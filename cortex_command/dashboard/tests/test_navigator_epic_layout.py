@@ -39,6 +39,7 @@ from cortex_command.dashboard.backlog.epic_layout import (
     NW,
     PANEL_W,
     POOL_COLS,
+    POOL_INSET,
     EpicLayout,
     LayoutContext,
     elbow,
@@ -422,7 +423,112 @@ class EdgeGeometryTests(unittest.TestCase):
 
     def test_elbow_path_is_integral(self):
         """Float coordinates would break byte-identical re-render."""
-        self.assertEqual("M 0 0 H 50 V 20 H 92", elbow(0, 0, 100, 20))
+        self.assertEqual("M 0 0 H 50 V 20 H 92", elbow(0, 0, 100, 20, 50))
+
+    def test_elbow_routes_through_the_given_lane_not_the_midpoint(self):
+        """The lane is an input, and nothing recomputes it from the endpoints.
+
+        A midpoint is clear only for a hop into the very next column; for any
+        longer hop it lands inside an intervening node box. Passing a lane
+        that is deliberately not the midpoint pins that the caller's channel
+        is the one used.
+        """
+        self.assertEqual("M 0 0 H 12 V 20 H 92", elbow(0, 0, 100, 20, 12))
+
+    def _segments(self, path: str) -> list[tuple[str, int, int, int]]:
+        """Decompose an ``M/H/V`` path into axis-aligned segments.
+
+        ``("H", lo, hi, y)`` for a horizontal run and ``("V", lo, hi, x)`` for
+        a vertical one, endpoints normalised low-to-high so a run drawn
+        right-to-left compares the same as one drawn left-to-right.
+        """
+        tokens = path.split()
+        out: list[tuple[str, int, int, int]] = []
+        x, y = int(tokens[1]), int(tokens[2])
+        i = 3
+        while i < len(tokens):
+            if tokens[i] == "H":
+                nxt = int(tokens[i + 1])
+                out.append(("H", min(x, nxt), max(x, nxt), y))
+                x = nxt
+            else:
+                nxt = int(tokens[i + 1])
+                out.append(("V", min(y, nxt), max(y, nxt), x))
+                y = nxt
+            i += 2
+        return out
+
+    def test_no_edge_passes_through_a_node_box(self):
+        """The invariant the whole lane mechanism exists to hold.
+
+        An arrow that runs through an unrelated node box asserts a
+        relationship between two tickets that have none, and it does it in
+        the one channel this surface has for saying what holds what. Before
+        the routing lanes this failed on two of the corpus's five framed
+        epics — ten segments in all, three of them arrows crossing the dashed
+        enclosure of an epic whose own label says its children are unordered.
+
+        Endpoints are excluded: an edge is *supposed* to touch the boxes it
+        joins.
+        """
+        ctx = corpus_ctx()
+        for epic_id in CORPUS_CHILDREN:
+            layout = layout_epic(epic_id, ctx)
+            for edge in layout.elbows:
+                for kind, lo, hi, fixed in self._segments(edge["path"]):
+                    for node, (nx, ny) in layout.pos.items():
+                        if node in (edge["src"], edge["dst"]):
+                            continue
+                        if kind == "H":
+                            hit = ny <= fixed <= ny + NH and lo < nx + NW and hi > nx
+                        else:
+                            hit = nx <= fixed <= nx + NW and lo < ny + NH and hi > ny
+                        with self.subTest(epic=epic_id, edge=edge["path"], node=node):
+                            self.assertFalse(hit)
+
+    def test_two_blockers_never_share_a_vertical_lane(self):
+        """Distinct sources get distinct channels, so a fork stays legible.
+
+        Two trunks on one x would merge into a single drawn line carrying two
+        unrelated claims. Edges from the *same* blocker do share a lane, and
+        should: that is one trunk forking, which is the true shape.
+        """
+        layout = layout_epic(EPIC_EXTERNAL_ONLY, corpus_ctx())
+        runs: list[tuple[int, int, int, str]] = []
+        for edge in layout.elbows:
+            for kind, lo, hi, fixed in self._segments(edge["path"]):
+                if kind == "V" and hi > lo:
+                    runs.append((fixed, lo, hi, edge["src"]))
+
+        self.assertTrue(runs, "the fixture must actually draw vertical runs")
+        for i, (x1, lo1, hi1, src1) in enumerate(runs):
+            for x2, lo2, hi2, src2 in runs[i + 1 :]:
+                if src1 == src2:
+                    continue
+                with self.subTest(a=src1, b=src2):
+                    self.assertFalse(x1 == x2 and min(hi1, hi2) > max(lo1, lo2))
+
+    def test_externally_held_children_sit_in_the_pools_first_column(self):
+        """The property that makes a clean left approach possible at all.
+
+        An external arrow reaches a pool node from the left; the pool has no
+        routing gutters between its columns, so a target outside column 0 can
+        only be reached by crossing a sibling.
+        """
+        ctx = corpus_ctx()
+        for epic_id in CORPUS_CHILDREN:
+            layout = layout_epic(epic_id, ctx)
+            if not layout.pool_box:
+                continue
+            held = {
+                edge["dst"]
+                for edge in layout.elbows
+                if edge["src"] in layout.externals and edge["dst"] in layout.pool
+            }
+            first_col_x = layout.pool_box[0] + POOL_INSET
+            for node in held:
+                with self.subTest(epic=epic_id, node=node):
+                    self.assertEqual(first_col_x, layout.pos[node][0])
 
     def test_externals_do_not_overlap_the_spine(self):
         layout = layout_epic(EPIC_LARGE, corpus_ctx())

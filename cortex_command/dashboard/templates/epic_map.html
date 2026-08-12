@@ -32,7 +32,7 @@
 
   {# Printed once, here, and never per epic. An epic's own line carries only
      the verdict and its numbers. #}
-  <p class="sec-lede">Ordering inside an epic is read from <code>blocked_by</code> between siblings and from nothing else. A group whose children declare no constraint on each other renders as a dashed enclosure rather than as an implied sequence — that is the honest rendering of a gap in the data, not a degenerate diagram. Ordering tables written in a ticket's prose are deliberately not parsed: a second source of truth for sequence would be worse than a visible gap.</p>
+  <p class="sec-lede">Ordering inside an epic is read from <code>blocked_by</code> between siblings and from nothing else. Children no sibling constrains sit inside the dashed enclosure, in no particular order.</p>
 
   {% if epics.frames %}
   <p class="sec-lede sec-lede--tight">{{ epics.declared }} of {{ epics.frames | length }} framed {{ 'group declares' if epics.frames | length == 1 else 'groups declare' }} any internal ordering at all.</p>
@@ -48,7 +48,7 @@
 <section id="epic-tail" aria-label="The tail">
   <span class="sec-num"><strong>§ 02</strong>the tail</span>
   <h2>The <em>tail</em> <span class="phase-tag">{{ epics.tail | length }} groups</span></h2>
-  <p class="sec-lede">A frame for one node states nothing about ordering, and a group whose parent is off this board has no header to draw. Both land here in full, with their membership stated.</p>
+  <p class="sec-lede">Groups too small or too off-board for a frame.</p>
   {{ tail(epics.tail) }}
 </section>
 {% endif %}

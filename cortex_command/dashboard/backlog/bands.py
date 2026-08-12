@@ -167,6 +167,7 @@ class Band:
     border_style: str
     rows: list[Row] = field(default_factory=list)
     show_rank: bool = False
+    show_why: bool = True
 
 
 @dataclass(frozen=True)
@@ -397,8 +398,17 @@ def _fmt_ids(ids: Sequence[str], limit: int = 3) -> str:
 
 
 def _fmt_blocker(blocker: BlockerRef) -> str:
+    """Name a blocker inside the "why" sentence — title first, id omitted.
+
+    The row already renders every blocker as a linked ``#id`` chip beside this
+    sentence, so repeating the id here printed it twice on one line ("waits on
+    #331 Dungeon space: … #331"). The chip keeps the id because it is the
+    thing you click; the sentence keeps the title because it is the thing you
+    read. Only the no-title paths fall back to the id, where it is the sole
+    handle there is.
+    """
     if blocker.title:
-        return "#%s %s" % (blocker.ref, blocker.title)
+        return blocker.title
     if blocker.kind == "unresolvable":
         return "#%s (names no known ticket)" % blocker.ref
     if blocker.status:
@@ -407,10 +417,9 @@ def _fmt_blocker(blocker: BlockerRef) -> str:
 
 
 def _why_closed(facts: _Facts) -> str:
-    return "%s / %s — closed in place, shown so the arithmetic closes" % (
-        facts.status or "unset",
-        facts.phase or "—",
-    )
+    # "shown so the arithmetic closes" is band H's own rationale, printed once
+    # above these rows; repeating it per row said nothing the header had not.
+    return "%s / %s" % (facts.status or "unset", facts.phase or "—")
 
 
 def _why_off_board(_facts: _Facts) -> str:
@@ -418,7 +427,7 @@ def _why_off_board(_facts: _Facts) -> str:
 
 
 def _why_untriaged(_facts: _Facts) -> str:
-    return "status: new — needs triage, not work"
+    return "status: new — needs triage"
 
 
 def _why_deferred(_facts: _Facts) -> str:
@@ -430,16 +439,16 @@ def _why_blocked(facts: _Facts) -> str:
 
 
 def _fmt_lapsed_blocker(blocker: BlockerRef) -> str:
-    """Name a discharged blocker the way a live one is named — id *and* title.
+    """Name a discharged blocker the way a live one is named, plus its status.
 
-    The status stays because it is what says "discharged", but it is no longer
-    the only thing said. Rendering these as a bare ``#90 (complete)`` made the
+    The status is what says "discharged", and it is the reason this band
+    exists. Rendering these as a bare ``#90 (complete)`` made the
     one band that tells the operator to go ahead the one band that made them
     look up which ticket had been holding them.
     """
     status = blocker.status or "closed"
     if blocker.title:
-        return "#%s %s (%s)" % (blocker.ref, blocker.title, status)
+        return "%s (%s)" % (blocker.title, status)
     return "#%s (%s)" % (blocker.ref, status)
 
 
@@ -581,16 +590,28 @@ _RULES: tuple[tuple[str, _Predicate, _Reason], ...] = (
 _RATIONALE: dict[str, str] = {
     "B": "carries a spec, plan or research artefact — cheapest to resume",
     "C": "declared high or critical, with no live blocker",
-    "D": "the bulk of the front; the band is the ordering claim, not the row order",
-    "E": "startable, but nothing argues for them",
+    "D": "declared medium, with no live blocker",
+    "E": "declared low or none, with no live blocker and nothing downstream",
     "E*": "priority outside the known vocabulary — banded, never dropped",
     "E′": "a container is not a day's work; its children are ranked above",
     "F": "deferral is a decision that was made, not an obstacle that appeared",
-    "G": "waiting on a live blocker; every row names the blocker and its title",
+    "G": "waiting on a live blocker",
     "G′": "the declared blocker is already closed — free today, and the old "
     "board still called them blocked",
     "H": "shown so the arithmetic closes, not because you should act on them",
 }
+
+
+# Bands whose placement rule IS the band label, so a per-row "why it sits
+# here" can only restate it. Band D's rows read "medium \u00b7 chore" under a
+# header that already says MEDIUM \u00b7 STARTABLE; band F's eight rows each
+# repeated the band's own rationale sentence verbatim. That is the pattern a
+# rejected prototype was killed for — the same explanation printed once per
+# row — and on the development corpus it was 53 of 73 rows.
+#
+# The type is not lost with it: it moves to a column of its own, where it is
+# data rather than an argument.
+_WHY_IS_THE_BAND: frozenset[str] = frozenset({"C", "D", "E", "E*", "F"})
 
 
 def _rationale_for(key: str, count: int, startable: int) -> str:
@@ -801,6 +822,7 @@ def partition(records: object, ctx: object, *, item_order: object = None) -> Ban
                 border_style=border,
                 rows=rows,
                 show_rank=show_rank,
+                show_why=key not in _WHY_IS_THE_BAND,
             )
         )
 

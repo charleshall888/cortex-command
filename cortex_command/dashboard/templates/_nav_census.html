@@ -30,8 +30,11 @@
     <tbody>
       {% for group in census.groups %}
       <tr>
+        {# Linked, because §03 is ten bands of vertical distance and this is
+           the only place that lists all of them in one view. The anchors are
+           the band blocks' own server-rendered ids. #}
         <th scope="row" class="census__keys">
-          <span class="census__swatch census__swatch--{{ group.border_style }}" aria-hidden="true"></span>{{ group.bands | join(' ') }}
+          <span class="census__swatch census__swatch--{{ group.border_style }}" aria-hidden="true"></span>{% for band in group.bands %}<a class="census__jump" href="#nav-band-{{ band.slug }}">{{ band.key }}</a>{% if not loop.last %} {% endif %}{% endfor %}
         </th>
         <td>{{ group.gloss }}</td>
         <td class="nav-table__pts">{{ group.count }}</td>
@@ -63,11 +66,16 @@
   </table>
 
   {% if census.corpus %}
-  {# The other half of the retired ledger bar. Stated in words with its counts
-     adjacent, rather than as a stacked bar whose only key was a hover. #}
+  {# What sits OUTSIDE the board — the half the eleven bands cannot see.
+
+     The active count used to lead this line, and it was both redundant and
+     wrong: the section header states the board total already, and the two
+     numbers disagree (72 active files against 73 banded records) because a
+     closed epic is backfilled to head its still-live group. Two different
+     answers to "how many are on this board" on one page. The archived count
+     is the fact the board genuinely cannot supply, so it is the line. #}
   <p class="census__corpus">
-    scope · {{ census.corpus.active }} active {{ 'record' if census.corpus.active == 1 else 'records' }} on this board
-    · {{ census.corpus.archived }} archived out of scope for every count above
+    beyond this board · {{ census.corpus.archived }} archived
     · records closed in place are counted by neither
   </p>
   {% endif %}
@@ -75,7 +83,7 @@
   {% if census.reconciliation %}
   <p class="recon{% if not census.reconciliation.ok %} recon--broken{% endif %}">
     {{ census.reconciliation.sum }} = {{ census.reconciliation.total }}
-    {% if census.reconciliation.ok %}· every one of the {{ slice_total }} records on this board is in exactly one band · nothing dropped, nothing truncated
+    {% if census.reconciliation.ok %}· every record on this board is in exactly one band
     {% else %}· {{ census.reconciliation.total }} banded against {{ census.reconciliation.slice_total }} in the slice — records are missing from this page
     {% endif %}
   </p>

@@ -1,12 +1,17 @@
 {# THE TAIL — every parent group that does not earn a frame.
 
-   Two kinds land here, and each row says which it is rather than leaving the
-   reader to infer it from the count: a group of one child (a diagram of one
-   node states nothing about ordering), and a group whose parent is not on this
-   board at all (there is no title, status or link to head a frame with). The
-   second kind is the reason this table exists — those groups are real, their
-   children are on the board, and dropping them silently is the failure mode
-   the whole surface is built against.
+   Two kinds land here: a group of one child (a diagram of one node states
+   nothing about ordering), and a group whose parent is not on this board at
+   all. The second kind is the reason this table exists — those groups are
+   real, their children are on the board, and dropping them silently is the
+   failure mode the whole surface is built against.
+
+   Which rule applied is read off the row rather than restated beside it. The
+   children column shows the count; the status column shows the parent's own
+   status, resolved from the corpus when it is off the slice, and every
+   off-board parent on the development corpus reads "complete". A "why it is
+   here" column carried one sentence four times over five rows, in a column
+   narrow enough to break it across six lines.
 
    One row per group, one <a> per cell, no SVG. #}
 
@@ -17,9 +22,9 @@
     <tr>
       <th scope="col" class="nav-table__id">epic</th>
       <th scope="col" class="nav-table__title">title</th>
+      <th scope="col" class="nav-table__type">status</th>
       <th scope="col" class="nav-table__pts">children</th>
-      <th scope="col">membership</th>
-      <th scope="col">why it is here</th>
+      <th scope="col" class="epic-tail__members">membership</th>
     </tr>
   </thead>
   <tbody>
@@ -27,11 +32,11 @@
     <tr{% if not row.on_board %} class="epic-tail__off"{% endif %}>
       <td class="nav-table__id"><a href="{{ row.href }}">ε#{{ row.id }}</a></td>
       <td class="nav-table__title">{{ row.title }}</td>
+      <td class="nav-table__type">{{ row.status }}</td>
       <td class="nav-table__pts">{{ row.count }}</td>
       <td class="epic-tail__members">
         {% for child in row.children %}<a href="{{ child.href }}">#{{ child.id }}</a> {{ child.title }} <span class="epic-tail__state">{{ child.state }}</span>{% if not loop.last %} · {% endif %}{% endfor %}
       </td>
-      <td>{{ row.note }}</td>
     </tr>
     {% endfor %}
   </tbody>

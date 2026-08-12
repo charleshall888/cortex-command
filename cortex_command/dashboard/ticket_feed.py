@@ -31,6 +31,7 @@ docstring without reading the code that fills it.
       "ineligible":  [{"id": "<id>", "reason": "<str>", "kind": "status"|"blocker"}],
       "blocked_why": {"<id>": [{"ref": "<str>", "kind": "internal"|"external"|"not_found",
                                 "status": "<str>|null", "title": "<str>|null"}]},
+      "offslice":    {"<id>": {"title": "<str>", "status": "<str>"}},
       "active_ids":  [<int>, ...],
       "archive_ids": [<int>, ...],
       "counts":      {"active": <int>, "archived": <int>}
@@ -53,6 +54,12 @@ Shape notes that are load-bearing for consumers:
   its group, then children are filtered to active ids and childless closed
   epics are dropped. Every id in a ``children`` list is therefore resolvable
   in ``items``; an epic key is too.
+* ``offslice`` names the ids the board *points at* but does not contain — the
+  ``parent`` and ``blocked_by`` targets that live in the corpus rather than the
+  active slice. Almost all of them are complete, and for a blocker that is the
+  whole story: closing it is what discharged the hold. Membership is the
+  promise that the title or the status is real, so an id absent from it names
+  no known ticket, which is a different fact a view renders differently.
 * Status, type, and priority are carried through raw. All three vocabularies
   are documented as closed enums but are open in practice — the item-creation
   verb applies no restriction — so every display switch needs a default branch.
@@ -188,6 +195,52 @@ def _resolve_blockers(
     return resolved
 
 
+def _resolve_offslice(
+    active_items: list[dict],
+    items: dict[str, dict],
+    status_by_id: dict[str, str],
+    titles_by_id: dict[str, str],
+) -> dict[str, dict]:
+    """Name every id the board points at but does not contain.
+
+    An active record can name two kinds of id that is not itself on the board:
+    a ``blocked_by`` ref and a ``parent``. Both are real tickets in the corpus,
+    both are routinely *complete* — and completion is usually the whole point,
+    because closing a blocker is what discharges a hold. A view with no way to
+    resolve them can only print a placeholder, and "not on this board" is a
+    worse thing to read than the ticket's actual name and status: it reads as
+    a data error where the truth is an ordinary, already-finished ticket.
+
+    ``blocked_why`` resolves the blocker half already, per-blocked-ticket. This
+    is the same resolution keyed by the *referenced* id and widened to parents,
+    so a consumer has one lookup rather than a scan plus a gap.
+
+    Only ids the corpus can actually name are included: an entry here is a
+    promise that the title or the status is real. A ref that resolves to
+    nothing is absent, which is what lets a view distinguish "finished" from
+    "names no known ticket" instead of rendering both as missing.
+    """
+    resolved: dict[str, dict] = {}
+    for record in active_items:
+        refs = [record.get("parent"), *(record.get("blocked_by") or [])]
+        for ref in refs:
+            if ref is None or isinstance(ref, bool):
+                continue
+            key = str(ref).strip()
+            if not key or key in items or key in resolved:
+                continue
+            # The same two-candidate lookup _resolve_blockers uses: the corpus
+            # spells the same id bare and zero-padded.
+            candidates = [key, key.zfill(3)] if key.isdigit() else [key]
+            status = next(
+                (status_by_id[c] for c in candidates if c in status_by_id), None
+            )
+            title = titles_by_id.get(str(int(key)) if key.isdigit() else key)
+            if status or title:
+                resolved[key] = {"title": title or "", "status": status or ""}
+    return resolved
+
+
 def _display_record(record: dict) -> dict:
     """Enrich one ``collect_items`` record with the three board-only fields."""
     return {
@@ -318,6 +371,8 @@ def build_backlog_snapshot(
             continue
         items[epic_id] = _display_record(by_id[epic_id])
 
+    offslice = _resolve_offslice(active_items, items, status_by_id, titles_by_id)
+
     return {
         "schema_version": SCHEMA_VERSION,
         "polled_ts": polled_ts,
@@ -331,6 +386,7 @@ def build_backlog_snapshot(
             for item, reason, rejection in partition.ineligible
         ],
         "blocked_why": blocked_why,
+        "offslice": offslice,
         "active_ids": sorted(active_ids),
         "archive_ids": sorted(archive_ids),
         "counts": {"active": len(active_ids), "archived": len(archive_ids)},

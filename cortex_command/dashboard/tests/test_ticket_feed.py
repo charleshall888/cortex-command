@@ -41,6 +41,7 @@ EXPECTED_KEYS = [
     "ineligible",
     "item_order",
     "items",
+    "offslice",
     "polled_ts",
     "ready",
     "schema_version",
@@ -163,6 +164,82 @@ class TestSnapshotSchema(_CorpusTestCase):
         self.assertEqual(sorted(snapshot.keys()), EXPECTED_KEYS)
         self.assertEqual(snapshot["items"], {})
         self.assertEqual(snapshot["counts"], {"active": 0, "archived": 0})
+
+
+class TestOffsliceResolution(_CorpusTestCase):
+    """Ids the board points at but does not contain."""
+
+    def test_completed_blocker_is_named_with_its_title_and_status(self):
+        """The fact that discharges a hold has to survive to the view.
+
+        A view with no resolution can only print a placeholder for the very
+        ticket whose completion made the blocked item startable.
+        """
+        _write_item(
+            self.backlog_dir,
+            "001-alpha.md",
+            "title: Alpha\nstatus: backlog\nblocked-by: [9]\n",
+        )
+        _write_item(
+            self.backlog_dir, "009-done.md", "title: The Blocker\nstatus: complete\n"
+        )
+
+        snapshot = self.build(titles_by_id={"9": "The Blocker"})
+
+        self.assertNotIn("9", snapshot["items"])
+        self.assertEqual(
+            {"title": "The Blocker", "status": "complete"}, snapshot["offslice"]["9"]
+        )
+
+    def test_offslice_parent_is_resolved_too(self):
+        """A parent that is not an epic never reaches ``items``.
+
+        ``build_epic_map`` detects a container by ``type: epic``, so an
+        ordinary ticket named as someone's parent is invisible to the epic
+        envelope and to the closed-epic backfill beneath it. On the
+        development corpus that is four groups, every one of them complete.
+        """
+        _write_item(
+            self.backlog_dir,
+            "001-child.md",
+            "title: Child\nstatus: backlog\nparent: 7\n",
+        )
+        _write_item(
+            self.backlog_dir,
+            "007-parent.md",
+            "title: Not An Epic\nstatus: complete\ntype: bug\n",
+        )
+
+        snapshot = self.build(titles_by_id={"7": "Not An Epic"})
+
+        self.assertNotIn("7", snapshot["items"])
+        self.assertEqual("Not An Epic", snapshot["offslice"]["7"]["title"])
+        self.assertEqual("complete", snapshot["offslice"]["7"]["status"])
+
+    def test_an_id_on_the_board_is_not_listed_as_offslice(self):
+        _write_item(
+            self.backlog_dir,
+            "001-alpha.md",
+            "title: Alpha\nstatus: backlog\nblocked-by: [2]\n",
+        )
+        _write_item(self.backlog_dir, "002-beta.md", "title: Beta\nstatus: backlog\n")
+
+        snapshot = self.build(titles_by_id={"1": "Alpha", "2": "Beta"})
+
+        self.assertIn("2", snapshot["items"])
+        self.assertEqual({}, snapshot["offslice"])
+
+    def test_a_reference_naming_no_ticket_is_absent_rather_than_blank(self):
+        """Absence is what lets a view tell "finished" from "names nothing"."""
+        _write_item(
+            self.backlog_dir,
+            "001-alpha.md",
+            "title: Alpha\nstatus: backlog\nblocked-by: [4242]\n",
+        )
+
+        snapshot = self.build()
+
+        self.assertNotIn("4242", snapshot["offslice"])
 
 
 class TestActiveArchiveSplit(_CorpusTestCase):

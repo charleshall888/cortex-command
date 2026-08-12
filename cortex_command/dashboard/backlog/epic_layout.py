@@ -244,19 +244,30 @@ def intra_waves(
     return wave, sub
 
 
-def elbow(x1: int, y1: int, x2: int, y2: int) -> str:
+def elbow(x1: int, y1: int, x2: int, y2: int, lane: int) -> str:
     """Return the SVG path ``d`` for one edge: out, across, down, in.
 
-    A right-angled elbow through the mid-gutter rather than a straight line
-    or a curve — the gutter between two spine columns is reserved for
-    exactly this, so an edge that has to cross several rows travels through
-    clear space instead of over a node box. The path stops short of the
-    target by :data:`ARROW_INSET` to leave room for the arrowhead marker.
+    A right-angled elbow whose vertical run sits in *lane* — an x the caller
+    has established is clear of every node box. The caller owns that choice
+    because only the caller knows the column grid; this function is the
+    stringifier.
+
+    ``lane`` used to be derived here as the midpoint between the endpoints,
+    and that is the defect this signature exists to prevent. A midpoint is
+    only clear when the target sits in the column immediately right of the
+    source: for any longer hop it lands *inside* an intervening node box.
+    On the development corpus that drew ten edge segments straight through
+    node boxes across two of five frames, including three arrows crossing
+    the dashed pool enclosure of an epic whose own label says its children
+    are unordered. There is no midpoint that is clear in general, so the
+    lane is an input.
+
+    The path stops short of the target by :data:`ARROW_INSET` to leave room
+    for the arrowhead marker.
 
     All arithmetic is integer: the same input must produce the same bytes.
     """
-    mid_x = x1 + (x2 - x1) // 2
-    return f"M {x1} {y1} H {mid_x} V {y2} H {x2 - ARROW_INSET}"
+    return f"M {x1} {y1} H {lane} V {y2} H {x2 - ARROW_INSET}"
 
 
 def _pool_width(cols: int) -> int:
@@ -264,6 +275,29 @@ def _pool_width(cols: int) -> int:
     if cols <= 0:
         return 0
     return POOL_INSET * 2 + cols * (NW + POOL_COL_GAP) - POOL_COL_GAP
+
+
+def _ext_lanes(externals: Sequence[str]) -> dict[str, int]:
+    """One reserved vertical channel per external blocker, left of the content.
+
+    Externals occupy ``x`` in ``[PAD, PAD + NW]`` and the epic's own content
+    starts at ``PAD + NW + COL_GAP``, so the ``COL_GAP`` between them is
+    empty by construction and is the only strip on the frame guaranteed to
+    stay that way. Each external gets its own x inside it, evenly spaced and
+    ordered by the caller's already-sorted list, so the assignment is stable
+    across renders.
+
+    Per *external*, not per *edge*: one blocker holding three children draws
+    one trunk that forks, which is the true shape of the relationship. Giving
+    each edge its own lane would draw three near-parallel verticals saying
+    the same thing.
+    """
+    if not externals:
+        return {}
+    step = max(1, COL_GAP // (len(externals) + 1))
+    return {
+        node: PAD + NW + (i + 1) * step for i, node in enumerate(externals)
+    }
 
 
 def _marker_id(epic_id: str) -> str:
@@ -343,6 +377,20 @@ def layout_epic(epic_id: str, ctx: LayoutContext) -> EpicLayout:
     ]
     externals = sorted({a for a, _b in ext_live + ext_discharged}, key=_sort_key)
 
+    # Which *pool* children an external blocker points at. The pool is the one
+    # region of a frame with no routing gutters between its columns, so an
+    # arrow can only reach a pool node cleanly from the left. Hoisting these
+    # into the pool's first column below is what makes that approach true by
+    # construction rather than true by luck of the id order.
+    ext_targets = [
+        node
+        for node in pool
+        if any(b == node for _a, b in ext_live + ext_discharged)
+    ]
+    if ext_targets:
+        held = set(ext_targets)
+        pool = ext_targets + [node for node in pool if node not in held]
+
     pos: dict[str, tuple[int, int]] = {}
 
     # Externals occupy their own column hard against the frame's left edge,
@@ -380,7 +428,11 @@ def layout_epic(epic_id: str, ctx: LayoutContext) -> EpicLayout:
         PAD * 2 + ext_offset + spine_w + SPINE_POOL_GAP + _pool_width(beside_cols)
         <= PANEL_W
     )
-    beside = bool(ncols) and fits_beside
+    # A pool an external blocker points into cannot sit beside the spine: the
+    # only clear approach to a pool node is from the left, and beside-placement
+    # puts the entire spine between the external column and the pool's left
+    # edge. Dropping the pool below keeps the routing gutter unobstructed.
+    beside = bool(ncols) and fits_beside and not ext_targets
 
     # The pool is the one part of a frame whose width we get to choose, so it
     # is fitted to the panel budget rather than allowed to overrun it. A frame
@@ -394,6 +446,24 @@ def layout_epic(epic_id: str, ctx: LayoutContext) -> EpicLayout:
     ) // (NW + POOL_COL_GAP)
     max_pool_cols = max(1, min(POOL_COLS, fit_cols))
 
+    # The pool fills column-major, and the column count is capped so that the
+    # first column is long enough to hold every externally-held child. Both
+    # halves of that are one requirement: an external arrow must reach its
+    # target without crossing a sibling, the approach is from the left, so the
+    # target has to be in column 0. Column-major makes the first column the
+    # first `pool_rows` entries, and the hoist above made those the held ones.
+    #
+    # Always satisfiable — a single column holds every child — so this narrows
+    # a frame rather than ever failing to place one. Reading order is not lost:
+    # the enclosure's whole claim is that its children have no declared order,
+    # and the roster beneath the frame lists them in this same sequence.
+    def _cols_for(cols: int) -> int:
+        if not ext_targets:
+            return cols
+        while cols > 1 and -(-len(pool) // cols) < len(ext_targets):
+            cols -= 1
+        return cols
+
     if not pool:
         pool_cols, pool_x0, pool_y0, wrapped = 0, 0, 0, False
     elif beside:
@@ -405,27 +475,52 @@ def layout_epic(epic_id: str, ctx: LayoutContext) -> EpicLayout:
         # is nothing above the pool to wrap beneath. The flag means "pushed
         # below a spine that would not fit next to it", and a template that
         # explains the placement must only say so when it happened.
-        pool_cols = max(1, min(max_pool_cols, len(pool)))
+        pool_cols = _cols_for(max(1, min(max_pool_cols, len(pool))))
         wrapped = bool(ncols)
         pool_x0 = origin_x
         pool_y0 = PAD + 22 + (spine_h + 40 if ncols else 0)
 
-    for i, node in enumerate(pool):
-        col, row = i % pool_cols, i // pool_cols
-        pos[node] = (
-            pool_x0 + POOL_INSET + col * (NW + POOL_COL_GAP),
-            pool_y0 + POOL_HEAD_H + row * (NH + POOL_ROW_GAP),
-        )
-
     pool_box: tuple[int, int, int, int] | None = None
     if pool:
         pool_rows = (len(pool) + pool_cols - 1) // pool_cols
+        for i, node in enumerate(pool):
+            col, row = i // pool_rows, i % pool_rows
+            pos[node] = (
+                pool_x0 + POOL_INSET + col * (NW + POOL_COL_GAP),
+                pool_y0 + POOL_HEAD_H + row * (NH + POOL_ROW_GAP),
+            )
+        # Columns actually occupied, which a short last column makes smaller
+        # than `pool_cols`: three children over four permitted columns fill
+        # three. Sizing the enclosure to the permitted count would draw a
+        # dashed box with an empty column inside it.
+        used_cols = (len(pool) + pool_rows - 1) // pool_rows
         pool_box = (
             pool_x0,
             pool_y0,
-            _pool_width(pool_cols),
+            _pool_width(used_cols),
             POOL_HEAD_H + pool_rows * (NH + POOL_ROW_GAP) + POOL_FOOT_H,
         )
+
+    # Every edge routes its vertical run through a lane the layout knows is
+    # empty. Two kinds of lane, because there are two kinds of clear space:
+    #
+    # * an **external** edge uses its own blocker's reserved channel in the
+    #   gutter between the externals column and the epic's content, so a
+    #   blocker holding several children draws one trunk that forks;
+    # * an **intra-epic** edge uses the ``COL_GAP`` gutter immediately left of
+    #   its target's spine column, which is the strip that gap exists for.
+    #
+    # Neither is the midpoint between the endpoints. See :func:`elbow`.
+    lane_of_ext = _ext_lanes(externals)
+
+    def _lane(src: str, dst: str) -> int:
+        if src in lane_of_ext:
+            return lane_of_ext[src]
+        col = wave.get(dst, 0)
+        # Clamped so a target in column 0 — which no intra-epic edge can have,
+        # every column-0 node being unconstrained — could not route off-canvas
+        # if one ever arrived.
+        return max(PAD, origin_x + col * (NW + COL_GAP) - COL_GAP // 2)
 
     # Elbows are emitted in a fixed order — live, then discharged, then
     # external — and each group is already sorted, so two renders of the
@@ -454,7 +549,9 @@ def layout_epic(epic_id: str, ctx: LayoutContext) -> EpicLayout:
                 "kind": kind,
                 "src": a,
                 "dst": b,
-                "path": elbow(ax + NW, ay + NH // 2, bx, by + NH // 2),
+                "path": elbow(
+                    ax + NW, ay + NH // 2, bx, by + NH // 2, _lane(a, b)
+                ),
             })
 
     # Extents. Every max() below takes an explicit default because each of

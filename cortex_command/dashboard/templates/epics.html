@@ -36,9 +36,11 @@
    One of each per page, so neither can collide with the other's id no matter
    how many frames the map draws.
 
-   The hover card is aria-hidden: it is a visual convenience over data the
-   node's own <title> child already announces, and having a screen reader read
-   the same ticket twice is worse than not reading the card at all. #}
+   The hover card is aria-hidden: it is a visual convenience over a node whose
+   own anchor text already announces the id, the state and the title, and
+   having a screen reader read the same ticket twice is worse than not reading
+   the card at all. The card earns its place visually by carrying what the box
+   does not — status, priority, type, points and the band's own reason. #}
 <div id="epic-hover" class="hovercard" hidden aria-hidden="true">
   <p class="hovercard__title"><span class="hovercard__id"></span> <span class="hovercard__name"></span></p>
   <p class="hovercard__chips">

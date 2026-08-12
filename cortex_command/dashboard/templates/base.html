@@ -2800,9 +2800,8 @@
 
       /* The node keeps a visible hover state of its own. The card explains the
          ticket; this says which box the card is about — on a frame of nine
-         near-identical boxes the card alone does not. */
-      .node-link:hover .node { stroke: var(--color-ochre); stroke-width: 2; }
-      .node-link { cursor: pointer; }
+         near-identical boxes the card alone does not. Declared with the rest
+         of the node styling, below. */
       .nav-chip--pts {
         color: var(--color-ink-1);
         border-color: var(--color-ink-3);
@@ -3079,7 +3078,10 @@
       }
       .nav-table tbody tr:last-child td { border-bottom: none; }
       .nav-table tbody tr:hover td { background: color-mix(in srgb, var(--color-blue) 6%, transparent); }
-      .nav-table__rank, .nav-table__id, .nav-table__pts { white-space: nowrap; width: 1%; }
+      .nav-table__rank, .nav-table__id, .nav-table__pts, .nav-table__type { white-space: nowrap; width: 1%; }
+      /* Data, not an argument. It used to be half of a "why it sits here"
+         whose other half restated the band header. */
+      .nav-table__type { color: var(--color-ink-3); font-size: 10.5px; }
       .nav-table__rank { color: var(--color-ink-faint); font-variant-numeric: tabular-nums slashed-zero; }
       .nav-table__pts { text-align: right; font-variant-numeric: tabular-nums slashed-zero; }
       .nav-table__id a { color: var(--color-ochre); text-decoration: none; }
@@ -3103,6 +3105,8 @@
         gap: 22px;
       }
       .census__keys { white-space: nowrap; font-weight: 400; color: var(--color-ink-1); }
+      .census__jump { color: var(--color-ink-1); text-decoration: none; border-bottom: 1px dotted var(--color-rule-soft); }
+      .census__jump:hover { color: var(--color-ochre); border-bottom-color: var(--color-ochre); }
       .census__swatch {
         display: inline-block;
         width: 22px; height: 0;
@@ -3166,43 +3170,74 @@
         margin: 6px 0 4px;
       }
       .epic-verdict--partial { color: var(--color-ochre); }
-      .epic-caption {
-        display: flex;
-        gap: 16px;
-        flex-wrap: wrap;
-        font-family: var(--font-mono);
-        font-size: 10px;
-        letter-spacing: var(--register);
-        text-transform: uppercase;
-        color: var(--color-ink-faint);
-        margin: 0 0 10px;
-      }
       /* Horizontal pan only. The server already knows the frame's exact width
          and height, so nothing reflows on a morph swap and no JS recomputes a
          coordinate. */
       .epic-pan { overflow-x: auto; overflow-y: hidden; padding-bottom: 6px; }
       .epic-svg { display: block; max-width: none; }
 
-      .node { fill: var(--color-parchment-3); stroke-width: 1.5; stroke: var(--color-rule-soft); }
-      .node--solid  { stroke: var(--color-blue); stroke-dasharray: none; }
-      .node--dotted { stroke: var(--color-ochre); stroke-dasharray: 1 3; }
-      .node--dashed { stroke: var(--color-ink-3); stroke-dasharray: 6 4; }
-      .node--ghost  { stroke: var(--color-ink-faint); stroke-opacity: 0.45; fill: none; }
-      .node-link:hover .node { fill: color-mix(in srgb, var(--color-blue) 12%, var(--color-parchment-3)); }
-      /* The only strings drawn as SVG text: an id and a one-word state, both
-         inside a 244x68 box at 14px in from its left edge. Nothing here is
-         positioned from a measured or guessed character advance. */
-      .node-id {
+      /* A node is an HTML box inside a <foreignObject> the server sized and
+         placed. The box carries the ticket's TITLE, which is the thing an
+         operator is actually looking for and which used to live only in a
+         table underneath the diagram.
+
+         This does not relax the no-text-metrics rule, it satisfies it the
+         other way: nothing here computes a width from a character advance.
+         The <foreignObject> is exactly 244x68 because the layout said so, and
+         CSS wraps and clamps inside it. The fonts are still not bundled and
+         Georgia is still what renders — and now that is fine, because a font
+         that measures wider simply wraps sooner. */
+      .node-link {
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+        box-sizing: border-box;
+        width: 100%;
+        height: 100%;
+        padding: 7px 11px;
+        overflow: hidden;
+        text-decoration: none;
+        cursor: pointer;
+        background: var(--color-parchment-3);
+        border: 1.5px solid var(--color-rule-soft);
+        border-radius: 2px;
+      }
+      .node--solid  { border-color: var(--color-blue); }
+      .node--dotted { border-style: dotted; border-color: var(--color-ochre); }
+      .node--dashed { border-style: dashed; border-color: var(--color-ink-3); }
+      .node--ghost  { border-color: var(--color-ink-faint); background: none; opacity: 0.62; }
+      .node-link:hover {
+        background: color-mix(in srgb, var(--color-blue) 12%, var(--color-parchment-3));
+        border-color: var(--color-ochre);
+        opacity: 1;
+      }
+      .node-head {
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
         font-family: var(--font-mono);
-        font-size: 12px;
-        fill: var(--color-ochre);
+        font-size: 11px;
+        line-height: 1;
+        color: var(--color-ochre);
       }
       .node-state {
-        font-family: var(--font-mono);
-        font-size: 10px;
+        margin-left: auto;
+        font-size: 9px;
         letter-spacing: 0.06em;
         text-transform: uppercase;
-        fill: var(--color-ink-faint);
+        color: var(--color-ink-faint);
+      }
+      /* Two lines, then an ellipsis. A third line would collide with the box
+         floor on the longest titles in the corpus, and the hover card carries
+         the full string for anything that clips. */
+      .node-title {
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        font-size: 11.5px;
+        line-height: 1.28;
+        color: var(--color-ink-2);
       }
       .pool-box {
         fill: none;
@@ -3221,8 +3256,11 @@
       .edge--external { stroke: var(--color-ink-3); stroke-dasharray: 5 4; }
       .edge--discharged { stroke: var(--color-ink-faint); stroke-opacity: 0.5; stroke-dasharray: 2 4; }
       .epic-arrow { fill: var(--color-ochre); }
-      .epic-roster__ext td, .epic-tail__off td { color: var(--color-ink-faint); }
-      .epic-tail__members { font-size: 10.5px; color: var(--color-ink-3); }
+      .epic-tail__off td { color: var(--color-ink-faint); }
+      /* Capped, so the membership run cannot starve the title column. Titles
+         wrapped to five lines beside a membership cell holding half the table
+         before this; both are prose and the title is the one being looked up. */
+      .epic-tail__members { font-size: 10.5px; color: var(--color-ink-3); max-width: 46%; }
       .epic-tail__state { color: var(--color-ink-faint); }
 
       /* ── Drop italic-WONK header treatment on deep sections ──────── */

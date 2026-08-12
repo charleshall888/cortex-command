@@ -40,8 +40,13 @@
         {% if band.show_rank %}<th scope="col" class="nav-table__rank">rank</th>{% endif %}
         <th scope="col" class="nav-table__id">id</th>
         <th scope="col" class="nav-table__title">title</th>
+        <th scope="col" class="nav-table__type">type</th>
         <th scope="col" class="nav-table__pts">pts</th>
-        <th scope="col">why it sits here</th>
+        {# Only where the placement needs explaining. Under MEDIUM · STARTABLE
+           a per-row "medium · chore" restated the header and called it a
+           reason; band F's rows each repeated the band's own rationale
+           verbatim. Both are gone, and the type they carried has a column. #}
+        {% if band.show_why %}<th scope="col">why it sits here</th>{% endif %}
       </tr>
     </thead>
     <tbody>
@@ -50,13 +55,16 @@
         {% if band.show_rank %}<td class="nav-table__rank">{{ row.rank if row.rank is not none else '—' }}</td>{% endif %}
         <td class="nav-table__id"><a href="{{ row.href }}">#{{ row.id }}</a></td>
         <td class="nav-table__title">{{ row.title }}</td>
+        <td class="nav-table__type">{{ row.type }}</td>
         <td class="nav-table__pts">{{ row.points }}</td>
+        {% if band.show_why %}
         <td class="nav-table__why">
           {{ row.why }}
           {% if row.blockers %}
           <span class="band__blockers">{% for blocker in row.blockers %}<a class="band__blocker{% if blocker.discharged %} band__blocker--lapsed{% endif %}" href="{{ blocker.href }}">#{{ blocker.id }}</a>{% endfor %}</span>
           {% endif %}
         </td>
+        {% endif %}
       </tr>
       {% endfor %}
     </tbody>

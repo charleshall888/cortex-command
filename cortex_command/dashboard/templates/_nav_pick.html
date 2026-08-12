@@ -31,9 +31,16 @@
 </p>
 {% endmacro %}
 
-{# The two-way counterfactual. Both halves render, always: "if you skip it" is
-   what makes the leverage claim falsifiable from the page, and a pick that
-   frees nothing has to be able to say so. #}
+{# The counterfactual — what changes on this board if the pick lands.
+
+   It used to render a second column headed "if you skip it", and on every
+   pick that frees anything that column printed the SAME ids back in the
+   negative: "these become startable the moment it closes — #242 · #278"
+   beside "these stay frozen for as long as it does — #242 · #278". Between
+   that and the argument paragraph above, the hero named its freed tickets
+   three times. The claim stays falsifiable without it: `still_held` says what
+   does NOT come free, and the re-ranked table shows the board you would
+   actually be looking at. #}
 {% macro counterfactual(cf) %}
 <div class="cf">
   <div class="cf__col">
@@ -70,15 +77,6 @@
         {% endfor %}
       </tbody>
     </table>
-    {% endif %}
-  </div>
-  <div class="cf__col">
-    <h3 class="cf__head">if you skip it</h3>
-    {% if cf.freed %}
-    <p class="cf__body">these stay frozen for as long as it does —
-      {% for ref in cf.freed %}<a href="{{ ref.href }}">#{{ ref.id }}</a> {{ ref.title }}{% if not loop.last %} · {% endif %}{% endfor %}</p>
-    {% else %}
-    <p class="cf__body cf__body--none">nothing freezes. Skipping it costs this board no reachability at all — only its own points.</p>
     {% endif %}
   </div>
 </div>

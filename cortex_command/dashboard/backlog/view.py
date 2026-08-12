@@ -44,7 +44,9 @@ from typing import Any
 from cortex_command.dashboard.backlog import bands as bands_mod
 from cortex_command.dashboard.backlog.bands import OPEN_STATUSES
 from cortex_command.dashboard.backlog.epic_layout import (
+    PAD,
     POOL_INSET,
+    SPINE_HEAD_H,
     LayoutContext,
     layout_epic,
 )
@@ -179,6 +181,20 @@ def _items_of(snapshot: dict) -> dict[str, dict]:
     return {str(key): value for key, value in raw.items() if isinstance(value, dict)}
 
 
+def _offslice_of(snapshot: dict) -> dict[str, dict]:
+    """The snapshot's corpus resolution for ids the board points at but lacks.
+
+    Absent on a snapshot written before the key existed, which is a live case:
+    the poller retains the last good snapshot across a failed poll, so a
+    process can serve one shape while running the code for another. An empty
+    map degrades to the old placeholder rather than raising.
+    """
+    raw = snapshot.get("offslice") or {}
+    return {
+        str(key): value for key, value in raw.items() if isinstance(value, dict)
+    }
+
+
 def _corpus_of(snapshot: dict, items: dict[str, dict]) -> list[dict]:
     """Reconstruct :func:`~.graph.build_graph`'s corpus argument.
 
@@ -243,22 +259,54 @@ def _context(snapshot: dict) -> tuple[dict[str, dict], Any, ScoreContext, dict[s
 # ---------------------------------------------------------------------------
 
 
-def _title_of(tid: str, items: dict[str, dict]) -> str:
-    """A ticket's title, or a statement that it is not on this board.
+def _title_of(tid: str, items: dict[str, dict], offslice: dict | None = None) -> str:
+    """A ticket's title, from the board or from the corpus behind it.
+
+    The fallback used to be the literal "not on this board", and that was the
+    wrong sentence for the population that actually reaches it. Nearly every
+    off-board reference on these surfaces is a **completed** ticket — a
+    blocker whose closing is precisely what discharged the hold being drawn.
+    Telling the operator it is not on the board describes the board rather
+    than the ticket, and reads like a lookup that failed.
+
+    ``offslice`` carries the snapshot's corpus resolution for exactly these
+    ids. When it names one, the real title is used and the caller states the
+    disposition separately (see :func:`_state_of`); the placeholder survives
+    only for a reference the corpus cannot name at all, where it is true.
 
     Never the empty string: every place this feeds is a link's accessible name
     or a sentence, and a blank there reads as a rendering failure rather than
     as missing data.
     """
     record = items.get(tid)
-    if record is None:
-        return "not on this board"
-    return _text(record.get("title")) or "untitled"
+    if record is not None:
+        return _text(record.get("title")) or "untitled"
+    known = (offslice or {}).get(tid)
+    if known:
+        return _text(known.get("title")) or "untitled"
+    return "names no known ticket"
 
 
-def _ref(tid: str, items: dict[str, dict]) -> dict:
+def _offslice_state(tid: str, offslice: dict | None) -> str:
+    """The one- or two-word disposition of an id that is not on the board.
+
+    Fits the SVG-text rule's label budget, so a node box can carry it, and it
+    is the ticket's own status rather than a statement about the board. A
+    corpus status is a single word for every spelling cortex writes; an
+    unrecognised one is passed through rather than bucketed, because consumer
+    repos run their own vocabularies.
+    """
+    known = (offslice or {}).get(tid) or {}
+    return _text(known.get("status")) or "off board"
+
+
+def _ref(tid: str, items: dict[str, dict], offslice: dict | None = None) -> dict:
     """One id as every cross-reference on these surfaces renders it."""
-    return {"id": tid, "title": _title_of(tid, items), "href": "/tickets/%s" % tid}
+    return {
+        "id": tid,
+        "title": _title_of(tid, items, offslice),
+        "href": "/tickets/%s" % tid,
+    }
 
 
 def _join(parts: list[str]) -> str:
@@ -352,12 +400,14 @@ def _argument(tid: str, ctx: ScoreContext, items: dict[str, dict]) -> str:
     if top.key != "priority" and by_key["priority"].points:
         parts.append("It is %s priority, which is not why it wins." % priority)
     parts.append(wins)
+    # Only the branch that ADDS ids. The "frees nobody" arm used to fire here
+    # too, forty pixels above a counterfactual whose whole job is to say what
+    # changes — "Nothing on this board waits on it, so finishing it frees
+    # nobody." sitting directly over "nothing becomes startable — no ticket on
+    # this board names it as its only live blocker." The counterfactual keeps
+    # it, because that is the section a reader goes to for the consequence.
     if top.key != "leverage" and (direct or onward):
-        parts.append(
-            "It also unblocks %s." % _fmt_refs(direct or onward)
-        )
-    elif not direct and not onward:
-        parts.append("Nothing on this board waits on it, so finishing it frees nobody.")
+        parts.append("It also unblocks %s." % _fmt_refs(direct or onward))
     return " ".join(parts)
 
 
@@ -544,6 +594,7 @@ def _band(band: bands_mod.Band, items: dict[str, dict]) -> dict:
         "rationale": band.rationale,
         "border_style": band.border_style,
         "show_rank": band.show_rank,
+        "show_why": band.show_why,
         "rows": [_row(row, items) for row in band.rows],
     }
 
@@ -568,7 +619,13 @@ def _census(banded: bands_mod.Bands) -> dict:
                 "key": key,
                 "gloss": gloss,
                 "count": count,
-                "bands": [band.key for band in present if band.count],
+                # Key AND slug: the letters are jump links to the band blocks
+                # in § 03, whose ids come from the same injective slug rule.
+                "bands": [
+                    {"key": band.key, "slug": _band_slug(band.key)}
+                    for band in present
+                    if band.count
+                ],
                 "border_style": present[0].border_style if present else "solid",
             }
         )
@@ -722,6 +779,7 @@ def _preview(
     ctx: ScoreContext,
     items: dict[str, dict],
     why_of: dict[str, str],
+    offslice: dict | None = None,
 ) -> dict:
     """The facts a hover card shows, resolved from data already computed.
 
@@ -740,8 +798,14 @@ def _preview(
     on_slice = tid in items
     direct = ctx.direct_of(tid) if on_slice else ()
     onward = ctx.downstream_of(tid) if on_slice else ()
+    # An off-board blocker has a status the corpus knows, and it is the single
+    # most useful thing the card can say about it: "complete" means the arrow
+    # you just hovered is a hold that has already lapsed. Reading only `items`
+    # printed "unset" for every one of them, which is the same wrong answer
+    # "not on this board" used to give in the roster.
+    known = (offslice or {}).get(tid) or {}
     return {
-        "status": _text(record.get("status")) or "unset",
+        "status": _text(record.get("status")) or _text(known.get("status")) or "unset",
         "priority": _text(record.get("priority")) or "unset",
         "type": _text(record.get("type")) or "unset",
         "points": score_of(tid, ctx).total if on_slice else None,
@@ -755,6 +819,7 @@ def _node(
     xy: tuple[int, int],
     items: dict[str, dict],
     band_of: dict[str, str],
+    offslice: dict,
     *,
     external: bool = False,
     preview: dict | None = None,
@@ -776,9 +841,21 @@ def _node(
         "id": tid,
         "x": xy[0],
         "y": xy[1],
-        "title": _title_of(tid, items),
-        "state": "external" if external else _NODE_STATE.get(key, "on board"),
-        "border_style": "ghost" if external else _BORDER_OF_BAND.get(key, "solid"),
+        "title": _title_of(tid, items, offslice),
+        # State and border say what the ticket IS, never where it sits. Being
+        # external to this epic is already carried by the left-hand column and
+        # its caption, so spending the label on "external" spent it on the one
+        # fact the position had already made. Most external blockers are on the
+        # board — #331 heads the whole ranked field — and half of the rest are
+        # complete, which is the useful word: it says this arrow's hold has
+        # already lapsed. A ghost border is then true rather than conventional,
+        # matching the census key's own gloss for it.
+        "state": _NODE_STATE.get(key, "on board")
+        if tid in items
+        else _offslice_state(tid, offslice),
+        "border_style": _BORDER_OF_BAND.get(key, "solid")
+        if tid in items
+        else "ghost",
         "href": "/tickets/%s" % tid,
         "external": external,
         "preview": preview or {},
@@ -793,6 +870,7 @@ def _frame(
     band_of: dict[str, str],
     layout_ctx: LayoutContext,
     why_of: dict[str, str],
+    offslice: dict,
 ) -> dict:
     """One epic frame: the geometry, plus the table that carries the names."""
     layout = layout_epic(epic_id, layout_ctx)
@@ -804,8 +882,9 @@ def _frame(
             layout.pos[tid],
             items,
             band_of,
+            offslice,
             external=tid in external_set,
-            preview=_preview(tid, ctx, items, why_of),
+            preview=_preview(tid, ctx, items, why_of, offslice),
         )
         for tid in sorted(layout.pos, key=_id_key)
     ]
@@ -813,7 +892,7 @@ def _frame(
 
     return {
         "id": epic_id,
-        "title": _title_of(epic_id, items),
+        "title": _title_of(epic_id, items, offslice),
         "href": "/tickets/%s" % epic_id,
         "status": _text(record.get("status")) or "unset",
         "on_board": epic_id in items,
@@ -841,6 +920,14 @@ def _frame(
             if layout.pool_box
             else None
         ),
+        # The externals column's own heading, in the caption band the layout
+        # already reserves above the first node row. It replaces a per-epic
+        # prose line that said the same thing in eight more words, one frame
+        # below where the reader needed it. Two words, inside the frame, at the
+        # top of the column it names.
+        "ext_label": (
+            {"x": PAD, "y": PAD + SPINE_HEAD_H - 12} if layout.externals else None
+        ),
         "spine": layout.spine,
         "pool": layout.pool,
         "externals": layout.externals,
@@ -850,14 +937,15 @@ def _frame(
         # table reads in the same order the frame does.
         "roster": [
             {
-                **_ref(tid, items),
+                **_ref(tid, items, offslice),
                 "points": score_of(tid, ctx).total if tid in items else 0,
-                "state": _NODE_STATE.get(band_of.get(tid, ""), "off board"),
+                "state": _NODE_STATE.get(band_of.get(tid, ""), "")
+                or _offslice_state(tid, offslice),
                 "external": tid in external_set,
                 # The roster row is the same ticket as the node above it, so it
                 # opens the same hover card and the same modal. Carrying the
                 # payload twice keeps the two affordances from disagreeing.
-                "preview": _preview(tid, ctx, items, why_of),
+                "preview": _preview(tid, ctx, items, why_of, offslice),
             }
             for tid in list(layout.spine) + list(layout.pool) + list(layout.externals)
         ],
@@ -869,31 +957,36 @@ def _tail_row(
     children: list[str],
     items: dict[str, dict],
     band_of: dict[str, str],
+    offslice: dict,
 ) -> dict:
     """One THE TAIL row — a group too small, or too off-board, for a frame.
 
-    ``note`` states *why* it is in the tail. A group that appears here without
-    saying which rule sent it looks dropped, and "never silently dropped" is
-    the whole reason the tail exists.
+    Which of the two rules sent it here is readable from the row's own
+    columns: the child count is printed, and the status resolves to the
+    parent's own — "complete" for every off-board parent on the development
+    corpus. Both used to be restated as a prose note per row, which on five
+    rows meant one sentence four times.
     """
     on_board = epic_id in items
-    if not on_board:
-        note = "parent is not on this board"
-    elif len(children) < FRAME_MIN_CHILDREN:
-        note = "one child — a frame for one node states nothing"
-    else:
-        note = "small group"
     return {
         "id": epic_id,
-        "title": _title_of(epic_id, items),
+        "title": _title_of(epic_id, items, offslice),
         "href": "/tickets/%s" % epic_id,
         "on_board": on_board,
-        "status": _text((items.get(epic_id) or {}).get("status")) or "unset",
+        # One status, wherever it had to be resolved from. It replaces the
+        # prose "why it is here" note: an off-board parent reads "complete",
+        # which both explains the row's presence and is the fact the reader
+        # actually wants, where "parent is not on this board" was a statement
+        # about the board printed four times in five rows.
+        "status": (
+            _text((items.get(epic_id) or {}).get("status")) or "unset"
+            if on_board
+            else _offslice_state(epic_id, offslice)
+        ),
         "count": len(children),
-        "note": note,
         "children": [
             {
-                **_ref(tid, items),
+                **_ref(tid, items, offslice),
                 "state": _NODE_STATE.get(band_of.get(tid, ""), "off board"),
             }
             for tid in children
@@ -970,6 +1063,7 @@ def _epic_map_model(state: object) -> dict:
         return _empty_epic_map(state)
 
     items, graph, ctx, parents = _context(snapshot)
+    offslice = _offslice_of(snapshot)
     banded = bands_mod.partition(items, ctx, item_order=snapshot.get("item_order"))
     band_of = {row.id: band.key for band in banded for row in band.rows}
     # The board's own "why it sits here" sentence, keyed by ticket, so a hover
@@ -992,10 +1086,12 @@ def _epic_map_model(state: object) -> dict:
         # design routes it to the tail with its membership stated instead of
         # drawing a frame titled after a ticket nobody can open.
         if len(children) < FRAME_MIN_CHILDREN or epic_id not in items:
-            tail.append(_tail_row(epic_id, children, items, band_of))
+            tail.append(_tail_row(epic_id, children, items, band_of, offslice))
         else:
             frames.append(
-                _frame(epic_id, children, ctx, items, band_of, layout_ctx, why_of)
+                _frame(
+                    epic_id, children, ctx, items, band_of, layout_ctx, why_of, offslice
+                )
             )
 
     # Frames read largest first: the epic holding nine children is the one an

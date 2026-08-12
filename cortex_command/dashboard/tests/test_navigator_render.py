@@ -40,6 +40,7 @@ import hashlib
 import tempfile
 import types
 import unittest
+from html import escape
 from html.parser import HTMLParser
 from pathlib import Path
 
@@ -289,6 +290,10 @@ class _Structure(HTMLParser):
         self.tags: dict[str, int] = {}
         self.th_scopes: list[str] = []
         self.svg_texts: list[str] = []
+        # Every native tooltip source. `title="…"` on any element and a
+        # `<title>` child inside an <svg> render the same grey OS tooltip,
+        # which is what competed with the hover card.
+        self.title_attrs: list[str] = []
         self._stack: list[str] = []
         self._in_svg_text = False
 
@@ -301,6 +306,8 @@ class _Structure(HTMLParser):
             self.nested_anchors.append(attributes.get("href", ""))
         if tag == "th":
             self.th_scopes.append(attributes.get("scope", ""))
+        if "title" in attributes:
+            self.title_attrs.append(attributes["title"])
         if tag == "text":
             self._in_svg_text = True
             self.svg_texts.append("")
@@ -311,6 +318,8 @@ class _Structure(HTMLParser):
         attributes = dict(attrs)
         if "id" in attributes:
             self.ids.append(attributes["id"])
+        if "title" in attributes:
+            self.title_attrs.append(attributes["title"])
         self.tags[tag] = self.tags.get(tag, 0) + 1
 
     def handle_endtag(self, tag) -> None:
@@ -343,6 +352,10 @@ class _Fixture(unittest.TestCase):
         cls.state = _state_for(cls.CORPUS, Path(cls._tmp.name))
         cls.html = _render_both(cls.state)
         cls.parsed = _parse(cls.html)
+        # Surface B alone, plus the model behind it, for the assertions that
+        # are joins between the two rather than counts over the markup.
+        cls.epics = build_epic_map(cls.state, None)
+        cls.epic_html = _render("epic_map.html", epics=cls.epics)
 
     @classmethod
     def tearDownClass(cls) -> None:
@@ -415,10 +428,65 @@ class TestListsAreTables(_Fixture):
         self.assertEqual([], too_long, "SVG <text> longer than 3 words: %s" % too_long)
 
     def test_svg_text_exists_at_all(self):
-        # The epic frames draw node ids and the enclosure label as SVG text; an
-        # empty list would mean the frames did not render and the assertion
-        # above passed on nothing.
+        # The epic frames draw the enclosure label and the externals heading as
+        # SVG text; an empty list would mean the frames did not render and the
+        # assertion above passed on nothing.
         self.assertGreater(len(self.parsed.svg_texts), 0)
+
+    def test_no_svg_title_element_anywhere(self):
+        """An absence assertion, and the point of the change that made it true.
+
+        A ``<title>`` child is a legitimate accessible name and that is why one
+        was there — but browsers also paint it as an OS tooltip, so hovering a
+        node produced the styled hover card and a grey system tooltip at once.
+        The accessible name now comes from the anchor's own text, which no
+        browser renders twice.
+        """
+        self.assertEqual(0, self.parsed.tags.get("title", 0))
+
+    def test_no_native_title_attribute_anywhere(self):
+        """The other spelling of the same defect.
+
+        ``title="…"`` on any element renders the identical OS tooltip. Nothing
+        on either surface may carry one, or the double-tooltip returns through
+        a different door.
+        """
+        self.assertEqual([], self.parsed.title_attrs)
+
+    def test_node_boxes_carry_their_ticket_title(self):
+        """Titles are IN the boxes, which is what retired the roster table.
+
+        Asserted as a join, not as prose: every title the view-model gave a
+        node has to appear in the rendered frame. The check is that the data
+        reached the markup — the words themselves are the corpus's.
+        """
+        titles = [
+            node["title"]
+            for frame in self.epics["frames"]
+            for node in frame["nodes"]
+        ]
+        self.assertTrue(titles, "the fixture must render at least one node")
+        for title in titles:
+            with self.subTest(title=title):
+                self.assertIn(escape(title), self.epic_html)
+
+    def test_node_titles_are_not_svg_text(self):
+        """…and they are still not measured.
+
+        A title drawn as ``<text>`` is a box sized to a guessed character
+        advance, which is the defect the whole no-text-metrics rule exists to
+        prevent. Every title flows as HTML inside a ``<foreignObject>`` the
+        server sized; the three-word cap above is what holds the line, and
+        this states the specific case it is holding.
+        """
+        titles = {
+            node["title"]
+            for frame in self.epics["frames"]
+            for node in frame["nodes"]
+            if len(node["title"].split()) > 3
+        }
+        self.assertTrue(titles, "the fixture must have a title worth clamping")
+        self.assertEqual(set(), titles & set(self.parsed.svg_texts))
 
 
 class TestByteStability(_Fixture):

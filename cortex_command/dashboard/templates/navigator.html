@@ -62,7 +62,7 @@
      ("ALTERNATE / S"). Two short words wrap cleanly. #}
   <span class="sec-num"><strong>§ 02</strong>next best</span>
   <h2>If not <em>that one</em> <span class="phase-tag">{% if nav.alternates | length == 1 %}rank 2{% else %}ranks 2–{{ nav.alternates | length + 1 }}{% endif %}</span></h2>
-  <p class="sec-lede">{% if nav.alternates | length == 1 %}This row states{% else %}Each row states{% endif %} the condition under which it beats the pick, derived from the differences between the two ledgers. The ledger itself is one click away; the condition is not.</p>
+  <p class="sec-lede">{% if nav.alternates | length == 1 %}This row states{% else %}Each row states{% endif %} the condition under which it beats the pick, derived from the differences between the two ledgers.</p>
   <div class="alt-grid">
     {% for entry in nav.alternates %}{{ alternate(entry) }}{% endfor %}
   </div>
@@ -72,7 +72,7 @@
 <section id="nav-board" aria-label="The board">
   <span class="sec-num"><strong>§ 03</strong>the board</span>
   <h2>The <em>board</em> <span class="phase-tag">{{ nav.slice_total }} records · {{ nav.bands | length }} bands</span></h2>
-  <p class="sec-lede">Every record on the board, in the first band whose rule it satisfies. The last band is unconditional, so an unrecognised status cannot fall off the page. Nothing here is behind a disclosure.</p>
+  <p class="sec-lede">Every record on the board, in the first band whose rule it satisfies.</p>
   {% for band in nav.bands %}{{ band_block(band) }}{% endfor %}
 </section>
 
