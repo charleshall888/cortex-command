@@ -1,6 +1,6 @@
 ---
 name: ui-lint
-description: Run ESLint and Stylelint in auto-fix-then-report mode and write results to ui-check-results/lint.json. Use when user says "/ui-lint", "lint the UI", "run UI linting", "check frontend lint", or asks to fix and report frontend code style issues.
+description: Lint the frontend — runs ESLint and Stylelint in auto-fix-then-report mode. Layer 1 of the design enforcement stack.
 inputs:
   - "target: string (optional) — path or glob to lint; defaults to src"
 outputs:

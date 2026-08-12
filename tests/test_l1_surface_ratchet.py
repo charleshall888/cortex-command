@@ -17,7 +17,7 @@ Two structural gates accompany the per-skill comparison:
 - ``test_non_cluster_budgets_within_default`` asserts every non-cluster skill's
   budget is <= 400 bytes (the cap-policy default). The routing-pressure cluster
   (``ROUTING_PRESSURE_CLUSTER``, the single source of truth imported from
-  ``test_skill_routing_disambiguation``) is the only exemption surface.
+  defined in this module) is the only exemption surface, now vacuous.
 
 Provenance correction (298): ``research`` was itself post-#191 regrowth — its
 L1 surface had grown +124B (378 -> 502) after the harness-token-efficiency-trim
@@ -37,7 +37,21 @@ from pathlib import Path
 import pytest
 
 from conftest import enumerate_canonical_skills
-from test_skill_routing_disambiguation import ROUTING_PRESSURE_CLUSTER
+
+
+# The routing-pressure cluster — skills that compete on overlapping user
+# utterances. Retained as the cap policy's exemption surface for future
+# authoring; no current skill needs it (every budget below is <=400B), so the
+# subtractive-set guard in test_non_cluster_budgets_within_default is what
+# keeps a stale name here from silently shrinking the enforced set.
+ROUTING_PRESSURE_CLUSTER = (
+    "dev",
+    "build",
+    "refine",
+    "research",
+    "discovery",
+    "critical-review",
+)
 
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -51,21 +65,21 @@ UTILITY = REPO_ROOT / "bin" / "cortex-measure-l1-surface"
 # Cap-policy lifecycle: cortex/backlog/298-l1-frontmatter-cap-policy-for-new-
 # skills-research-description-overage.md
 _BASELINES: dict[str, int] = {
-    "backlog": 319,
-    "backlog-author": 288,
-    "commit": 208,
-    "critical-review": 795,
-    "dev": 285,
-    "discovery": 932,
-    "interview": 361,
-    "build": 890,
+    "backlog": 50,
+    "backlog-author": 103,
+    "commit": 50,
+    "critical-review": 193,
+    "dev": 162,
+    "discovery": 154,
+    "interview": 118,
+    "build": 151,
     "morning-review": 320,
     "overnight": 314,
-    "pr": 237,
-    "refine": 624,
-    "requirements": 231,
-    "research": 379,
-    "total": 7177,
+    "pr": 66,
+    "refine": 149,
+    "requirements": 203,
+    "research": 157,
+    "total": 2190,
 }
 
 
@@ -129,11 +143,11 @@ def test_non_cluster_budgets_within_default() -> None:
     """Every non-cluster skill's deliberate budget is <= 400 bytes.
 
     This is the cap-policy default (298): a new non-cluster skill shipping
-    >400B fails here at add time. The routing-pressure cluster — sourced from
-    ``ROUTING_PRESSURE_CLUSTER`` (the single source of truth in
-    ``test_skill_routing_disambiguation``) — is the only exemption surface; its
-    skills carry irreducible disambiguation/path-routing tokens and are bounded
-    by their own higher budget rows. Promoting a skill into the cluster is a
+    >400B fails here at add time. The routing-pressure cluster —
+    ``ROUTING_PRESSURE_CLUSTER`` above — is the only exemption surface, and it
+    is currently vacuous: every cluster skill sits far below the 400B default,
+    so the "irreducible disambiguation tokens" premise no longer holds. It is
+    kept as forward-looking authoring headroom. Promoting a skill into it is a
     reviewed allowlist edit, not a self-granted per-skill pass (see
     cortex/requirements/project.md, "SKILL.md L1 surface ratchet").
     """

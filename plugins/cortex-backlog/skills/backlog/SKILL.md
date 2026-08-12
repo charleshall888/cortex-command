@@ -1,6 +1,6 @@
 ---
 name: backlog
-description: Manage project backlog items as individual markdown files with YAML frontmatter. Use when user says "/cortex-backlog:backlog", "backlog add", "backlog list", "backlog pick", "add to backlog", "show backlog", "archive backlog item", "what's ready", "pick a backlog item", or asks to create/view/manage/select items.
+description: Add, list, pick, or archive project backlog items.
 argument-hint: "<subcommand> [args]"
 ---
 

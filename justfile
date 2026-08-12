@@ -545,9 +545,9 @@ test-init:
     [ -f .venv/bin/pytest ] || { echo "venv not found — run 'just python-setup' first"; exit 1; }
     .venv/bin/pytest cortex_command/init/tests/ -q
 
-# Run skill-design test infrastructure (descriptions, handoffs, size budget, lifecycle refs)
+# Run skill-design test infrastructure (L1 surface, handoffs, size budget, lifecycle refs)
 test-skill-design:
-    .venv/bin/pytest tests/test_skill_descriptions.py tests/test_skill_handoff.py tests/test_skill_size_budget.py tests/test_reference_size_ratchet.py tests/test_lifecycle_references_resolve.py -q
+    .venv/bin/pytest tests/test_l1_surface_ratchet.py tests/test_skill_handoff.py tests/test_skill_size_budget.py tests/test_reference_size_ratchet.py tests/test_lifecycle_references_resolve.py -q
 
 # Run all pipeline and overnight test suites and print aggregate pass/fail summary
 test:

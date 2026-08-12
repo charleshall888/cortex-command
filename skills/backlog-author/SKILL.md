@@ -1,6 +1,6 @@
 ---
 name: backlog-author
-description: Compose a structured backlog ticket body from a context block, using the Why/Role/Integration/Edges/Touch-points template. Use when user says "compose a ticket", "write a ticket body", or "author a backlog item".
+description: Compose a ticket body from a context block, using the Why/Role/Integration/Edges/Touch-points template.
 argument-hint: "compose <context-block>"
 ---
 

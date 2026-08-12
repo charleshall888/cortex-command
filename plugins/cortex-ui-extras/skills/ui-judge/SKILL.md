@@ -1,6 +1,6 @@
 ---
 name: ui-judge
-description: Captures a screenshot of a URL via Playwright, evaluates it against a five-criterion visual quality rubric using Claude Vision (two-call UICrit pattern), and writes a scored JSON verdict to ui-check-results/judge.json. Layer 3 of the design enforcement stack — human-triggered advisory scorecard, never a CI gate. Always exits 0. Use when user says "/ui-judge", "judge the UI", "visual quality score", "score the UI", "run the visual judge", "design scorecard", or wants a scored visual quality report of the current UI.
+description: Score visual quality — screenshots a URL and rates it against a five-criterion rubric using Claude Vision. Layer 3 of the design enforcement stack; advisory, never a CI gate.
 inputs:
   - "url: string (optional) — URL to evaluate; defaults to http://localhost:3000"
   - "--viewports: string (optional) — comma-separated viewport widths in px; defaults to 1440; full run: 375,768,1440"

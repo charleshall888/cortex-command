@@ -1,7 +1,6 @@
 ---
 name: build
-description: Build a refined feature through plan, implement, review, and complete. Use when user says "/cortex-core:build", "build this", "implement this ticket", "plan and build", or names a ticket that already has a spec. Requires research.md and spec.md — run /cortex-core:refine first if either is missing.
-when_to_use: "Use once a ticket is refined (spec.md exists) and you want it built. Different from /cortex-core:refine — refine produces research and spec; build takes them through plan, implement, review, and complete. /cortex-core:dev routes to whichever the ticket's status calls for."
+description: Take a refined ticket from spec through plan, implement, review, and complete. Needs research.md and spec.md — run refine first if either is missing.
 argument-hint: "<feature> [phase]"
 ---
 

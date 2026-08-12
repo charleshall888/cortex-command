@@ -1,7 +1,6 @@
 ---
 name: refine
-description: Prepare a backlog item for execution by running it through Clarify → Research → Spec. Use when user says "/cortex-core:refine", "refine backlog item", "spec this out", or "prepare for overnight". Produces cortex/lifecycle/{slug}/research.md and spec.md, then sets status:refined on the backlog item.
-when_to_use: "Use to take a ticket from idea to approved spec. Different from /cortex-core:build — refine produces research and spec and stops; build takes them through plan, implement, review, and complete. /cortex-core:dev routes to whichever the ticket's status calls for."
+description: Take a backlog item from idea to approved spec via Clarify → Research → Spec. Stops at spec; build takes it from there. Also preps for overnight.
 argument-hint: "<topic>"
 ---
 

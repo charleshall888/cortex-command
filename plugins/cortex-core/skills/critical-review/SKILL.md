@@ -1,7 +1,6 @@
 ---
 name: critical-review
-description: Adversarial review — dispatches 1–2 reviewer agents on distinct challenge angles, then synthesizes their findings. Use when user says "critical review", "pressure test", "adversarial review", or "challenge from multiple angles". Auto-triggers in the lifecycle for Complex + medium/high/critical features before spec approval.
-when_to_use: "Use when you want to stress-test a plan, spec, or research artifact before committing (\"poke holes in the plan\"). Different from /devils-advocate — devils-advocate runs inline in the current agent context for a lightweight solo deliberation; critical-review dispatches 1–2 sub-agents and synthesizes findings."
+description: Adversarial review — dispatches 1–2 reviewer agents on distinct angles, then synthesizes. Pressure-tests a plan, spec, or research artifact. Heavier than devils-advocate, which runs inline.
 argument-hint: "[<artifact-path>]"
 ---
 

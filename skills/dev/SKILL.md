@@ -1,6 +1,6 @@
 ---
 name: dev
-description: Development entry point that analyzes requests and routes to the appropriate workflow. Use when user says "/cortex-core:dev", "what should I work on", "start working on", "dev hub", "where do I start", "next task", "what's next", or describes a feature without naming a specific skill.
+description: Development entry point — routes a request to the right workflow. Use for "what should I work on", "what's next", or a feature described without naming a skill.
 ---
 
 # Dev

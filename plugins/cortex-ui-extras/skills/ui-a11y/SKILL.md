@@ -1,6 +1,6 @@
 ---
 name: ui-a11y
-description: Run axe-core via Playwright against the project's running dev server, targeting WCAG 2.1 AA. Produces ui-check-results/a11y.json (compact violation JSON). Layer 2 of the design enforcement stack — runtime a11y verification that catches rendered issues static JSX analysis cannot (color contrast on real renders, ARIA in context, dynamic state). Use when user says "/ui-a11y", "check accessibility", "run a11y check", "WCAG audit", or when /ui-check invokes Layer 2.
+description: Check accessibility — runs axe-core via Playwright against the running dev server for WCAG 2.1 AA violations. Layer 2 of the design enforcement stack.
 inputs:
   - "url: string (optional) — path to append to the base server URL (e.g. /dashboard); defaults to root"
 outputs:

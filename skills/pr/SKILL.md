@@ -1,6 +1,6 @@
 ---
 name: pr
-description: Create GitHub pull requests with well-crafted titles and descriptions. Use when user says "pr", "/cortex-core:pr", "create a pr", "open a pull request", "submit a pr", "make a pull request", or asks to get their changes ready for review.
+description: Create a GitHub pull request with a crafted title and description.
 ---
 
 # Pull Request
