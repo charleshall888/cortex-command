@@ -43,6 +43,32 @@ from cortex_command.backlog.generate_index import _parse_frontmatter, _parse_inl
 from cortex_command.common import normalize_status, resolve_lifecycle_phase, slugify
 
 
+def read_text_lossy(path: Path) -> str | None:
+    """Read *path* as text, substituting U+FFFD for undecodable bytes.
+
+    Every text read in this module used ``read_text(encoding="utf-8")`` under
+    an ``except OSError``, and ``UnicodeDecodeError`` is a ``ValueError`` — so
+    a single file that is not valid UTF-8 anywhere under ``cortex/backlog/``
+    or ``cortex/lifecycle/`` escaped every guard. Measured consequences, on a
+    root with one such file: ``_poll_slow`` raised on its first sweep and kept
+    raising, leaving the whole backlog navigator reading "awaiting first poll"
+    for the life of the process, and ``/tickets/{id}`` returned 500.
+
+    Lossy rather than skipping, because this is a monitoring surface and the
+    two outcomes are not symmetric: a record dropped from the board is a
+    record an operator cannot see is missing, while a replacement character in
+    one title is visibly wrong in exactly the place that is wrong. A file that
+    is genuinely binary still fails frontmatter parsing downstream and is
+    skipped there, which is where "this is not a ticket" belongs.
+
+    Returns None only when the file cannot be read at all.
+    """
+    try:
+        return path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return None
+
+
 def parse_overnight_state(path: Path) -> dict | None:
     """Read and return the overnight session state as a plain dict.
 
@@ -55,7 +81,7 @@ def parse_overnight_state(path: Path) -> dict | None:
     """
     try:
         return json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
         return None
 
 
@@ -74,7 +100,7 @@ def parse_pipeline_state(path: Path) -> dict | None:
     """
     try:
         return json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
         return None
 
 
@@ -821,7 +847,7 @@ def parse_last_session(lifecycle_dir: Path) -> dict | None:
     for path in candidates:
         try:
             data = json.loads(path.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError):
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError):
             continue
 
         updated_str = data.get("updated_at", "")
@@ -857,6 +883,34 @@ def parse_last_session(lifecycle_dir: Path) -> dict | None:
     }
 
 
+def _format_session_span(start_ts: str | None, end_ts: str | None) -> str:
+    """Return ``'Xh Ym'`` / ``'Nm'`` between two ISO-8601 stamps, or ``'—'``.
+
+    Session-scale, deliberately: a run measured in hours reads as ``'6h 51m'``
+    here and as ``'411m 3s'`` under ``_format_duration_secs``, which is the
+    minute-scale formatter the feature cards use. Both session surfaces —
+    the history list and the per-session detail page — call this one function
+    so a session cannot report two different lengths of itself.
+
+    Accepts a trailing ``Z`` (``fromisoformat`` did not until 3.11) and
+    assumes UTC for a naive stamp, matching every other timestamp reader here.
+    """
+    if not start_ts or not end_ts:
+        return "—"
+    try:
+        start_dt = datetime.fromisoformat(start_ts.replace("Z", "+00:00"))
+        end_dt = datetime.fromisoformat(end_ts.replace("Z", "+00:00"))
+        if start_dt.tzinfo is None:
+            start_dt = start_dt.replace(tzinfo=timezone.utc)
+        if end_dt.tzinfo is None:
+            end_dt = end_dt.replace(tzinfo=timezone.utc)
+        total_minutes = int((end_dt - start_dt).total_seconds() // 60)
+        hours, minutes = divmod(total_minutes, 60)
+        return f"{hours}h {minutes}m" if hours else f"{minutes}m"
+    except (ValueError, TypeError):
+        return "—"
+
+
 def parse_session_list(lifecycle_dir: Path) -> list[dict]:
     """Return a summary row for every completed overnight session found on disk.
 
@@ -876,6 +930,11 @@ def parse_session_list(lifecycle_dir: Path) -> list[dict]:
         - ``start_ts`` (str | None) -- ISO-8601 value of ``started_at``
         - ``end_ts`` (str | None) -- ISO-8601 value of ``updated_at``
         - ``duration_secs`` (int | None) -- whole seconds between start and end
+        - ``duration_str`` (str) -- that span as ``'Xh Ym'`` / ``'Nm'``, or
+          ``'—'``. Rendered rather than derived in the template because the
+          history list read a ``duration_str`` these rows never carried, and
+          a Jinja undefined took the ``default('—')`` arm on every row of
+          every session — a column that could not display a value.
         - ``features_merged`` (int)
         - ``features_paused`` (int)
         - ``features_failed`` (int)
@@ -891,7 +950,7 @@ def parse_session_list(lifecycle_dir: Path) -> list[dict]:
     for path in candidates:
         try:
             data = json.loads(path.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError):
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError):
             continue
 
         if not isinstance(data, dict):
@@ -921,6 +980,7 @@ def parse_session_list(lifecycle_dir: Path) -> list[dict]:
             "start_ts": start_ts,
             "end_ts": end_ts,
             "duration_secs": duration_secs,
+            "duration_str": _format_session_span(start_ts, end_ts),
             "features_merged": statuses.count("merged"),
             "features_paused": statuses.count("paused"),
             "features_failed": statuses.count("failed"),
@@ -988,21 +1048,7 @@ def parse_session_detail(session_id: str, lifecycle_dir: Path) -> dict | None:
     start_ts: str | None = overnight.get("started_at") or None
     end_ts: str | None = overnight.get("updated_at") or None
 
-    # Compute duration_str (same logic as _format_duration in app.py)
-    duration_str = "—"
-    if start_ts and end_ts:
-        try:
-            start_dt_dur = datetime.fromisoformat(start_ts.replace("Z", "+00:00"))
-            end_dt_dur = datetime.fromisoformat(end_ts.replace("Z", "+00:00"))
-            if start_dt_dur.tzinfo is None:
-                start_dt_dur = start_dt_dur.replace(tzinfo=timezone.utc)
-            if end_dt_dur.tzinfo is None:
-                end_dt_dur = end_dt_dur.replace(tzinfo=timezone.utc)
-            total_minutes = int((end_dt_dur - start_dt_dur).total_seconds() // 60)
-            hours, minutes = divmod(total_minutes, 60)
-            duration_str = f"{hours}h {minutes}m" if hours else f"{minutes}m"
-        except (ValueError, TypeError):
-            duration_str = "—"
+    duration_str = _format_session_span(start_ts, end_ts)
 
     # Build feature_states from per-feature phase transitions.
     # Per-feature artifacts may live under a different project's lifecycle dir
@@ -1023,16 +1069,22 @@ def parse_session_detail(session_id: str, lifecycle_dir: Path) -> dict | None:
         for slug in features_dict:
             feature_states[slug] = parse_feature_events(slug, project_lifecycle_dir)
 
-    # Render morning-report.md as HTML
+    # Render morning-report.md as HTML, through the same allowlist every other
+    # markdown surface here goes through. Python-Markdown passes raw HTML in
+    # the source straight to the output, and this value reaches the template
+    # under `| safe` — so an unsanitized report was the one `| safe` site on
+    # the dashboard that a `<script>` could reach. The report is agent-written
+    # and quotes material the agent read (PR bodies, issue text, code), which
+    # is untrusted-input-shaped, and `DASHBOARD_HOST` makes a non-loopback bind
+    # a documented option. The asymmetry with `load_ticket_body` was the defect
+    # whether or not it was reachable: same renderer, same `| safe`, one
+    # sanitized and one not.
     morning_report_html: str | None = None
-    report_path = session_dir / "morning-report.md"
-    try:
-        report_text = report_path.read_text(encoding="utf-8")
-        morning_report_html = markdown.markdown(
-            report_text, extensions=["fenced_code", "tables"]
+    report_text = read_text_lossy(session_dir / "morning-report.md")
+    if report_text is not None:
+        morning_report_html = _sanitize_ticket_html(
+            markdown.markdown(report_text, extensions=["fenced_code", "tables"])
         )
-    except OSError:
-        morning_report_html = None
 
     # Build swim lane data
     swim_data = build_swim_lane_data(overnight, events, feature_states, lifecycle_dir, end_dt=end_dt)
@@ -1109,9 +1161,8 @@ def parse_backlog_titles(backlog_dir: Path) -> BacklogTitles:
         return BacklogTitles(titles, titles_by_id)
 
     for filepath in files:
-        try:
-            text = filepath.read_text(encoding="utf-8")
-        except OSError:
+        text = read_text_lossy(filepath)
+        if text is None:
             continue
 
         lines = text.splitlines()
@@ -1386,9 +1437,8 @@ def load_ticket_body(item_id: str, backlog_dir: Path) -> dict | None:
 
     normalized = str(int(item_id))
 
-    try:
-        text = resolved.read_text(encoding="utf-8")
-    except OSError:
+    text = read_text_lossy(resolved)
+    if text is None:
         return None
 
     title = None
@@ -1521,9 +1571,8 @@ def _epic_children_corpus(backlog_dir: Path) -> list[dict]:
         return corpus
 
     for filepath in files:
-        try:
-            text = filepath.read_text(encoding="utf-8")
-        except OSError:
+        text = read_text_lossy(filepath)
+        if text is None:
             continue
         fm = _parse_frontmatter(text)
         if not fm:
@@ -1591,9 +1640,8 @@ def load_ticket_page(item_id: str, backlog_dir: Path, lifecycle_dir: Path) -> di
     if resolved is None:
         return None
 
-    try:
-        text = resolved.read_text(encoding="utf-8")
-    except OSError:
+    text = read_text_lossy(resolved)
+    if text is None:
         return None
 
     body = load_ticket_body(item_id, backlog_dir)
@@ -1671,9 +1719,8 @@ def load_ticket_artifact(
     if resolved is None:
         return None
 
-    try:
-        text = resolved.read_text(encoding="utf-8")
-    except OSError:
+    text = read_text_lossy(resolved)
+    if text is None:
         return None
 
     fm = _parse_frontmatter(text)
@@ -1682,9 +1729,8 @@ def load_ticket_artifact(
         return None
 
     artifact_path = artifact_dir / f"{kind}.md"
-    try:
-        raw = artifact_path.read_text(encoding="utf-8")
-    except OSError:
+    raw = read_text_lossy(artifact_path)
+    if raw is None:
         return None
 
     raw = raw.strip()
@@ -1754,7 +1800,7 @@ def parse_metrics(lifecycle_dir: Path) -> dict | None:
     path = lifecycle_dir / "metrics.json"
     try:
         return json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
         return None
 
 
@@ -1984,7 +2030,7 @@ def parse_exit_reports(feature_slug: str, lifecycle_dir: Path) -> list[dict]:
         ):
             try:
                 data = json.loads(path.read_text(encoding="utf-8"))
-            except (OSError, json.JSONDecodeError):
+            except (OSError, UnicodeDecodeError, json.JSONDecodeError):
                 continue
             if isinstance(data, dict):
                 data = {**data, "_task_number": path.stem}
@@ -2009,7 +2055,7 @@ def parse_feature_pr_artifact(lifecycle_dir: Path, feature_slug: str) -> dict | 
     path = lifecycle_dir / feature_slug / "pr.json"
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
         return None
     if not isinstance(data, dict):
         return None
@@ -2036,9 +2082,8 @@ def parse_learnings_progress(
     "task": str, "error": str}, ...]}`` or None when absent.
     """
     path = lifecycle_dir / feature_slug / "learnings" / "progress.txt"
-    try:
-        text = path.read_text(encoding="utf-8")
-    except OSError:
+    text = read_text_lossy(path)
+    if text is None:
         return None
     if not text.strip():
         return None

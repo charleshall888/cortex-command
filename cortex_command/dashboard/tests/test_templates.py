@@ -585,6 +585,41 @@ class TestTicketPageBadgeStrip(unittest.TestCase):
         self.assertNotIn("areas ·", html)
 
 
+class TestTicketPageSectionRegister(unittest.TestCase):
+    """The § register counts the sections that rendered.
+
+    Children and artifacts are both conditional, and a non-epic ticket has no
+    children section at all — the ordinary case. Against fixed ordinals that
+    page printed § 01 · § 02 · § 04, and a hole in a numbered register reads
+    as a section that failed to draw.
+    """
+
+    @staticmethod
+    def _ordinals(html: str) -> list[int]:
+        return [int(n) for n in re.findall(r"§\s*0*(\d+)</strong>", html)]
+
+    def _render(self, **overrides) -> str:
+        return _render_partial(
+            "ticket_page.html", item_id="42",
+            ticket=_ticket_page_fixture(**overrides), backend="cortex-backlog",
+        )
+
+    def test_a_non_epic_ticket_with_artifacts_has_no_gap(self):
+        html = self._render(artifacts=["spec"], children=None)
+        self.assertEqual([1, 2, 3], self._ordinals(html))
+
+    def test_an_epic_with_artifacts_numbers_all_four(self):
+        # The complement: a counter must not satisfy the above by collapsing.
+        html = self._render(
+            type="epic", artifacts=["spec", "plan"],
+            children=[{"id": 5, "spec": None, "status": "open", "title": "Child"}],
+        )
+        self.assertEqual([1, 2, 3, 4], self._ordinals(html))
+
+    def test_a_bare_ticket_numbers_the_two_it_draws(self):
+        self.assertEqual([1, 2], self._ordinals(self._render()))
+
+
 class TestTicketPageArtifactPanels(unittest.TestCase):
     """One lazily-fetched <details> panel per present artifact kind (R9, R10)."""
 
@@ -724,6 +759,98 @@ class TestTicketArtifactBackendGate(unittest.TestCase):
         artifact = {"kind": "spec", "html": "<p>Spec prose.</p>", "truncated": True}
         html = _render_partial("ticket_artifact.html", artifact=artifact)
         self.assertIn("truncated", html)
+
+
+class TestStylesheetReachesTheMarkup(unittest.TestCase):
+    """No rule in base.html is scoped to a class no template renders.
+
+    Two defects share this shape and neither is visible from any render
+    assertion, because both fail silently — the wrong-scoped rule simply never
+    matches, and the page looks *plausible* without it:
+
+      - Rules for a panel that has since been retired sit in the sheet
+        forever. ``DESIGN.md`` tells the next author to reuse an existing
+        pattern before writing new CSS, so a dead ``.ticket-row`` family is
+        not merely weight; it is a trap that reads as precedent.
+      - A live class styled only under a dead ancestor. Every
+        ``.ticket-prose`` table rule was written as ``.ticket-desc
+        .ticket-prose table``; ``.ticket-desc`` belonged to the retired board,
+        so every markdown table on the ticket page and in the four artifact
+        panels rendered at the browser default against the dark ground.
+
+    The check is on the LEFTMOST class of each selector branch — the one that
+    has to exist in the DOM for anything to the right of it to matter.
+    """
+
+    # Classes composed at render time as `prefix{{ value }}`, which no literal
+    # scan of the templates can see. Every entry corresponds to a real
+    # `class="…{{ … }}"` site; kept as an explicit list so a newly-dead family
+    # cannot hide behind a broad pattern.
+    #
+    #   grep -rno 'class="[^"]*{{[^"]*"' cortex_command/dashboard/templates/
+    #
+    # is what regenerates it when a new interpolated class ships.
+    DYNAMIC_PREFIXES = (
+        "alert-badge-", "badge-", "edge--", "egroup--", "ekid--",
+        "feature-row--", "lane-status-", "nav-list__row--", "node--",
+    )
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        base = Path(__file__).resolve().parents[1] / "templates" / "base.html"
+        text = base.read_text(encoding="utf-8")
+        cls.sheet = text[text.find("<style"):text.find("</style>")]
+        cls.rendered = set()
+        for path in (base.parent).rglob("*.html"):
+            body = path.read_text(encoding="utf-8")
+            if path.name == "base.html":
+                # base.html's own stylesheet is the thing under test; only the
+                # markup and script below <body> count as usage.
+                body = body[text.find("<body"):]
+            for attr in re.findall(r'class="([^"]*)"', body):
+                cls.rendered.update(
+                    token for token in re.split(r"[\s{}%|'\"()]+", attr) if token
+                )
+            # Class names assembled in the delegated handlers in base.html.
+            cls.rendered.update(re.findall(r"classList\.\w+\(['\"]([\w-]+)", body))
+        # Class names the Python side hands to a template as a value rather
+        # than writing into markup — ``app._BADGE_CLASS_MAP`` is the live case.
+        for module in (base.parents[1]).rglob("*.py"):
+            cls.rendered.update(
+                re.findall(r"""["']([a-z][\w-]*-[\w-]+)["']""", module.read_text(encoding="utf-8"))
+            )
+
+    def _leftmost_classes(self) -> list[tuple[str, str]]:
+        """(selector, leftmost class) for every rule in the sheet."""
+        out = []
+        for match in re.finditer(r"(?m)^\s*([^\n{}]*?)\s*\{", self.sheet):
+            selector = match.group(1).strip()
+            if not selector or selector.startswith("@") or selector.startswith("/*"):
+                continue
+            for branch in selector.split(","):
+                first = re.search(r"\.([A-Za-z][\w-]*)", branch)
+                if first:
+                    out.append((selector, first.group(1)))
+        return out
+
+    def test_the_scan_found_the_stylesheet(self):
+        # Guard: every assertion below passes vacuously against an empty sheet.
+        self.assertGreater(len(self._leftmost_classes()), 200)
+        self.assertIn("ticket-prose", {c for _, c in self._leftmost_classes()})
+
+    def test_every_rule_is_reachable_from_some_template(self):
+        orphans = sorted({
+            "%s  (.%s)" % (selector, cls)
+            for selector, cls in self._leftmost_classes()
+            if cls not in self.rendered
+            and not cls.startswith(self.DYNAMIC_PREFIXES)
+        })
+        self.assertEqual(
+            [], orphans,
+            "stylesheet rules scoped to classes no template renders — delete "
+            "them, or re-scope them onto the class the markup carries:\n  "
+            + "\n  ".join(orphans),
+        )
 
 
 if __name__ == "__main__":

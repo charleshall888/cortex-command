@@ -125,6 +125,59 @@ class DashboardState:
     last_updated: str = ""
     _active_session_id: str = ""
 
+    def reset_for_new_session(self) -> None:
+        """Drop the running totals when the active session changes.
+
+        The dashboard process is meant to run for weeks, so it observes many
+        sessions. Anything it sums incrementally has to be zeroed here or it
+        reports one session's numbers under the next session's heading — the
+        § 01 "session cost" KPI an operator reads to decide whether to let a
+        run continue was showing the sum of every session this process had
+        ever watched.
+
+        WHICH OFFSETS RESET AND WHICH DO NOT is the whole subtlety here, and
+        it follows from where each log lives:
+
+        - ``overnight-events.log`` is written INSIDE the session directory. A
+          new session is a new file that starts at byte 0, so the offset must
+          reset or the first poll seeks past the start of a shorter file and
+          the activity stream stays empty for the rest of the night.
+
+        - ``agent-activity.jsonl`` lives under the FEATURE's lifecycle
+          directory and is appended to (``_append_event_atomic``), never
+          recreated. Its offset must be KEPT: it is precisely the mark
+          separating rows that belong to previous sessions from rows this one
+          has yet to write. Zeroing it re-reads last night's rows and lands on
+          the same inflated total the reset exists to prevent — which is what
+          the end-to-end test in ``test_poller`` pins, because reasoning about
+          it in either direction is easy to get backwards.
+
+        So: totals to zero, per-session offsets to zero, per-feature offsets
+        left where they are.
+
+        The alert state is session-scoped for the same reason and had the same
+        leak. ``circuit_breaker_active`` is only ever set True — nothing in
+        ``alerts.py`` clears it — so one halted dispatch pinned the banner and
+        the § 01 issue count on for the life of the process, across every
+        later session, while ``circuit_breaker_notified`` suppressed the log
+        line for a genuinely new one. The stated contract is "fires once per
+        SESSION"; without this it fired once per process. ``alerts`` is keyed
+        ``(slug, condition)`` and only ever cleared for slugs present in the
+        current session's feature list, so an alert for a feature that does
+        not run again was never reachable by the code that would clear it.
+
+        Deliberately untouched: ``feature_states``, ``slow_flags`` and the
+        other per-feature maps are recomputed wholesale from disk on every
+        poll rather than accumulated, so they carry nothing forward.
+        """
+        self.overnight_events = []
+        self.overnight_events_offset = 0
+        self.feature_cost_totals = {}
+        self.session_cost_total = None
+        self.alerts = {}
+        self.circuit_breaker_active = False
+        self.circuit_breaker_notified = False
+
 
 def _resolve_session_path(root: Path) -> tuple[Path, Path]:
     """Return (overnight_state_path, events_log_path) for the active session.
@@ -166,14 +219,32 @@ async def _poll_state_files(state: DashboardState, root: Path) -> None:
         try:
             overnight_path, _events_path = _resolve_session_path(root)
 
-            # Detect session change and reset events offset if needed
-            session_id = str(overnight_path.parent)
-            if session_id != state._active_session_id:
-                state._active_session_id = session_id
-                state.overnight_events_offset = 0
-                state.overnight_events = []
-
             overnight = parse_overnight_state(overnight_path)
+
+            # Detect a session change and drop everything scoped to the old
+            # one. Keyed on the session's own identity, NOT on the path it was
+            # read through: the runner repoints `sessions/latest-overnight` at
+            # each new session, and that is the path this poller falls back to
+            # whenever the active-session pointer is not `executing` — which
+            # includes every moment after a run finishes. `str(parent)` was
+            # therefore the same string on every night the process observed,
+            # the branch never fired a second time, and the reset it guards
+            # had never run in the pointer case at all.
+            #
+            # `resolve()` is the fallback rather than the primary because a
+            # session that rewrites its state file in place keeps one
+            # directory while genuinely being a new session; the id inside the
+            # file is what changes.
+            session_key = (overnight or {}).get("session_id") or ""
+            if not session_key:
+                try:
+                    session_key = str(overnight_path.resolve().parent)
+                except OSError:
+                    session_key = str(overnight_path.parent)
+            if session_key != state._active_session_id:
+                state._active_session_id = session_key
+                state.reset_for_new_session()
+
             if overnight is not None:
                 state.overnight = overnight
 

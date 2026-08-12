@@ -97,7 +97,7 @@ The observability area covers five subsystems that give the developer visibility
 
 ## Non-Functional Requirements
 
-- **Latency**: Statusline < 500ms per invocation; notification dispatch fire-and-forget with 5s curl timeout. Dashboard total refresh ≤ 7s for live-session panels; panels reading the slow tier (Metrics Baseline, Backlog, Triage Board) refresh at 30s for a ceiling of ~32s. The slow tier is deliberate: those panels read a corpus that changes on human timescales, and polling it at the live cadence buys nothing. Cadence per panel is owned by `docs/dashboard.md`.
+- **Latency**: Statusline < 500ms per invocation; notification dispatch fire-and-forget with 5s curl timeout. Dashboard total refresh ≤ 7s for live-session panels; panels reading the slow tier (Metrics Baseline and the backlog navigator) refresh at 30s for a ceiling of ~32s. The slow tier is deliberate: those panels read a corpus that changes on human timescales, and polling it at the live cadence buys nothing. Cadence per panel is owned by `docs/dashboard.md`.
 - **Availability**: Dashboard process crash does not affect Claude session; statusline failure is non-blocking (no crash, no output is acceptable)
 - **No writes**: All three subsystems are read-only with respect to session state files
 - **Resource usage**: One FastAPI process + 4 asyncio polling tasks; no database; in-memory cache only

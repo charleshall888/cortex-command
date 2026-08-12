@@ -1,4 +1,10 @@
-<span class="sec-num"><strong>§ 06</strong>timing</span>
+{# The register mark is the INCLUDER's to set, because this partial renders in
+   two registers. It is § 06 on the overnight page and § 02 on a session
+   retrospective; hardcoding the overnight number made the detail page read
+   § 01 · § 06 · § 02 — out of order, and citing a section number from a
+   different view. The default keeps the overnight page's own include (and the
+   /partials/swim-lane poll, which supplies no context) unchanged. #}
+<span class="sec-num"><strong>§ {{ swim_lane_sec_num | default('06', true) }}</strong>timing</span>
 <h2>Timeline <em>diagram</em> <span class="phase-tag">{% if summary_mode %}summary · ticks hidden{% else %}scrub · per-feature{% endif %}</span></h2>
 {% if lanes %}
 <div class="overflow-x-auto" aria-label="Feature timeline">

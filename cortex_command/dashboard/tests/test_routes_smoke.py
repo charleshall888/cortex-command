@@ -32,6 +32,8 @@ PID write, leaving no clean way to isolate it without monkeypatching internals.)
 
 from __future__ import annotations
 
+import json
+
 import pytest
 from starlette.testclient import TestClient
 
@@ -149,3 +151,53 @@ def test_missing_ticket_returns_404(client):
     """``GET /tickets/{unseeded-numeric-id}`` returns 404, not 500."""
     response = client.get("/tickets/999999")
     assert response.status_code == 404
+
+
+def test_a_non_utf8_ticket_file_does_not_500(fixture_root):
+    """A stray byte in one item is a legibility problem, not a 500.
+
+    Every text read in ``data.py`` sat under ``except OSError``, and
+    ``UnicodeDecodeError`` is a ``ValueError`` — so one file under
+    ``cortex/backlog/`` that is not valid UTF-8 escaped the guard and
+    ``/tickets/{id}`` returned 500 for it. Asserted at the route level
+    because that is where the failure was visible; the corpus-scan half of
+    the same defect is pinned in ``tests/test_backlog_corpus_encoding.py``.
+    """
+    (fixture_root / "cortex" / "backlog" / "7-latin1.md").write_bytes(
+        "---\nid: 7\ntitle: \"caf\N{PLUS-MINUS SIGN}\"\nstatus: open\n"
+        "priority: medium\ntype: feature\n---\n\nBody.\n".encode("latin-1")
+    )
+    client = TestClient(app)
+
+    assert client.get("/tickets/7").status_code == 200
+    assert client.get("/partials/ticket/7").status_code == 200
+    # The replacement character reached the page, which is the point: the
+    # item renders, visibly wrong in exactly the byte that is wrong.
+    assert "\N{REPLACEMENT CHARACTER}" in client.get("/tickets/7").text
+
+
+def test_history_row_shows_the_session_duration(fixture_root):
+    """``GET /sessions`` renders a real duration, not the em-dash placeholder.
+
+    Regression, and the reason this assertion lives at the route level rather
+    than beside ``parse_session_list``: the data layer was never wrong. It
+    emitted ``duration_secs`` and the template read ``duration_str | default('—')``,
+    so a Jinja undefined took the default arm for every row of every session
+    and the Duration column could not display a value on any corpus. A
+    data-layer test passes against that bug; only a render assertion fails.
+    """
+    session_dir = fixture_root / "cortex" / "lifecycle" / "sessions" / "overnight-2026-01-02-2200"
+    session_dir.mkdir(parents=True)
+    (session_dir / "overnight-state.json").write_text(
+        json.dumps({
+            "session_id": "overnight-2026-01-02-2200",
+            "started_at": "2026-01-02T22:00:00Z",
+            "updated_at": "2026-01-03T04:51:00Z",
+            "features": {"feat-a": {"status": "merged"}},
+        }),
+        encoding="utf-8",
+    )
+
+    body = TestClient(app).get("/sessions").text
+
+    assert "6h 51m" in body

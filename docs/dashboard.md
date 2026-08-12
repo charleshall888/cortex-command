@@ -101,7 +101,7 @@ Both regimes matter, and neither substitutes for the other:
 
 ## What It Shows
 
-The dashboard is divided into three peer views, reachable from the masthead nav: **Overnight** (`/`), **Backlog** (`/backlog`), and **History** (`/sessions`). Section numbering (`§ 01`, `§ 02`, …) restarts in each view, because the register is per-view rather than per-app.
+The dashboard is divided into three peer views, reachable from the masthead nav: **Overnight** (`/`), **Backlog** (`/backlog`), and **History** (`/sessions`). Section numbering (`§ 01`, `§ 02`, …) restarts in each view, because the register is per-view rather than per-app, and counts the sections a given corpus actually draws. On the two views with suppressible sections — the navigator and the ticket page — the ordinals are assigned at render, so a repo with no epics reads `§ 01 · § 02 · § 03` rather than skipping the number the epic section would have taken. A gap in a numbered register reads as a section that failed to draw.
 
 The split is what the two groups of panels are *for*. Overnight answers "what is the runner doing right now" and refreshes every 3–5 s; Backlog answers "what is queued, what is ready, and what is blocked on what" — a question that outlives any one session and that an operator asks while nothing is running at all — and refreshes every 30 s. The backlog panels previously sat at the bottom of the overnight page as § 10 and § 11 of eleven, which read as an overnight subsection.
 
@@ -164,41 +164,25 @@ there is no pick, no alternate, no swap condition, no counterfactual and no
 ledger. Ranking by points and drawing the dependency structure is the whole job;
 choosing is `/cortex-core:dev`'s.
 
+**Epics lead the page.** The order is Epics, Ready, Blocked, Not competing.
+Structure before list: the groups say what the board is made of, and a reader
+who scrolls past thirty loose rows to reach them has already formed the wrong
+picture of the board. On a corpus with no epic the section does not exist and
+Ready leads, which is the same rule rather than a special case — three of the
+four sections are conditional and the register numbers what rendered.
+
 **One record, one appearance.** A ticket whose `parent` resolves to a real
 ticket is drawn inside that epic's map and nowhere else. An epic container is a
-section heading and never a row. So the lists in § 01 and § 03 are *loose*
-records only, and § 02 is where everything else lives. The rule is applied in
-exactly one place (`view._partition`); a second site is how the same ticket comes
-to read one thing in a list and another in a frame.
+section heading and never a row. So the Ready and Blocked lists are *loose*
+records only, and the Epics section is where everything else lives. The rule is
+applied in exactly one place (`view._partition`); a second site is how the same
+ticket comes to read one thing in a list and another in a frame.
 
 A parent that does **not** resolve to a real ticket is treated as no parent, so
 a typo in a `parent` field leaves its ticket loose and visible rather than
 moving it into a phantom epic named after the typo and off the board entirely.
 
-### 1. Ready
-
-Every loose startable record, ordered by points, highest first — across bands
-rather than within them, because a band boundary in the middle of a
-points-sorted run is an inversion a reader can see and cannot explain.
-
-Four columns: points, id, title, type. The board previously printed seven. Two
-of the three that went were blank most of the time — "why it sits here" was
-empty on 54 of 78 rows and the rank on 46 of 51 startable ones — and between
-them they took the width that wrapped half the titles onto a second line. The
-band letter went because the section a row sits in already says what the letter
-said.
-
-What survives of the band is a single glyph in the points cell, on three bands
-out of eleven: `⚷` holds other work, `▸` already in flight, `✓` its declared
-blocker has already closed. Sparse by construction, so a mark reads as an
-exception rather than as a column.
-
-No per-row "reason" column. The dominant scoring term is `priority` on 49 of 51
-startable rows on the largest real corpus, so such a column would print the same
-word forty-nine times. The points number is the ordering claim; the hover card
-carries the working for any single row on demand.
-
-### 2. Epics
+### 1. Epics
 
 One collapsed `<details>` per parent group, largest first. The head line carries
 the only things that could make you open it: how many children are ready, held
@@ -236,29 +220,114 @@ The fonts are not bundled and Georgia is what renders — which is harmless,
 because a wider font wraps sooner instead of overflowing a box sized to a
 guessed advance.
 
+### 2. Ready
+
+Every loose startable record, ordered by points, highest first — across bands
+rather than within them, because a band boundary in the middle of a
+points-sorted run is an inversion a reader can see and cannot explain.
+
+Four columns: points, id, title, type. The board previously printed seven. Two
+of the three that went were blank most of the time — "why it sits here" was
+empty on 54 of 78 rows and the rank on 46 of 51 startable ones — and between
+them they took the width that wrapped half the titles onto a second line. The
+band letter went because the section a row sits in already says what the letter
+said.
+
+What survives of the band is a single glyph in the points cell, on three bands
+out of eleven: `⚷` holds other work, `▸` already in flight, `✓` its declared
+blocker has already closed. Sparse by construction, so a mark reads as an
+exception rather than as a column.
+
+No per-row "reason" column. The dominant scoring term is `priority` on 49 of 51
+startable rows on the largest real corpus, so such a column would print the same
+word forty-nine times. The points number is the ordering claim; the hover card
+carries the working for any single row on demand.
+
 ### 3. Blocked
 
 Loose records waiting on a live blocker, each naming what holds it. A blocker
 that has already closed is struck through rather than hidden: the edge is why
 the row was ever held, and its closing is the news.
 
-On a corpus where every held ticket belongs to an epic this list is empty, and
-the section says so explicitly — it names the total held count and points at the
-maps, because a bare empty section would read as "nothing is blocked", which is
-the opposite of true.
+A ref that names no ticket the corpus knows — a bare uuid left behind by a
+deleted or never-created item — is printed as the ref plus "names no known
+ticket", and is deliberately **not** a link: `/tickets/{that-ref}` is a 404,
+and the section's own promise is that each row names its blocker. The epic maps
+draw the same dangling reference the same way, as an off-board node.
 
-### 4. The rest
+On a corpus where every held ticket belongs to an epic this list is empty and
+**the section is not drawn at all**. The fact survives as a clause on the Epics
+lede — "5 tickets here are held by a live blocker, drawn with the arrow that
+holds them" — beside the maps that draw the records. A heading, a "5 held"
+count and a body whose only sentence was that the records were somewhere else
+is a section that reads as a rendering failure.
 
-Collapsed panels for everything that is not a candidate today: held by decision,
-and untriaged / closed in place / off-board. The count is readable without
-opening a panel.
+A board where nothing is held keeps its section, because "nothing on this board
+waits on a live blocker" is a finding about the board and the count is what
+proves it. Empty-because-elsewhere and empty-because-none are different facts
+and only the first one loses its section.
+
+### 4. Not competing
+
+Collapsed panels for what is on the board and out of the running, **one panel
+per reason**: held by decision, untriaged, off the board, matched no rule. Each
+count is readable without opening a panel.
+
+Out of the running is not the same as not worth doing. Band H tests
+`status: new` before any startability rule, so an untriaged row is excluded on
+its status alone and may be the highest-pointed unstarted work on the board —
+the lede says so rather than claiming nothing here is a candidate.
+
+The single panel this replaced was labelled "untriaged · closed in place ·
+off-board" — three unrelated findings under one heading, so no row in it could
+be read without opening the ticket. The split runs on the same facts, tested in
+the same order, that `bands._RULES` used to assign the band, so it cannot
+disagree with the banding: off-board is tested before untriaged because the
+band is assigned that way, and a split that tested `new` first would file a
+record under a reason the banding did not use.
+
+There is deliberately no "closed in place" panel. `collect_items` drops a
+terminal-status record before it reaches `active_items`, so no such record is
+ever in the board's ordering; the only terminal records that reach the board at
+all are the closed epic heads the feed adds to `items` alone, and those are
+off-board by the test that runs first. A panel for it would be a label no row
+can carry.
+
+### The filter
+
+A strip above the Ready list narrows every **loose** list on the page at once —
+Ready, Blocked, and each collapsed panel — on a free-text match over id and
+title plus a toggle per `type`. Each list reports "showing N of M" while a
+filter is applied, and a shut panel's own count reads "0 of 10" rather than
+appearing empty over its matches.
+
+The chips are built from the values the rendered rows actually carry rather
+than from a fixed vocabulary: `type` is an open field, and a hardcoded
+feature/bug/chore strip offers a consumer repo three filters that match nothing
+while hiding the two it uses.
+
+It does not reach the epic maps. A frame's geometry is computed server-side and
+hiding one node would leave its arrows pointing at nothing.
+
+The filtering is client-side and the state lives in `sessionStorage`, re-applied
+after each swap. That is what keeps an unfiltered poll byte-identical to the
+last one — a server-side filter would make the fragment differ per operator and
+take that property with it. The strip ships `hidden` and JS unhides it, so a
+reader without JS is never shown a filter that cannot filter.
 
 ### Hover and click
 
 Every ticket on the page — list row, frame node, epic child tile — is a
-`.js-ticket` anchor carrying its own `data-t-*` payload. Hovering paints a card
+`.js-ticket` element carrying its own `data-t-*` payload. Hovering paints a card
 from values this render already computed, so it costs no request and cannot lag
 behind the pointer; clicking opens the ticket in a `<dialog>`.
+
+**In a list the whole row is the target**, not the id cell: the payload and the
+hook sit on the `<tr>`. A title column holding 70% of the table's width and
+doing nothing when clicked is a target the eye reads as live and the pointer
+does not. The id stays a real anchor inside it, marked `js-ticket-self` so the
+delegated handler can tell it from the blocker refs in the same row — those
+point at *other* tickets and navigate rather than opening this one.
 
 The three shapes expose the *same* keys (`view._hover` is merged flat into each).
 That is load-bearing: nesting the payload under a `preview` key on nodes but not
@@ -325,6 +394,8 @@ Both routes are declared as plain `def` rather than `async def`. The dashboard's
 
 Navigate to `/sessions` to list past sessions. `/sessions/{session_id}` shows the per-session detail view for any completed session. Both views are read-only.
 
+The list carries session id, start, duration and outcome counts. Duration is the span from `started_at` to `updated_at` in the session's own `overnight-state.json`, rendered at session scale (`3h 17m`, `42m`) by the same helper the detail page uses — one function, so a session cannot report two different lengths of itself. It reads `—` only when a state file carries no usable pair of timestamps.
+
 ---
 
 ## Data Sources
@@ -344,7 +415,7 @@ The dashboard reads directly from files written by the overnight runner — no s
 
 - `plan.md` — task-level progress for each feature
 - `events.log` — phase transitions and per-phase timings
-- `agent-activity.jsonl` — tool activity, last-activity timestamps, and incremental cost deltas (read by offset, so no double-counting)
+- `agent-activity.jsonl` — tool activity, last-activity timestamps, and incremental cost deltas (read by offset, so no double-counting). This file lives under the **feature**, not the session, and is appended to rather than recreated, so it outlives any one run. That is what makes the session boundary below load-bearing.
 - `escalations.jsonl` — open questions and worker-to-orchestrator escalations
 - `exit-reports/*.json` — per-task worker exit reports
 - `pr.json` — the feature's PR artifact
@@ -370,12 +441,23 @@ The dashboard uses two polling layers:
 | Backend `_poll_slow` | Backlog counts, ticket feed, dispatch details, metrics | every 30 s |
 | HTMX (browser-side) | Alerts Banner, Session, Feature Cards, Agent Fleet, Swim-Lane, Round History, Escalations | every 5 s |
 | HTMX (browser-side) | Recent Activity Stream | every 3 s |
-| HTMX (browser-side) | Metrics Baseline (Overnight); Backlog Ledger and Triage Board (Backlog view) | every 30 s |
+| HTMX (browser-side) | Metrics Baseline (Overnight); the navigator — all four sections in one fragment (Backlog view) | every 30 s |
 | HTMX (browser-side) | Ticket description (`/partials/ticket/{id}`) | once, on first expand |
 
-Total state-change latency is up to approximately 7 seconds (2 s backend read + 5 s HTMX refresh) for panels on the 5 s HTMX interval. For 30 s-polling panels (Metrics Baseline, Backlog Ledger, Triage Board), end-to-end latency is up to approximately 32 seconds.
+Total state-change latency is up to approximately 7 seconds (2 s backend read + 5 s HTMX refresh) for panels on the 5 s HTMX interval. For 30 s-polling panels (Metrics Baseline and the navigator), end-to-end latency is up to approximately 32 seconds.
 
 The backend pollers are view-independent: all four run for the process, so switching views costs a page load but never a cold start.
+
+### The session boundary
+
+The dashboard process is meant to run for weeks, so it outlives many sessions. When `_poll_state_files` sees the active session's identity change it calls `DashboardState.reset_for_new_session()`, which drops the running cost totals and the `overnight-events.log` offset.
+
+Two details are easy to get backwards, and both have bitten:
+
+- **The boundary is keyed on the session's own id**, not on the path it was read through. The runner repoints `sessions/latest-overnight` at each new session, and that symlink is the path the poller falls back to whenever the active-session pointer is not `executing` — so a path-derived key is the same string every night and the boundary never fires after the first poll.
+- **Per-session offsets reset; per-feature offsets do not.** `overnight-events.log` is a new file each session and must be re-read from byte 0. `agent-activity.jsonl` is cumulative under the feature, so its offset is exactly the mark dividing previous sessions' rows from this one's — zeroing it re-reads last night's spend and inflates the § 01 cost KPI, which is the failure the reset exists to prevent.
+
+The alert state resets here too. `evaluate_alerts` only ever *sets* `circuit_breaker_active`, so "fires once per session" holds only because the boundary re-arms it; and `alerts` is keyed `(slug, condition)` and cleared only for slugs in the current session's feature list, so an alert for a feature that does not run again is unreachable by the code that would clear it.
 
 ---
 

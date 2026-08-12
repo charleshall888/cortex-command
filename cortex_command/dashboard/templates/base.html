@@ -5,6 +5,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block title %}Cortex · Overnight{% endblock %}</title>
+  {# Inlined as a data URI rather than served from a route: the dashboard mounts
+     no static directory, and every page load was costing a 404 for
+     /favicon.ico that showed up in the process log an operator reads for real
+     errors. Same mark as docs/favicon.svg. #}
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='3' fill='%230f1219'/%3E%3Ctext x='16' y='22' text-anchor='middle' font-family='monospace' font-size='18' font-weight='600' fill='%23c79545'%3ER%3C/text%3E%3C/svg%3E">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   {# Inter was dropped from this request: `--font-ui` declared it in two
@@ -716,13 +721,6 @@
         color: var(--color-ink-faint);
         letter-spacing: 0.02em;
       }
-      .task-ratio {
-        font-family: var(--font-mono);
-        font-size: 11px;
-        color: var(--color-ink-faint);
-        letter-spacing: 0.04em;
-        font-variant-numeric: tabular-nums slashed-zero;
-      }
       .cost-chip {
         font-family: var(--font-mono);
         font-size: 11px;
@@ -1005,9 +1003,6 @@
         gap: 28px;
       }
       .dash-grid-side > section { align-self: start; }
-
-      /* Helpers used by Tailwind utility classes elsewhere */
-      .word-break-all { word-break: break-all; }
       .overflow-x-auto { overflow-x: auto; }
 
       /* Page-load reveal */
@@ -1051,313 +1046,6 @@
       .prose pre code { background: none; padding: 0; border: none; color: inherit; }
       .prose ul, .prose ol { padding-left: 1.4em; }
       .prose ul li::marker { color: var(--color-blue); }
-
-      /* Footer-rule pattern — small mono line below sections */
-      /* ── Triage board ─────────────────────────────────────────────────
-         The board shipped with no styles of its own: every ticket was a bare
-         .card-row, so an epic heading, its children and the unparented list
-         all rendered as one undifferentiated stack of rows and the grouping
-         the template works hard to compute was invisible. These rules make
-         the hierarchy legible — group container, epic head, indented
-         children — without introducing a second row vocabulary. */
-      .epic-group,
-      .flat-group {
-        border: 1px solid var(--color-rule-soft);
-        border-radius: 2px;
-        background: color-mix(in srgb, var(--color-ink) 2%, transparent);
-      }
-      .ticket-row > summary {
-        display: grid;
-        /* Every track that carries a scannable value is a FIXED width, and
-           that is the whole point. Each <summary> is its own grid container,
-           so a content-sized track (`auto`, `max-content`) resolves against
-           that row's own content and lands at a different x on every row —
-           grid tracks do not align across sibling grid containers. The
-           qualifier track was `minmax(0, auto)`, which put the status badge
-           anywhere across a measured 163px range down a 13-row board: the
-           column existed in the markup but was not scannable on screen.
-           Only the title and disposition tracks flex, because neither is
-           read by scanning down a column. */
-        grid-template-columns:
-          4.5ch                  /* #id, tabular so the column is exact */
-          minmax(12ch, 1fr)      /* title — read per row, not down a column */
-          108px                  /* status   — fits "in_progress" at 99px */
-          74px                   /* priority — fits "critical" / "medium" */
-          76px                   /* type     — scanned down the column */
-          minmax(10ch, 26ch)     /* ready · hold · child count */
-          14px;                  /* disclosure chevron */
-        align-items: center;
-        gap: var(--s-3);
-        padding: 7px 12px;
-        cursor: pointer;
-        list-style: none;
-        /* No row separator. It was 1px of dotted rule every ~31px down the
-           board, and once the columns align and the title carries a leader,
-           it is drawing a boundary the eye no longer needs — the hover ground
-           marks the row under the cursor. Rules survive at the group edge and
-           under a group head, where they separate things that differ. */
-        transition: background 0.18s ease;
-      }
-      .ticket-row__id {
-        font-variant-numeric: tabular-nums slashed-zero;
-        text-align: right;
-      }
-      .ticket-row__title {
-        display: flex;
-        align-items: baseline;
-        gap: 8px;
-        min-width: 0;
-      }
-      .ticket-row__title > strong {
-        font-family: var(--font-serif);
-        font-weight: 500;
-        font-size: 15px;
-        letter-spacing: -0.005em;
-        color: var(--color-ink-1);
-        /* One line per ticket: the board is a scan surface, and a wrapped
-           title breaks the column rhythm that makes it scannable. The full
-           text stays reachable in the disclosure below. */
-        min-width: 0;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
-      /* The leader: dots from the end of the title to the status column. */
-      .ticket-row__title::after {
-        content: "";
-        flex: 1 1 auto;
-        min-width: 2ch;
-        height: 3px;
-        transform: translateY(-0.18em);
-        background-image: radial-gradient(circle at 50% 50%, var(--color-ink-30) 0.9px, transparent 1px);
-        background-size: 6px 3px;
-        background-repeat: repeat-x;
-        opacity: 0.5;
-      }
-      /* ── Backlog ledger lede ──────────────────────────────────────────
-         The one line at the top of § 01 that says what the queue is doing.
-         Replaces an inline-styled card-row: DESIGN.md forbids `style=` on
-         new components, and that row carried both a raw `font-size: 32px`
-         and a token colour inline. */
-      .ledger-lede {
-        display: flex;
-        align-items: baseline;
-        flex-wrap: wrap;
-        gap: 10px 14px;
-      }
-      .ledger-lede__n {
-        font-family: var(--font-serif);
-        font-size: 34px;
-        font-weight: 500;
-        line-height: 1;
-        color: var(--c-state-merged);
-      }
-      .ledger-lede__label {
-        font-family: var(--font-mono);
-        font-size: 11.5px;
-        letter-spacing: 0.06em;
-        text-transform: uppercase;
-        color: var(--color-ink-2);
-      }
-      .ledger-lede__rule {
-        flex: 1 1 24px;
-        height: 1px;
-        background: var(--color-rule-soft);
-        align-self: center;
-        min-width: 16px;
-      }
-      .ledger-lede__stat {
-        font-family: var(--font-mono);
-        font-size: 11.5px;
-        letter-spacing: 0.02em;
-        color: var(--color-ink-4);
-        white-space: nowrap;
-      }
-      .ledger-lede__stat .num {
-        font-size: 14px;
-        color: var(--color-ink-2);
-        margin-right: 2px;
-      }
-      /* A non-zero blocked count is the only stat here that asks for action. */
-      .ledger-lede__stat.is-blocked .num { color: var(--c-state-failed); }
-
-      /* One classification value per fixed cell. Left-aligned inside the cell
-         so the badge's leading edge — not its trailing edge — is what lines
-         up down the board, because that is the edge the eye tracks. */
-      .ticket-row__cell {
-        display: flex;
-        align-items: center;
-        min-width: 0;
-      }
-      .ticket-row__cell .badge {
-        max-width: 100%;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        display: inline-block;
-      }
-      /* Three dimensions, three weights of the same badge form — so the row
-         reads as a hierarchy instead of three interchangeable boxes.
-         Status is what an operator scans for, so it keeps the solid fill it
-         already had (set by its badge- colour class). Priority steps down to
-         an outline. Type steps down again to a borderless ghost: it reads
-         "feature" on most rows and is near-zero information in the scan,
-         but it is not free to delete — R10 fixes the open vocabulary in
-         place, and "epic" / "bug" / "chore" do carry signal when they
-         appear. Muting it costs nothing and buys back the column. */
-      /* Status always gets a ground, whatever its colour class. Deriving the
-         fill from `currentColor` rather than from a specific state token is
-         what makes the tier hold: the most common status on any real board is
-         `backlog`, which maps to `.badge-gray` — and `.badge-gray` sets
-         `background: transparent`. Without this rule the solid/outline/ghost
-         hierarchy inverted to transparent/transparent/transparent on exactly
-         the majority of rows, so the tier existed only on the minority that
-         happened to carry a coloured status. */
-      .ticket-row__status .badge {
-        background: color-mix(in srgb, currentColor 15%, transparent);
-        border-style: solid;
-      }
-      .ticket-row__prio .badge {
-        background: transparent;
-        font-weight: 500;
-      }
-      .ticket-row__type .badge {
-        background: transparent;
-        border-color: transparent;
-        /* ink-3, not ink-4: with no border and no ground this is the weakest
-           thing in the row, so it cannot also sit at the lowest ink step. */
-        color: var(--color-ink-3);
-        padding-left: 0;
-        padding-right: 0;
-        letter-spacing: 0.06em;
-      }
-      /* A blocked row is the one thing on this board that wants to be found
-         from across the room, so it is marked on the row itself rather than
-         only by a badge inside it. */
-      .ticket-row > summary.is-blocked {
-        box-shadow: inset 2px 0 0 0 var(--c-state-failed);
-      }
-      /* The reason line: full width beneath the row, never truncated. */
-      .ticket-row__why {
-        grid-column: 3 / -1;
-        font-family: var(--font-mono);
-        font-size: 11px;
-        line-height: 1.45;
-        color: var(--color-ink-3);
-        white-space: normal;
-        margin-top: 3px;
-      }
-      .ticket-row__why::before {
-        content: "↳ ";
-        color: var(--color-ink-4);
-      }
-      .ticket-row__note {
-        display: flex;
-        align-items: baseline;
-        gap: 6px;
-        justify-content: flex-end;
-        min-width: 0;
-        overflow: hidden;
-        white-space: nowrap;
-        text-overflow: ellipsis;
-      }
-      /* Disposition is the board's headline answer to "what can I pick up",
-         so ready and hold are the only two colour-carrying words in a row. */
-      .ticket-row__ready { color: var(--c-state-merged); }
-      .ticket-row__hold  { color: var(--c-state-paused); }
-      .ticket-row__note .phase-label { overflow: hidden; text-overflow: ellipsis; }
-      .ticket-row > summary::-webkit-details-marker { display: none; }
-      .ticket-row:last-child > summary { border-bottom: none; }
-      .ticket-row > summary:hover { background: color-mix(in srgb, var(--color-blue) 6%, transparent); }
-      .ticket-row[open] > summary { background: color-mix(in srgb, var(--color-blue) 4%, transparent); }
-      .ticket-row[open] > summary .feature-row__chev { transform: rotate(90deg); color: var(--color-ink-1); }
-      /* The epic head reads as a heading first and a row second: heavier
-         ground, a state stripe, and its title at heading weight. */
-      .ticket-row.epic-head > summary {
-        /* Opaque, not a color-mix over transparent: these heads are sticky,
-           and rows scrolling underneath a translucent head show through it. */
-        background: var(--color-parchment-3);
-        border-bottom: 1px solid var(--color-rule-soft);
-        box-shadow: inset 3px 0 0 0 var(--color-ochre);
-        /* 12px, matching every other row and the flat head, so all three
-           head types start their title on one x. The stripe is an inset
-           box-shadow and takes no layout space, so it needs no extra room. */
-        padding-left: 12px;
-        position: sticky;
-        top: 0;
-        z-index: 2;
-      }
-      /* A blocked epic is blocked FIRST and an epic second, so the failure
-         colour takes the stripe. This rule has to exist: `.epic-head > summary`
-         and `> summary.is-blocked` have identical specificity (0,2,1), and
-         box-shadow does not accumulate across rules — so source order alone
-         decided, the later epic-head rule won, and a blocked epic head
-         silently rendered the ochre stripe. The one row type where a blocked
-         marker matters most was the one row type that never showed it. */
-      .ticket-row.epic-head > summary.is-blocked {
-        box-shadow: inset 3px 0 0 0 var(--c-state-failed);
-      }
-      .ticket-row.epic-head > summary strong { font-size: 16px; }
-      .ticket-row.epic-head > summary:hover { background: color-mix(in srgb, var(--color-ochre) 8%, transparent); }
-      /* Children are indented under their epic by a rule rather than by
-         whitespace, so the association survives a long title wrapping. */
-      .epic-children {
-        margin-left: 14px;
-        border-left: 1px solid var(--color-rule-soft);
-      }
-      /* Same grid as a ticket row, so the head's title and its tally land on
-         the columns the rows beneath them use. The leading cells are empty:
-         a group head has no id and no classification of its own. */
-      .flat-head {
-        display: grid;
-        grid-template-columns:
-          4.5ch minmax(12ch, 1fr) 108px 74px 76px minmax(10ch, 26ch) 14px;
-        align-items: center;
-        gap: var(--s-3);
-        margin: 0;
-        padding: 8px 12px;
-        border-bottom: 1px solid var(--color-rule-soft);
-        background: var(--color-parchment-3);
-        position: sticky;
-        top: 0;
-        z-index: 2;
-      }
-      .flat-head__title { grid-column: 2; display: flex; align-items: baseline; gap: 8px; }
-      .flat-head .ticket-row__note { grid-column: 6; }
-      .flat-head strong { font-size: 16px; }
-      @media (max-width: 1100px) {
-        .flat-head { grid-template-columns: 4.5ch minmax(12ch, 1fr) 108px 74px minmax(8ch, 20ch) 14px; }
-        .flat-head .ticket-row__note { grid-column: 5; }
-      }
-      @media (max-width: 900px) {
-        .flat-head { grid-template-columns: 4.5ch minmax(0, 1fr) 108px minmax(8ch, 14ch) 14px; }
-        .flat-head .ticket-row__note { grid-column: 4; }
-      }
-      .ticket-row .feature-detail { padding: 12px 16px 16px 26px; }
-      /* Narrow viewports drop the two qualifier columns rather than letting
-         them squeeze the title into an ellipsis at three characters. */
-      @media (max-width: 1100px) {
-        /* Drop type first — it is the least-carrying column — and keep status
-           and priority as long as there is room for them. */
-        .ticket-row > summary {
-          grid-template-columns: 4.5ch minmax(12ch, 1fr) 108px 74px minmax(8ch, 20ch) 14px;
-        }
-        .ticket-row__type { display: none; }
-        .ticket-row__why { grid-column: 3 / -1; }
-      }
-      @media (max-width: 900px) {
-        /* Drop priority, never disposition. `ready` and the `blocked` badge
-           live in the note cell, and hiding it took "what can I pick up" —
-           the question this whole view exists to answer — off the board at
-           narrow widths, leaving only "why not" for the subset of rows that
-           carry a reason. Priority is the one qualifier that can go, because
-           the rows are already ordered by it. */
-        .ticket-row > summary {
-          grid-template-columns: 4.5ch minmax(0, 1fr) 108px minmax(8ch, 14ch) 14px;
-        }
-        .ticket-row__prio { display: none; }
-        .ticket-row__why { grid-column: 2 / -1; }
-      }
 
       /* Cross-view handoff: the one-line pointer at the foot of each page to
          the peer view that owns what this page deliberately does not show.
@@ -1416,12 +1104,7 @@
       }
       a.text-brand-primary:hover { color: var(--color-ochre-soft); border-color: var(--color-ochre-soft); }
       a.text-brand-primary.no-underline { border-bottom: 1px solid var(--color-ochre); }
-
-      /* Inline mono adjustments */
-      .font-mono { font-family: var(--font-mono); }
-      .text-mono { font-family: var(--font-mono); }
-
-      /* ── Section-attention variant (ochre rail; for escalations etc) ─ */
+            /* ── Section-attention variant (ochre rail; for escalations etc) ─ */
       .section-attention {
         box-shadow:
           inset 3px 0 0 0 var(--color-ochre),
@@ -1522,71 +1205,13 @@
       .pip--deferred { background: transparent; border-color: var(--c-state-deferred); border-style: dashed; }
       .pip--failed   { background: color-mix(in srgb, var(--c-state-failed) 50%, transparent); border-color: var(--c-state-failed); }
       .pip--pending  { background: transparent; border-color: var(--color-ink-faint); border-style: dotted; }
-
-      /* ── Phase-track (4-step lifecycle progress on feature cards) ──── */
-      .card-row--phase-timeline {
-        padding: 4px 0;
-      }
-      .phase-track {
-        display: flex;
-        align-items: center;
-        gap: 0;
-        list-style: none;
-        margin: 0;
-        padding: 0;
-        flex: 0 0 auto;
-      }
-      .phase-step {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        padding: 2px 8px 2px 10px;
-        font-family: var(--font-mono);
-        font-size: 9.5px;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-        color: var(--color-ink-faint);
-        background: transparent;
-        border: 1px dotted var(--color-rule-soft);
-        border-right: none;
-        position: relative;
-      }
-      .phase-step:first-child { border-radius: 2px 0 0 2px; }
-      .phase-step:last-child { border-right: 1px dotted var(--color-rule-soft); border-radius: 0 2px 2px 0; }
-      .phase-step--done {
-        color: var(--color-blue);
-        background: color-mix(in srgb, var(--color-blue) 10%, transparent);
-        border-style: solid;
-        border-color: var(--color-blue);
-      }
-      .phase-step--current {
-        color: var(--color-blue);
-        background: color-mix(in srgb, var(--color-blue) 22%, transparent);
-        border-style: solid;
-        border-color: var(--color-blue);
-        box-shadow: 0 0 0 1px var(--shadow-blue-soft);
-        font-weight: 500;
-      }
-      .phase-step-label { line-height: 1.4; }
-
-      /* ── Tool ticker pips ─────────────────────────────────────────── */
-      .card-row--tools, .card-row--questions, .card-row--exitreport,
-      .card-row--checkpoints, .card-row--learnings, .card-row--links {
+            /* ── Tool ticker pips ─────────────────────────────────────────── */
+      .card-row--tools {
         padding: 4px 0;
         border-top: 1px dotted var(--color-rule-soft);
         margin-top: 2px;
         gap: 8px;
         font-size: 11px;
-      }
-      .card-row--links {
-        opacity: 0; transition: opacity 0.18s ease;
-        gap: 14px;
-      }
-      .feature-card:hover .card-row--links { opacity: 1; }
-      .tool-ticker {
-        display: inline-flex;
-        gap: 3px;
-        align-items: center;
       }
       .tool-pip {
         display: inline-flex;
@@ -1607,58 +1232,7 @@
         border-color: var(--color-status-red);
         color: var(--color-status-red);
       }
-      .tool-count {
-        font-family: var(--font-mono);
-        font-size: 10.5px;
-        color: var(--color-ink-mute);
-        letter-spacing: 0.02em;
-      }
-      .tool-count em {
-        font-style: normal;
-        color: var(--color-ink);
-        font-weight: 500;
-      }
-
-      /* ── Open question summary (in card) ──────────────────────────── */
-      .open-q-summary {
-        font-family: var(--font-serif);
-        font-style: italic;
-        font-size: 13.5px;
-        color: var(--color-ochre);
-        line-height: 1.45;
-      }
-
-      /* ── Exit report row ──────────────────────────────────────────── */
-      .exit-reason {
-        font-family: var(--font-mono);
-        font-size: 10.5px;
-        color: var(--color-ink-mute);
-        letter-spacing: 0.02em;
-      }
-
-      /* ── Learnings trace ──────────────────────────────────────────── */
-      .learning-trace {
-        font-family: var(--font-mono);
-        font-size: 10.5px;
-        color: var(--color-ink-mute);
-        letter-spacing: 0.01em;
-      }
-
-      /* ── Checkpoint trail ─────────────────────────────────────────── */
-      .checkpoint-trail {
-        display: inline-flex;
-        gap: 4px;
-        font-family: var(--font-mono);
-      }
-      .checkpoint-dot {
-        font-size: 14px;
-        line-height: 1;
-        color: var(--color-blue);
-        opacity: 0.6;
-      }
-      .checkpoint-dot:last-child { opacity: 1; }
-
-      /* ── Card links ───────────────────────────────────────────────── */
+            /* ── Card links ───────────────────────────────────────────────── */
       .card-link {
         font-family: var(--font-mono);
         font-size: 10px;
@@ -1670,18 +1244,6 @@
         padding-bottom: 1px;
       }
       .card-link:hover { color: var(--color-ochre-soft); border-color: var(--color-ochre-soft); }
-
-      /* ── Error / emphasized inline text ───────────────────────────── */
-      .error-line {
-        font-family: var(--font-mono);
-        font-size: 11.5px;
-        color: var(--color-status-red);
-        letter-spacing: 0.02em;
-      }
-      .emph {
-        color: var(--color-ink);
-        font-weight: 500;
-      }
       .inline-code {
         font-family: var(--font-mono);
         font-size: 11px;
@@ -1690,37 +1252,7 @@
         border-radius: 1px;
         color: var(--color-ink);
       }
-
-      /* ── Card status tinting ──────────────────────────────────────── */
-      .feature-card--failed::before { background: var(--color-status-red); }
-      .feature-card--failed {
-        background: color-mix(in srgb, var(--color-status-red) 5%, var(--color-parchment));
-      }
-      .feature-card--paused::before { background: var(--color-ochre); }
-      .feature-card--paused {
-        background: color-mix(in srgb, var(--color-ochre) 4%, var(--color-parchment));
-      }
-      .feature-card--merged::before { background: color-mix(in srgb, var(--color-blue) 70%, transparent); }
-
-      /* ── Budget track (cost of budget bar) ────────────────────────── */
-      .budget-track {
-        position: relative;
-        display: inline-block;
-        height: 4px;
-        width: 60px;
-        background: color-mix(in srgb, var(--color-ink) 8%, transparent);
-        border-radius: 0;
-        overflow: hidden;
-        margin: 0 4px;
-        vertical-align: middle;
-      }
-      .budget-fill {
-        position: absolute;
-        left: 0; top: 0; bottom: 0;
-        background: var(--color-ochre);
-      }
-
-      /* ── Open-q card (escalations panel) ──────────────────────────── */
+            /* ── Open-q card (escalations panel) ──────────────────────────── */
       .open-q-card {
         position: relative;
         background: var(--color-parchment);
@@ -1847,6 +1379,16 @@
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
+        /* The feature name does not lose the shrink contest to the detail
+           beside it. Both are flex children of a ~279px .event-body, and both
+           were shrinking — which truncated `seed-feature-gamma` (119px of
+           text into 95px of box) at exactly the suffix that says WHICH
+           feature the row is about. Sibling slugs share a prefix, so an
+           ellipsis there does not shorten the name, it deletes the name.
+           The detail is prose and reads fine truncated; an identifier does
+           not. `max-width` keeps a pathological slug from starving it. */
+        flex: 0 0 auto;
+        max-width: 24ch;
       }
       .event-detail {
         color: var(--color-ink-mute);
@@ -1938,65 +1480,6 @@
         flex: 1;
       }
 
-      /* ── Backlog ledger grid ─────────────────────────────────────── */
-      .backlog-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(108px, 1fr));
-        gap: 12px;
-        margin: 14px 0 0;
-        padding: 0;
-      }
-      @media (min-width: 1200px) {
-        .backlog-grid { grid-template-columns: repeat(9, 1fr); }
-      }
-      .backlog-cell {
-        background: var(--color-parchment);
-        border: 1px solid var(--color-rule-soft);
-        border-left: 3px solid var(--cell-color);
-        padding: 12px 14px;
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
-      }
-      .backlog-cell-label {
-        font-family: var(--font-mono);
-        font-size: 10px;
-        letter-spacing: var(--register);
-        text-transform: uppercase;
-        color: var(--color-ink-faint);
-        margin: 0;
-      }
-      .backlog-cell-value {
-        display: flex;
-        align-items: baseline;
-        gap: 8px;
-        margin: 0;
-      }
-      .backlog-cell-value strong {
-        font-family: var(--font-serif);
-        font-weight: 400;
-        font-size: 22px;
-        line-height: 1;
-        color: var(--color-ink);
-        font-variation-settings: "opsz" 22, "SOFT" 30;
-      }
-      .backlog-cell-pct {
-        font-family: var(--font-mono);
-        font-size: 10.5px;
-        color: var(--color-ink-faint);
-        letter-spacing: 0.04em;
-      }
-      .backlog-bar {
-        height: 3px;
-        background: color-mix(in srgb, var(--color-ink) 6%, transparent);
-        position: relative;
-      }
-      .backlog-bar-fill {
-        position: absolute;
-        left: 0; top: 0; bottom: 0;
-        background: var(--cell-color);
-      }
-
       /* ── .num — tabular monospace numerals (load-bearing) ─────────── */
       .num {
         font-family: var(--font-mono);
@@ -2004,14 +1487,10 @@
         font-feature-settings: "tnum" 1, "zero" 1, "ss01" 0;
         letter-spacing: 0.01em;
       }
-      .num--lg { font-size: 22px; font-family: var(--font-serif); font-weight: 400; line-height: 1; }
       .num--md { font-size: 14px; }
       .num--sm { font-size: 11px; color: var(--color-ink-mute); }
       .num--delta-up   { color: var(--c-state-failed); }
-      .num--delta-down { color: var(--c-state-merged); }
-      .num--delta-flat { color: var(--color-ink-faint); }
-
-      /* ── Utility classes (replacing inline styles) ────────────────── */
+            /* ── Utility classes (replacing inline styles) ────────────────── */
       .sr-only {
         position: absolute;
         width: 1px; height: 1px;
@@ -2022,7 +1501,6 @@
         border: 0;
       }
       .ml-auto { margin-left: auto; }
-      .mt-1 { margin-top: var(--s-1); }
       .mt-2 { margin-top: var(--s-2); }
       .mt-3 { margin-top: var(--s-3); }
       .mt-4 { margin-top: var(--s-4); }
@@ -2030,14 +1508,10 @@
       .gap-3 { gap: var(--s-3); }
       .flex-wrap { flex-wrap: wrap; }
       .flex { display: flex; }
-      .items-baseline { align-items: baseline; }
       .items-center { align-items: center; }
 
       /* Use `style="--w: 86%"` instead of inline width: */
       .fill-w { width: var(--w, 0%); }
-      .fill-h { height: 100%; }
-      /* Use `style="--c: var(--c-state-merged)"` for dynamic color */
-      .stripe-l { border-left: 3px solid var(--c, var(--color-ink-faint)); }
       .tint-c   { color: var(--c, inherit); }
 
       /* ── Alert top-rail (true banner — high contrast, prominent) ──── */
@@ -2324,49 +1798,50 @@
         .feature-row__tools { display: none; }
       }
 
-      /* ── Expanded feature detail (the launchpad pane) ─────────────── */
-      /* ── Ticket description ───────────────────────────────────────────
-         The rendered markdown body, lazy-loaded into an expanded board row.
-         It reads before the classification/readiness grid because it is the
-         prose an operator opened the row for; the field blocks below are
-         reference, and the row already showed most of them. */
-      .ticket-desc {
-        padding: 14px 22px 4px 26px;
-        max-width: 78ch;
-      }
-      .ticket-desc .ticket-prose {
+      /* ── Rendered markdown body (.ticket-prose) ──────────────────────
+         Every surface that renders a ticket or lifecycle artifact through
+         markdown carries `.prose .ticket-prose`: the modal card, the board
+         row's lazy body, the ticket page, and each artifact panel.
+
+         These rules were written scoped under `.ticket-desc`, a wrapper of
+         the retired triage board, so they applied to nothing — every real
+         spec table on the ticket page rendered at the browser default (0px
+         cell borders, 1px padding) against the dark ground. Scoped to the
+         class the four live templates actually carry, they apply. */
+      .ticket-prose {
         font-size: 14px;
         line-height: 1.6;
       }
       /* The body arrives with its own top-level heading structure, so the
-         first heading must not push the block away from the row it belongs
-         to. Later headings keep their leading. */
-      .ticket-desc .ticket-prose > :first-child { margin-top: 0; }
-      .ticket-desc .ticket-prose table {
+         first heading must not push the block away from what it belongs to.
+         Later headings keep their leading. */
+      .ticket-prose > :first-child { margin-top: 0; }
+      .ticket-prose table {
         border-collapse: collapse;
         margin: 0.6rem 0;
         font-family: var(--font-mono);
         font-size: 11.5px;
       }
-      .ticket-desc .ticket-prose th,
-      .ticket-desc .ticket-prose td {
+      .ticket-prose th,
+      .ticket-prose td {
         border: 1px solid var(--color-rule-soft);
         padding: 4px 9px;
         text-align: left;
       }
-      .ticket-desc .ticket-prose th {
+      .ticket-prose th {
         color: var(--color-ink-2);
         text-transform: uppercase;
         letter-spacing: 0.06em;
         font-size: 10px;
       }
-      .ticket-desc .ticket-prose blockquote {
+      .ticket-prose blockquote {
         margin: 0.6rem 0;
         padding-left: 12px;
         border-left: 2px solid var(--color-ochre);
         color: var(--color-ink-2);
       }
 
+      /* ── Expanded feature detail (the launchpad pane) ─────────────── */
       .feature-detail {
         padding: 18px 22px 22px;
         display: grid;
@@ -2587,52 +2062,6 @@
         fill: var(--c-state-running);
       }
 
-      /* ── Stacked bar (backlog) ───────────────────────────────────── */
-      .stack-bar {
-        position: relative;
-        display: flex;
-        height: 18px;
-        width: 100%;
-        background: color-mix(in srgb, var(--color-ink) 5%, transparent);
-        border: 1px solid var(--color-rule-soft);
-        overflow: hidden;
-      }
-      .stack-bar > span {
-        display: block;
-        height: 100%;
-        background: var(--c, var(--color-ink-mute));
-        flex: 0 0 var(--w, 0%);
-        border-right: 1px solid color-mix(in srgb, var(--color-parchment) 50%, transparent);
-        position: relative;
-      }
-      .stack-bar > span:last-child { border-right: none; }
-      .stack-legend {
-        display: flex;
-        gap: 14px;
-        flex-wrap: wrap;
-        font-family: var(--font-mono);
-        font-size: 11px;
-        color: var(--color-ink-2);
-        margin-top: 8px;
-      }
-      .stack-legend > span {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        font-variant-numeric: tabular-nums slashed-zero;
-      }
-      .stack-legend > span::before {
-        content: "";
-        width: 8px; height: 8px;
-        background: var(--c, var(--color-ink-mute));
-      }
-      .stack-legend .sl-label {
-        color: var(--color-ink-4);
-        text-transform: uppercase;
-        font-size: 10px;
-        letter-spacing: 0.08em;
-      }
-
       /* ── Backlog navigator ──────────────────────────────────────────
          One read-only surface. Every colour here is a token; the load-bearing
          channels are border STYLE and position, and tint is only ever
@@ -2651,7 +2080,6 @@
         max-width: 68ch;
         margin: 0 0 14px;
       }
-      .sec-lede--tight { margin-bottom: 8px; font-family: var(--font-mono); font-size: 11px; color: var(--color-ink-faint); }
       .sec-lede code {
         font-family: var(--font-mono);
         font-size: 0.9em;
@@ -2736,6 +2164,94 @@
       }
       .nav-table__why { color: var(--color-ink-faint); font-size: 10.5px; }
       .nav-list .nav-table__title { width: 70%; }
+
+      /* The whole row is the target. The pointer says so across the row, and
+         the id keeps its own colour because it is still the thing that works
+         with JS off. `:focus-within` is what makes the keyboard path visible:
+         tabbing reaches the anchor, and the row it belongs to lights up. */
+      .nav-list__row.js-ticket { cursor: pointer; }
+      .nav-list__row.js-ticket:focus-within td {
+        background: color-mix(in srgb, var(--color-blue) 9%, transparent);
+      }
+
+      /* How much of a list a filter is showing. Hidden until the client has a
+         filter to report — the server renders it empty. */
+      .nav-list__shown {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        color: var(--color-ink-faint);
+        margin: 6px 0 0;
+      }
+      .nav-list__row[hidden] { display: none; }
+
+      .nav-filter {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 6px 10px;
+        margin: 10px 0 4px;
+        padding: 8px 10px;
+        border: 1px solid var(--color-rule-soft);
+        border-left: 3px solid var(--color-ochre);
+        background: color-mix(in srgb, var(--color-ochre) 3%, transparent);
+      }
+      .nav-filter[hidden] { display: none; }
+      .nav-filter__label {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--color-ink-faint);
+      }
+      .nav-filter__q {
+        flex: 1 1 22ch;
+        min-width: 16ch;
+        font-family: var(--font-mono);
+        font-size: 11px;
+        color: var(--color-ink);
+        background: transparent;
+        border: none;
+        border-bottom: 1px solid var(--color-rule-soft);
+        padding: 3px 2px;
+      }
+      .nav-filter__q:focus { outline: none; border-bottom-color: var(--color-ochre); }
+      .nav-filter__chips { display: flex; flex-wrap: wrap; gap: 5px; }
+      .nav-filter__chip {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        color: var(--color-ink-3);
+        background: transparent;
+        border: 1px solid var(--color-rule-soft);
+        border-radius: 2px;
+        padding: 2px 7px;
+        cursor: pointer;
+      }
+      .nav-filter__chip:hover { color: var(--color-ink-1); border-color: var(--color-ink-faint); }
+      /* Pressed state is a fill AND a weight, not a hue alone. */
+      .nav-filter__chip[aria-pressed="true"] {
+        color: var(--color-ink);
+        font-weight: 600;
+        border-color: var(--color-ochre);
+        background: color-mix(in srgb, var(--color-ochre) 14%, transparent);
+      }
+      .nav-filter__chip-n { color: var(--color-ink-faint); margin-left: 3px; }
+      .nav-filter__chip[aria-pressed="true"] .nav-filter__chip-n { color: var(--color-ink-2); }
+      .nav-filter__clear {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        color: var(--color-ochre);
+        background: transparent;
+        border: none;
+        cursor: pointer;
+        text-decoration: underline;
+      }
+      .nav-filter__clear[hidden] { display: none; }
+      .nav-filter__state {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        color: var(--color-ink-faint);
+        margin-left: auto;
+      }
 
       /* The border channel, per row. Survives monochrome and colour-blindness,
          which is why it is a STYLE and not only a hue. */
@@ -3346,6 +2862,138 @@
       });
     })();
 
+    // The navigator's filter over every loose list — ready, blocked, and each
+    // tail panel.
+    //
+    // Client-side by construction. The server renders one neutral board and
+    // this narrows it, which is what lets an unfiltered poll stay
+    // byte-identical to the last one; a server-side filter would make the
+    // fragment differ per operator and take that property with it. The state
+    // lives in sessionStorage for the same reason the disclosure state does:
+    // the panel is replaced every 30s and anything held only in the DOM is
+    // gone with it.
+    //
+    // Every read is re-queried after a swap rather than cached, because the
+    // rows this ran against are detached nodes by then.
+    (function () {
+      var KEY = 'cortex-dashboard-nav-filter';
+      var bar = null;
+
+      function getState() {
+        try {
+          var raw = JSON.parse(sessionStorage.getItem(KEY) || '{}');
+          return {
+            q: typeof raw.q === 'string' ? raw.q : '',
+            types: Array.isArray(raw.types) ? raw.types : []
+          };
+        } catch (e) { return { q: '', types: [] }; }
+      }
+      function setState(state) {
+        try { sessionStorage.setItem(KEY, JSON.stringify(state)); }
+        catch (e) { /* quota or private-mode: the filter just stops persisting */ }
+      }
+
+      function matches(row, q, types) {
+        if (types.length && types.indexOf(row.getAttribute('data-t-type') || '') === -1) {
+          return false;
+        }
+        if (!q) return true;
+        var hay = (
+          (row.getAttribute('data-ticket') || '') + ' ' +
+          (row.getAttribute('data-t-title') || '')
+        ).toLowerCase();
+        return hay.indexOf(q) !== -1;
+      }
+
+      function apply() {
+        bar = document.getElementById('nav-filter');
+        if (!bar) return;
+        // JS is here, so the control is usable. It ships hidden so that a
+        // no-JS reader is never shown a filter that cannot filter.
+        bar.hidden = false;
+
+        var state = getState();
+        var q = state.q.trim().toLowerCase();
+        var types = state.types;
+        var active = !!q || types.length > 0;
+        var shownAll = 0, totalAll = 0;
+
+        document.querySelectorAll('[data-filterable]').forEach(function (wrap) {
+          var rows = wrap.querySelectorAll('tbody tr.nav-list__row');
+          var shown = 0;
+          rows.forEach(function (row) {
+            var ok = matches(row, q, types);
+            row.hidden = !ok;
+            if (ok) shown++;
+          });
+          shownAll += shown;
+          totalAll += rows.length;
+
+          var readout = wrap.querySelector('[data-shown]');
+          if (readout) {
+            readout.textContent = active ? 'showing ' + shown + ' of ' + rows.length : '';
+            readout.hidden = !active;
+          }
+          // A panel shut over its matches would otherwise read as empty, so
+          // its own count carries the filtered number while one is applied.
+          var panel = wrap.closest('details.nav-tail');
+          var count = panel && panel.querySelector('[data-panel-count]');
+          if (count) {
+            count.textContent = active
+              ? shown + ' of ' + (count.getAttribute('data-total') || rows.length)
+              : (count.getAttribute('data-total') || String(rows.length));
+          }
+        });
+
+        var input = document.getElementById('nav-filter-q');
+        if (input && input.value !== state.q) input.value = state.q;
+        bar.querySelectorAll('[data-type]').forEach(function (chip) {
+          chip.setAttribute(
+            'aria-pressed',
+            types.indexOf(chip.getAttribute('data-type')) === -1 ? 'false' : 'true'
+          );
+        });
+        var clear = bar.querySelector('[data-clear]');
+        if (clear) clear.hidden = !active;
+        var report = bar.querySelector('.nav-filter__state');
+        if (report) {
+          report.textContent = active
+            ? shownAll + ' of ' + totalAll + ' loose records' + (shownAll ? '' : ' — nothing matches')
+            : '';
+        }
+      }
+
+      // Delegated, so a swap that replaces the whole strip changes nothing.
+      document.addEventListener('input', function (ev) {
+        if (!ev.target.matches || !ev.target.matches('#nav-filter-q')) return;
+        var state = getState();
+        state.q = ev.target.value;
+        setState(state);
+        apply();
+      });
+
+      document.addEventListener('click', function (ev) {
+        if (!ev.target.closest) return;
+        var chip = ev.target.closest('#nav-filter [data-type]');
+        if (chip) {
+          var state = getState();
+          var value = chip.getAttribute('data-type');
+          var at = state.types.indexOf(value);
+          if (at === -1) state.types.push(value); else state.types.splice(at, 1);
+          setState(state);
+          apply();
+          return;
+        }
+        if (ev.target.closest('#nav-filter [data-clear]')) {
+          setState({ q: '', types: [] });
+          apply();
+        }
+      });
+
+      document.addEventListener('DOMContentLoaded', apply);
+      document.body.addEventListener('htmx:afterSettle', apply);
+    })();
+
     // Ticket hover card and modal.
     //
     // Every listener is delegated from document, never bound to a node. The
@@ -3470,6 +3118,12 @@
         if (ev.metaKey || ev.ctrlKey || ev.shiftKey || ev.altKey) return;
         var el = ev.target.closest && ev.target.closest('.js-ticket');
         if (!el) return;
+        // The hook is a whole row now, and a row can contain links that are
+        // not it: the blocker refs in the last cell point at OTHER tickets and
+        // must navigate. The row's own id link is marked and falls through to
+        // the modal, exactly as it did when it was the hook itself.
+        var link = ev.target.closest('a[href]');
+        if (link && link !== el && !link.classList.contains('js-ticket-self')) return;
         var id = el.getAttribute('data-ticket');
         if (!id) return;
         ev.preventDefault();

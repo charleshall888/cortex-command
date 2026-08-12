@@ -10,6 +10,14 @@
 {% set view = 'backlog' %}
 {% from "patterns/backlog_badges.html" import status_badge, priority_badge, type_badge %}
 
+{# The register counts the sections that RENDER. Children and artifacts are
+   both conditional — a non-epic ticket has no children section at all, which
+   is most tickets — so a fixed set printed § 01 · § 02 · § 04 on the ordinary
+   case, and a gap in a numbered register reads as a section that failed to
+   draw. Same device as navigator.html, for the same reason. #}
+{% set reg = namespace(n=0) %}
+{% macro sec_num(label) %}{% set reg.n = reg.n + 1 %}<span class="sec-num"><strong>§ {{ '%02d' % reg.n }}</strong>{{ label }}</span>{% endmacro %}
+
 {% block title %}Cortex · Ticket {{ item_id }}{% endblock %}
 
 {% block page_main %}
@@ -37,7 +45,7 @@
 
 {# ── 1. Identity + badge strip ───────────────────────────────────────────── #}
 <section class="section-primary">
-  <span class="sec-num"><strong>§ 01</strong>ticket</span>
+  {{ sec_num('ticket') }}
   <h2>{{ ticket.title if ticket.title else ('#' ~ ticket.id) }} <span class="phase-tag">#{{ ticket.id }}</span></h2>
   <div class="card-row" style="margin-top: 12px;">
     {{ status_badge(ticket.status) }}
@@ -54,7 +62,7 @@
    renders: prose, frontmatter-only, or (unreachable here, since `ticket` is
    never None in this arm) unavailable. #}
 <section>
-  <span class="sec-num"><strong>§ 02</strong>body</span>
+  {{ sec_num('body') }}
   <h2>Description</h2>
   <div class="prose ticket-prose">
     {% if ticket.body.html %}
@@ -74,7 +82,7 @@
    entirely rather than rendered empty. #}
 {% if ticket.children is not none %}
 <section>
-  <span class="sec-num"><strong>§ 03</strong>children</span>
+  {{ sec_num('children') }}
   <h2>Epic <em>children</em> <span class="phase-tag">{{ ticket.children | length }} active</span></h2>
   {% if ticket.children %}
   <ul class="feature-list">
@@ -100,7 +108,7 @@
    page loads at `#spec` from a feature card. #}
 {% if ticket.artifacts %}
 <section>
-  <span class="sec-num"><strong>§ 04</strong>artifacts</span>
+  {{ sec_num('artifacts') }}
   <h2>Lifecycle <em>artifacts</em> <span class="phase-tag">{{ ticket.artifacts | length }} present</span></h2>
   {% for kind in ticket.artifacts %}
   <details id="{{ kind }}" class="ticket-artifact">

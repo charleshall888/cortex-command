@@ -109,6 +109,26 @@ def _opt(fm: dict[str, str], key: str) -> str | None:
     return v if v and v.lower() != "null" else None
 
 
+def _read_item_text(path: Path) -> str:
+    """Read one backlog item, substituting U+FFFD for undecodable bytes.
+
+    Same discipline ``common.py`` already applies to ``events.log`` (spec R5:
+    a corrupt byte cannot crash a reader); the corpus scan simply never got
+    it. These two reads were unguarded, so ONE file under ``cortex/backlog/``
+    that is not valid UTF-8 raised ``UnicodeDecodeError`` out of
+    ``collect_items`` and took down every caller: ``cortex-backlog-index``,
+    and the dashboard's slow poller — which then left the whole backlog
+    navigator reading "awaiting first poll" for the life of the process,
+    because the failure came before any snapshot had ever been committed.
+
+    Returning text rather than skipping keeps the item counted. A file that is
+    genuinely binary still yields no frontmatter and is dropped by the
+    ``if not fm: continue`` below, which is where "this is not an item"
+    belongs.
+    """
+    return path.read_text(encoding="utf-8", errors="replace")
+
+
 def collect_items(
     backlog_dir: Path | None = None,
     lifecycle_dir: Path | None = None,
@@ -148,7 +168,7 @@ def collect_items(
                 continue
             arc_id = int(m.group(1))
             archive_ids.add(arc_id)
-            fm = _parse_frontmatter(path.read_text(encoding="utf-8"))
+            fm = _parse_frontmatter(_read_item_text(path))
             arc_status = normalize_status(fm.get("status", "complete")) if fm else "complete"
             arc_uuid = _opt(fm, "uuid") if fm else None
             all_items.append({"id": arc_id, "status": arc_status, "uuid": arc_uuid})
@@ -166,7 +186,7 @@ def collect_items(
             continue
         item_id = int(m.group(1))
 
-        fm = _parse_frontmatter(path.read_text(encoding="utf-8"))
+        fm = _parse_frontmatter(_read_item_text(path))
         if not fm:
             continue
 

@@ -7,8 +7,11 @@ live values, so a test pinning a sentence would be pinning a value that is
 supposed to move, while the defects this file guards against are all structural
 and all were real in the design bake-off that produced the surface.
 
-The page is § 01 READY, § 02 EPICS, § 03 BLOCKED, § 04 THE REST, and the two
-invariants those four sections rest on are what most of this file tests:
+The page is § 01 EPICS, § 02 READY, § 03 BLOCKED, § 04 NOT COMPETING — epics
+first, because the groups say what the board is made of and a reader who
+scrolls past thirty loose rows to reach them has already formed the wrong
+picture. Three of the four are conditional. The two invariants those sections
+rest on are what most of this file tests:
 
 * **One record, one appearance.** A ticket whose ``parent`` resolves to a real
   ticket is drawn inside that epic's map and nowhere else; an epic container is
@@ -60,6 +63,7 @@ assert only that the transcription matches itself.
 from __future__ import annotations
 
 import hashlib
+import re
 import tempfile
 import types
 import unittest
@@ -165,8 +169,21 @@ _SMALL_CORPUS: tuple[dict, ...] = tuple(
     for i in range(1, 6)
 )
 
-# Every held record has a parent, so § 03 lists nothing while the board holds
-# something. The section has to say which of those two facts it is looking at.
+# A held record whose declared blocker names nothing the corpus knows — a bare
+# uuid of the shape `cortex-create-backlog-item` writes, left behind when the
+# ticket it pointed at was never created or was deleted outright.
+_DANGLING_BLOCKER: tuple[dict, ...] = (
+    {"id": 200, "title": "Held by a ref that resolves to nothing",
+     "type": "bug", "status": "backlog", "priority": "medium",
+     "blocked_by": ["6ba7b810-9dad-11d1-80b4-00c04fd430c8"],
+     "updated": "2026-03-01"},
+    {"id": 201, "title": "Loose, so the board is not empty", "type": "feature",
+     "status": "backlog", "priority": "medium", "updated": "2026-03-01"},
+)
+
+# Every held record has a parent, so the blocked list is empty while the board
+# holds something. The page has to say which of those two facts it is looking
+# at, and it says it on the epic that draws the record.
 _ALL_HELD_INSIDE_EPICS: tuple[dict, ...] = (
     {"id": 100, "title": "Epic — holds the only held work", "type": "epic",
      "status": "backlog", "updated": "2026-03-01"},
@@ -275,6 +292,15 @@ class _Structure(HTMLParser):
         #: One record per ``<table>``: its enclosing section id and its cell
         #: counts, so a header/body mismatch is visible.
         self.tables: list[dict] = []
+        #: The attributes of every ``<tr>``. The row is the hoverable and the
+        #: click target now, so "the payload is on the row" is a fact about an
+        #: element type rather than about a class the row happens to carry.
+        self.rows: list[dict] = []
+        #: The id of every ``<section>``, in document order. Distinct from
+        #: :attr:`ids`, which is every id on the page — a disclosure, a filter
+        #: control and a section are all "an id" to that list, and only one of
+        #: them is a section of the page.
+        self.section_ids: list[str] = []
         #: Text content collected per :attr:`TEXT_CLASSES` member. A title that
         #: reaches only an ``aria-label`` is still in the document, so "the
         #: title rendered" has to be asked of the element that shows it.
@@ -305,8 +331,12 @@ class _Structure(HTMLParser):
             self.th_scopes.append(attributes.get("scope", ""))
         if tag == "details":
             self.details.append(attributes)
+        if tag == "tr":
+            self.rows.append(attributes)
         if tag == "section":
             self._sections.append(attributes.get("id", ""))
+            if attributes.get("id"):
+                self.section_ids.append(attributes["id"])
         if tag == "table":
             self._tables.append(
                 {"section": self._sections[-1] if self._sections else "",
@@ -355,6 +385,11 @@ def _parse(html: str) -> _Structure:
     parser = _Structure()
     parser.feed(html)
     return parser
+
+
+def _section_ordinals(html: str) -> list[int]:
+    """The § numbers the register actually printed, in document order."""
+    return [int(n) for n in re.findall(r"§\s*0*(\d+)</strong>", html)]
 
 
 def _appearance_buckets(nav: dict, slice_ids: set[str]) -> dict[str, list[str]]:
@@ -443,6 +478,18 @@ class TestNoDuplicateIds(_Fixture):
         self.assertGreater(len(self.parsed.details), 0, "no <details> rendered")
         without = [d for d in self.parsed.details if not d.get("id")]
         self.assertEqual([], without, "a <details> rendered without an id")
+
+
+class TestSectionRegister(_Fixture):
+    """The § register counts up by one across every section that drew.
+
+    The pair matters: ``TestDegenerateCorpus`` pins that a suppressed section
+    leaves no hole, and this pins that a counter cannot satisfy that by
+    printing § 01 four times over.
+    """
+
+    def test_all_four_sections_number_contiguously(self):
+        self.assertEqual([1, 2, 3, 4], _section_ordinals(self.html))
 
 
 class TestNoNestedAnchors(_Fixture):
@@ -867,7 +914,15 @@ class TestReconciliationCanFail(unittest.TestCase):
         # directions and keying on the band dropped a childless epic off the
         # page while double-rendering a non-epic parent.
         head_ids = frozenset(parents)
-        page = view_mod._partition(banded, items, child_ids, head_ids, ctx)
+        order = snapshot.get("item_order")
+        page = view_mod._partition(
+            banded,
+            items,
+            child_ids,
+            head_ids,
+            ctx,
+            frozenset(str(tid) for tid in order) if order else None,
+        )
         self.assertEqual(banded.total, len(page["seen"]))
 
         short = replace(
@@ -879,7 +934,14 @@ class TestReconciliationCanFail(unittest.TestCase):
             + tuple(banded[1:]),
         )
         self.assertEqual(banded.total - 1, len(
-            view_mod._partition(short, items, child_ids, head_ids, ctx)["seen"]
+            view_mod._partition(
+                short,
+                items,
+                child_ids,
+                head_ids,
+                ctx,
+                frozenset(str(tid) for tid in order) if order else None,
+            )["seen"]
         ))
 
 
@@ -1184,28 +1246,54 @@ class TestBlockerPathIsRendered(_Fixture):
                     self.assertIn(escape(blocker["title"]), self.html)
 
     def test_held_records_inside_an_epic_are_counted_not_listed(self):
-        # ``held_total`` counts every held record on the board; § 03 lists only
-        # the loose ones. Without the wider number the section cannot tell an
-        # unblocked board from one whose blocked work all sits inside epics.
+        # ``held_total`` counts every held record on the board; the blocked
+        # section lists only the loose ones. Without the wider number the page
+        # cannot tell an unblocked board from one whose blocked work all sits
+        # inside epics.
         listed = {row["id"] for row in self.nav["blocked"]}
         self.assertGreater(self.nav["held_total"], len(listed))
+        self.assertEqual(
+            self.nav["held_total"] - len(listed), self.nav["held_inside_epics"]
+        )
 
-    def test_a_board_whose_held_work_is_all_inside_epics_says_so(self):
-        """The empty-but-not-unblocked arm, which is a different sentence.
+    def test_a_board_whose_held_work_is_all_inside_epics_says_so_on_the_epics(self):
+        """The empty-but-not-unblocked case, stated where the records are.
 
-        On this corpus § 03 lists nothing and the board still holds something.
-        Rendering the ordinary empty state there would state the opposite of
-        the truth, so the branch is chosen on ``held_total`` and this is the
-        input that reaches it.
+        This corpus holds something and has no loose blocked row to list. The
+        page used to answer that with a whole section — a heading, a "1 held"
+        count, and a body whose only sentence was that the record was
+        somewhere else. The fact survives; the empty section does not. It is a
+        clause on the epic lede now, beside the map that draws the record.
         """
         with tempfile.TemporaryDirectory() as tmp:
             state = _state_for(_ALL_HELD_INSIDE_EPICS, Path(tmp))
             nav = build_navigator(state, None)
             self.assertEqual([], nav["blocked"])
             self.assertEqual(1, nav["held_total"])
-            parsed = _parse(_render("navigator.html", nav=nav))
-            self.assertIn("nav-blocked", parsed.ids)
+            self.assertEqual(1, nav["held_inside_epics"])
+            html = _render("navigator.html", nav=nav)
+            parsed = _parse(html)
+            self.assertNotIn("nav-blocked", parsed.ids)
+            self.assertIn("nav-epics", parsed.ids)
+            # The claim itself, not its wording: the count reaches the page and
+            # it reaches the section that draws the record.
+            epics = html[html.index('id="nav-epics"'):]
+            self.assertIn("held by a live blocker", epics[: epics.index("</section>")])
             self.assertEqual([], parsed.nested_anchors)
+
+    def test_an_unblocked_board_keeps_its_blocked_section(self):
+        """The other arm, and the reason the gate is not "hide when empty".
+
+        "Nothing on this board waits on a live blocker" is a finding about the
+        board and the section is where it is stated. Only the case where the
+        held records exist and are drawn elsewhere loses its section.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            state = _state_for(_SMALL_CORPUS, Path(tmp))
+            nav = build_navigator(state, None)
+            self.assertEqual([], nav["blocked"])
+            self.assertEqual(0, nav["held_total"])
+            self.assertIn("nav-blocked", _parse(_render("navigator.html", nav=nav)).ids)
 
 
 class TestUnrecognisedStatusIsDisclosed(_Fixture):
@@ -1356,6 +1444,80 @@ class TestHeadDetectionMatchesWhatIsDrawn(unittest.TestCase):
         )
 
 
+class TestDanglingBlockerRef(unittest.TestCase):
+    """A blocker naming no known ticket is not offered as a link.
+
+    The § 03 lede promises that each row "names the live blocker holding it".
+    A ref the corpus cannot resolve was printed there as a linked ``#<uuid>``
+    pointing at ``/tickets/<uuid>``, which returns 404 — the row named
+    something that does not exist and invited a click that dead-ends.
+
+    The cause was upstream of the markup and is what these assertions pin:
+    ``view._corpus_of`` stubbed a record for *every* off-slice ref, including
+    the ones the feed had already reported as ``not_found``. That stub made the
+    ref a known record inside ``build_graph``, whose sole test for
+    ``unresolvable`` is membership in exactly that set — so the edge came back
+    ``external``, indistinguishable from a real ticket sitting off the board,
+    and the ``unresolvable`` arm the row, the "why" sentence and the epic map's
+    external lane all branch on could never be reached from a snapshot.
+    """
+
+    REF = "6ba7b810-9dad-11d1-80b4-00c04fd430c8"
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls._tmp = tempfile.TemporaryDirectory()
+        cls.state = _state_for(_DANGLING_BLOCKER, Path(cls._tmp.name))
+        cls.nav = build_navigator(cls.state, None)
+        cls.html = _render("navigator.html", nav=cls.nav)
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        cls._tmp.cleanup()
+
+    def test_the_fixture_actually_held_the_row(self):
+        # The guard the mutation rule earns: every assertion below passes
+        # vacuously on a corpus whose blocker declaration the loader ignored.
+        self.assertEqual(["200"], [row["id"] for row in self.nav["blocked"]])
+        self.assertEqual(
+            [self.REF],
+            [b["id"] for row in self.nav["blocked"] for b in row["blockers"]],
+        )
+
+    def test_the_unresolvable_ref_carries_no_href(self):
+        blocker = self.nav["blocked"][0]["blockers"][0]
+        self.assertTrue(blocker["unresolvable"])
+        self.assertIsNone(blocker["href"])
+
+    def test_no_anchor_in_the_markup_points_at_the_dangling_ref(self):
+        self.assertNotIn('href="/tickets/%s"' % self.REF, self.html)
+
+    def test_the_ref_still_reaches_the_reader(self):
+        # Unlinking it must not silently drop it: the ref is the only handle
+        # the operator has for finding what the declaration meant.
+        self.assertIn(self.REF, self.html)
+        self.assertIn("names no known ticket", self.html)
+
+    def test_a_resolvable_off_board_blocker_keeps_its_link(self):
+        # The complement, so the fix cannot be "unlink every blocker". An
+        # archived-but-real blocker is a page that exists and must stay
+        # clickable.
+        with tempfile.TemporaryDirectory() as tmp:
+            corpus = _DANGLING_BLOCKER[1:] + (
+                {"id": 202, "title": "Held by a real off-board ticket",
+                 "type": "bug", "status": "backlog", "priority": "medium",
+                 "blocked_by": [203], "updated": "2026-03-01"},
+                {"id": 203, "title": "Real, and in progress", "type": "feature",
+                 "status": "in-progress", "priority": "high",
+                 "updated": "2026-03-01"},
+            )
+            nav = build_navigator(_state_for(corpus, Path(tmp)), None)
+            blockers = [b for row in nav["blocked"] for b in row["blockers"]]
+            self.assertEqual(["203"], [b["id"] for b in blockers])
+            self.assertFalse(blockers[0]["unresolvable"])
+            self.assertEqual("/tickets/203", blockers[0]["href"])
+
+
 class TestDegenerateCorpus(unittest.TestCase):
     """Five items, zero epics, zero edges — cortex-command's own shape.
 
@@ -1397,6 +1559,18 @@ class TestDegenerateCorpus(unittest.TestCase):
     def test_a_corpus_with_no_edges_draws_no_geometry(self):
         self.assertEqual(0, self.nav["mapped_epics"])
         self.assertEqual(0, _parse(self.html).tags.get("svg", 0))
+
+    def test_the_register_has_no_gap_where_the_epic_section_stood(self):
+        """Ordinals count the sections that rendered, not a fixed set of four.
+
+        Two of the four sections are conditional. Against hardcoded ordinals
+        this corpus — the shape of the repo the dashboard ships from — printed
+        § 01 · § 03 · § 04, and a hole in a numbered register reads as a
+        section that failed to draw, which is precisely what the reconciliation
+        line at the foot of the page exists to rule out.
+        """
+        marks = _section_ordinals(self.html)
+        self.assertEqual([1, 2, 3], marks)
 
     def test_ids_stay_unique_on_the_small_slice(self):
         parsed = _parse(_render_nav(self.state))
@@ -1516,14 +1690,235 @@ class TestRetiredSurfacesStayRetired(_Fixture):
                 self.assertNotIn(key, build_navigator(DashboardState(), None))
 
     def test_the_page_renders_only_the_four_sections(self):
-        sections = [i for i in self.parsed.ids if i.startswith("nav-")
-                    and not i.startswith(("nav-epic-", "nav-tail-"))]
+        # ``<section>`` ids only: the per-epic and per-panel disclosures carry
+        # their own, and so does the filter strip and its two controls, none of
+        # which are sections. Matched on the element rather than on the id
+        # prefix, so a fifth section cannot slip in under a name this list
+        # happens not to exclude.
+        sections = [
+            i for i in self.parsed.section_ids if i.startswith("nav-")
+        ]
         self.assertEqual(
             ["nav-blocked", "nav-epics", "nav-ready", "nav-tail"], sorted(sections)
         )
 
     def test_no_alternate_disclosure_survives(self):
         self.assertEqual([], [i for i in self.parsed.ids if i.startswith("nav-alt")])
+
+
+class TestEpicsLeadThePage(_Fixture):
+    """Structure before list, and the same rule when there is no structure.
+
+    A board's groups say what it is made of. Thirty loose rows above them means
+    a reader forms a picture of the board and then meets the thing that
+    organises it, which is the wrong way round on every corpus that has one.
+    """
+
+    def test_epics_is_the_first_section(self):
+        self.assertEqual("nav-epics", self.parsed.section_ids[0])
+
+    def test_ready_leads_when_there_is_no_epic(self):
+        # Not a special case: the section simply is not there, and the register
+        # renumbers from what rendered.
+        with tempfile.TemporaryDirectory() as tmp:
+            parsed = _parse(_render_nav(_state_for(_SMALL_CORPUS, Path(tmp))))
+            self.assertEqual("nav-ready", parsed.section_ids[0])
+            self.assertNotIn("nav-epics", parsed.section_ids)
+
+    def test_the_register_is_contiguous_from_one(self):
+        marks = _section_ordinals(self.html)
+        self.assertEqual(list(range(1, len(marks) + 1)), marks)
+
+
+class TestTailPanelsNameOneReasonEach(_Fixture):
+    """Every tail panel is one reason, and the reason is its label.
+
+    The single panel this replaced was labelled "untriaged · closed in place ·
+    off-board" — three unrelated findings under one heading, so no row in it
+    could be read without opening the ticket. The split is asserted at the
+    classifier, because the corpus a test can write does not reach every arm
+    and an arm that cannot be reached from a fixture is exactly the one that
+    rots.
+    """
+
+    #: Every panel key the view may emit. A panel outside this set is one the
+    #: template has no gloss for.
+    DECLARED = {"deferred", "untriaged", "offboard", "unruled"}
+
+    @staticmethod
+    def _row(tid: str, status: str) -> bands_mod.Row:
+        return bands_mod.Row(
+            id=tid, title="t", points=0, rank=None, why="", status=status,
+            priority=None, type=None, blockers=[],
+        )
+
+    def test_each_arm_of_the_classifier(self):
+        cases = (
+            ("5", "deferred", frozenset({"5"}), "deferred"),
+            ("7", "new", frozenset({"7"}), "untriaged"),
+            ("8", "icebox", frozenset({"8"}), "unruled"),
+            ("9", "backlog", frozenset({"1"}), "offboard"),
+        )
+        for tid, status, order, expected in cases:
+            with self.subTest(status=status, expected=expected):
+                self.assertEqual(
+                    expected, view_mod._tail_panel_of(self._row(tid, status), order)
+                )
+
+    def test_off_board_is_tested_before_untriaged(self):
+        """The precedence is ``bands._RULES``', and it has to be.
+
+        ``bands`` assigns band H off-board-first, so a record that is both
+        absent from the ordering and ``status: new`` is banded for the former.
+        A split that tested ``new`` first would file it under a reason the
+        banding did not use, and the panel's label would be a claim no other
+        part of the page makes.
+        """
+        self.assertEqual(
+            "offboard",
+            view_mod._tail_panel_of(self._row("9", "new"), frozenset({"1"})),
+        )
+
+    def test_an_absent_ordering_puts_nothing_off_board(self):
+        # ``bands.partition`` reads a falsy ``item_order`` as "no ordering
+        # known" and marks every record on-board. Passing a bare empty set
+        # instead would file an orderless snapshot's entire tail as off-board.
+        self.assertEqual(
+            "unruled", view_mod._tail_panel_of(self._row("9", "backlog"), None)
+        )
+
+    def test_every_rendered_panel_is_declared_and_non_empty(self):
+        self.assertTrue(self.nav["tail"])
+        for panel in self.nav["tail"]:
+            with self.subTest(panel=panel["key"]):
+                self.assertIn(panel["key"], self.DECLARED)
+                self.assertGreater(panel["count"], 0)
+                self.assertEqual(panel["count"], len(panel["rows"]))
+
+    def test_no_record_is_in_two_panels(self):
+        seen = [row["id"] for panel in self.nav["tail"] for row in panel["rows"]]
+        self.assertEqual(sorted(set(seen)), sorted(seen))
+
+    def test_the_composite_label_is_gone(self):
+        # An absence assertion, which is what keeps a removal removed.
+        self.assertNotIn("closed in place", self.html)
+
+
+class TestWholeRowIsTheTarget(_Fixture):
+    """The row is the ticket, not the id cell.
+
+    A title column holding 70% of the table's width and doing nothing when
+    clicked is a target the eye reads as live and the pointer does not. The
+    payload moves to the ``<tr>`` so the delegated handlers reach it from
+    anywhere in the row — and the anchor stays exactly where it was, because it
+    is what still works with JS off.
+    """
+
+    def _list_rows(self) -> list[dict]:
+        return [
+            row for row in self.parsed.rows
+            if "nav-list__row" in (row.get("class") or "").split()
+        ]
+
+    def test_every_list_row_is_the_hoverable(self):
+        rows = self._list_rows()
+        self.assertGreater(len(rows), 0)
+        for row in rows:
+            with self.subTest(row=row.get("data-ticket")):
+                self.assertIn("js-ticket", (row.get("class") or "").split())
+
+    def test_every_list_row_carries_the_whole_payload(self):
+        for row in self._list_rows():
+            with self.subTest(row=row.get("data-ticket")):
+                self.assertTrue(row.get("data-ticket"))
+                for key in _HOVER_ATTRS:
+                    self.assertTrue(row.get("data-t-%s" % key), key)
+
+    def test_one_real_anchor_per_row_and_no_more(self):
+        """The href stays real and stays the only one the click handler owns.
+
+        cmd-click, middle-click, "open in new tab" and a browser with no JS all
+        still reach the ticket page through it. It is marked so the handler can
+        tell it from the blocker links in the same row, which point at OTHER
+        tickets and must navigate rather than open this one.
+        """
+        self.assertEqual(
+            len(self._list_rows()), self.parsed.classes.get("js-ticket-self", 0)
+        )
+
+    def test_the_id_cell_no_longer_carries_the_payload(self):
+        # Two elements carrying one ticket's payload is how a hover card comes
+        # to paint from the stale half of a row.
+        for element in self.parsed.js_tickets:
+            with self.subTest(ticket=element.get("data-ticket")):
+                self.assertNotIn(
+                    "nav-table__id", (element.get("class") or "").split()
+                )
+
+
+class TestFilterStrip(_Fixture):
+    """The control over the loose lists, and the two things it must not do.
+
+    It must not reach the epic maps — a frame's geometry is computed
+    server-side and hiding one node would leave its arrows pointing at nothing
+    — and it must not render in a state, because a fragment that differs per
+    operator ends the byte-identical poll the whole surface rests on.
+    """
+
+    def test_the_strip_ships_hidden(self):
+        # JS unhides it. A reader without JS is never shown a filter that
+        # cannot filter.
+        self.assertIn('id="nav-filter"', self.html)
+        opening = self.html[self.html.index('id="nav-filter"'):]
+        self.assertIn("hidden", opening[: opening.index(">")])
+
+    def test_no_chip_is_rendered_pressed(self):
+        # The server has no filter state to render. Every chip is off, every
+        # row is visible, and the client applies whatever the operator left.
+        self.assertNotIn('aria-pressed="true"', self.html)
+        self.assertEqual(0, self.parsed.classes.get("nav-list__row--hidden", 0))
+
+    def test_the_facets_are_the_loose_rows_own_types(self):
+        loose = [
+            *self.nav["ready"], *self.nav["blocked"],
+            *(row for panel in self.nav["tail"] for row in panel["rows"]),
+        ]
+        counted: dict[str, int] = {}
+        for row in loose:
+            counted[row["type"]] = counted.get(row["type"], 0) + 1
+        self.assertEqual(
+            counted, {facet["value"]: facet["count"] for facet in self.nav["facets"]}
+        )
+        self.assertEqual(len(loose), self.nav["loose_total"])
+
+    def test_an_epic_child_does_not_reach_the_facets(self):
+        """The population is the rows the filter can actually hide.
+
+        Every child in this corpus is typed ``feature``; a facet count built
+        from the slice rather than from the loose rows would say so, and the
+        chip would then promise to filter records it cannot touch.
+        """
+        self.assertGreater(self.nav["epic_children"], 0)
+        self.assertEqual(
+            self.nav["loose_total"],
+            sum(facet["count"] for facet in self.nav["facets"]),
+        )
+        # The gap IS the epic children plus the heads, which is the whole
+        # claim: the facets count the loose half of the board and no more.
+        self.assertEqual(
+            self.nav["recon"]["total"] - self.nav["loose_total"],
+            self.nav["epic_children"] + self.nav["recon"]["heads"],
+        )
+
+    def test_every_list_is_filterable_and_reports_its_own_count(self):
+        # One wrapper per table, each with the readout the client fills. A
+        # table outside a wrapper is a list the filter silently does not reach.
+        self.assertEqual(
+            len(self.parsed.tables), self.parsed.classes.get("nav-list-wrap", 0)
+        )
+        self.assertEqual(
+            len(self.parsed.tables), self.parsed.classes.get("nav-list__shown", 0)
+        )
 
 
 if __name__ == "__main__":  # pragma: no cover

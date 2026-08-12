@@ -39,18 +39,23 @@
   </div>
 </section>
 
-{# ── 2. Timeline ─────────────────────────────────────────────────────────── #}
+{# ── 2. Timeline ───────────────────────────────────────────────────────────
+   The swim lane is shared with the overnight page, where it is § 06. Its
+   register mark travels in as context rather than being baked into the
+   partial, so this page's register reads 01 · 02 · 03 instead of borrowing a
+   number from a view the reader is not looking at. #}
 <section id="swim-lane-history">
   {% set lanes = detail.swim_data.lanes %}
   {% set summary_mode = detail.swim_data.summary_mode %}
   {% set total_elapsed_secs = detail.swim_data.total_elapsed_secs %}
   {% set swim_lane_empty_label = "no timeline data captured" %}
+  {% set swim_lane_sec_num = '02' %}
   {% include "swim-lane.html" with context %}
 </section>
 
 {# ── 3. Morning Report ───────────────────────────────────────────────────── #}
 <section>
-  <span class="sec-num"><strong>§ 02</strong>report</span>
+  <span class="sec-num"><strong>§ 03</strong>report</span>
   <h2>Morning <em>report</em> <span class="phase-tag">narrative · what happened overnight</span></h2>
   <div class="prose">
     {% if detail.morning_report_html %}
@@ -62,10 +67,4 @@
 </section>
 
 {% endif %}
-{% endblock %}
-
-{% block head %}
-<style>
-  /* Session-detail-specific overrides handled by .prose in base.html */
-</style>
 {% endblock %}

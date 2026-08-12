@@ -1,4 +1,11 @@
-{# The polled fragment: § 01 READY through § 04 THE REST.
+{# The polled fragment: EPICS, READY, BLOCKED, NOT COMPETING — numbered § 01
+   upward in whatever subset of those four a given corpus draws.
+
+   EPICS LEADS. Structure before list: the groups say what the board is made
+   of, and a reader who scrolls past thirty loose rows to reach them has
+   already formed the wrong picture of the board. On a corpus with no epic the
+   section does not exist and READY leads instead, which is the same rule and
+   not a special case.
 
    The page shell in ``backlog.html`` owns the poll target and nothing else, so
    the four sections arrive together on every swap and cannot drift out of
@@ -27,6 +34,15 @@
 {% from "_nav_rows.html" import row_table, tail_panel %}
 {% from "_nav_epics.html" import epic_block %}
 
+{# The register counts the sections that RENDER, rather than labelling each with
+   a fixed ordinal. Three of the four are conditional, and a hardcoded set read
+   § 01 · § 03 · § 04 on any corpus with no epic — a gap in a numbered register
+   reads as a section that failed to draw, which is the one thing the
+   reconciliation line at the foot of this page exists to rule out. A repo whose
+   whole backlog is loose tickets is the common case, not an edge. #}
+{% set reg = namespace(n=0) %}
+{% macro sec_num(label) %}{% set reg.n = reg.n + 1 %}<span class="sec-num"><strong>§ {{ '%02d' % reg.n }}</strong>{{ label }}</span>{% endmacro %}
+
 {% if nav.backend != 'cortex-backlog' %}
 {# The same gate every other backlog read sits behind. Under a non-local
    backend there is no cortex/backlog/ to read and the surface stands down
@@ -45,9 +61,20 @@
 </section>
 
 {% else %}
-<section id="nav-ready" class="section-primary" aria-label="Ready">
-  <span class="sec-num"><strong>§ 01</strong>ready</span>
-  <h2>What you can <em>start</em> <span class="phase-tag">{{ nav.ready | length }} of {{ nav.slice_total }}</span></h2>
+{% if nav.epics %}
+<section id="nav-epics" class="section-primary" aria-label="Epics">
+  {{ sec_num('epics') }}
+  <h2>Epics <span class="phase-tag">{{ nav.epics | length }} groups · {{ nav.epic_children }} tickets</span></h2>
+  <p class="sec-lede">Grouped by the <code>parent</code> each ticket declares. Open one for its map — {% if nav.mapped_epics %}{{ nav.mapped_epics }} of {{ nav.epics | length }} declare a dependency order and are drawn as a diagram; the rest are membership without a sequence.{% else %}none declares a dependency order, so each is membership without a sequence.{% endif %}{% if nav.held_inside_epics %} {{ nav.held_inside_epics }} {{ 'ticket here is' if nav.held_inside_epics == 1 else 'tickets here are' }} held by a live blocker, drawn with the arrow that holds {{ 'it' if nav.held_inside_epics == 1 else 'them' }}.{% endif %}</p>
+  <div class="egroup-list">
+    {% for epic in nav.epics %}{{ epic_block(epic) }}{% endfor %}
+  </div>
+</section>
+{% endif %}
+
+<section id="nav-ready" class="{{ 'section-primary' if not nav.epics }}" aria-label="Ready">
+  {{ sec_num('ready') }}
+  <h2>Ready to start <span class="phase-tag">{{ nav.ready | length }} of {{ nav.slice_total }}</span></h2>
   <div class="stream-line">
     <span>doc · cortex/backlog/*.md frontmatter</span>
     {# The corpus's own "today". The staleness term is measured against the
@@ -59,6 +86,36 @@
     <span class="ml-auto">refresh · 30s</span>
   </div>
   <p class="sec-lede">Nothing holds these and none belongs to an epic. Ordered by points, highest first.</p>
+
+  {# The filter over every loose list on the page — this section, blocked, and
+     each tail panel. It is deliberately NOT over the epic maps: a frame's
+     geometry is computed server-side and hiding one node would leave its
+     arrows pointing at nothing.
+
+     Rendered here in its resting state and never with a filter applied. The
+     client owns the state and re-applies it after each swap, which is what
+     keeps an unfiltered poll byte-identical to the last one — the property the
+     whole surface rests on. With JS off the strip hides itself and every row
+     stays visible, so the page loses a convenience and not a record.
+
+     The chips are built from the values these rows actually carry. `type` is
+     an open field and consumer repos run their own vocabularies, so a
+     hardcoded feature/bug/chore strip would offer three filters matching
+     nothing while hiding the two a given repo uses. #}
+  <div class="nav-filter" id="nav-filter" data-loose-total="{{ nav.loose_total }}" hidden>
+    <label class="nav-filter__label" for="nav-filter-q">filter</label>
+    <input class="nav-filter__q" id="nav-filter-q" type="search" autocomplete="off"
+           placeholder="id or title — all loose lists" aria-describedby="nav-filter-state">
+    {% if nav.facets %}
+    <span class="nav-filter__chips" role="group" aria-label="Filter by type">
+      {% for facet in nav.facets %}
+      <button type="button" class="nav-filter__chip" data-type="{{ facet.value }}" aria-pressed="false">{{ facet.value }} <span class="nav-filter__chip-n">{{ facet.count }}</span></button>
+      {% endfor %}
+    </span>
+    {% endif %}
+    <button type="button" class="nav-filter__clear" data-clear hidden>clear</button>
+    <span class="nav-filter__state" id="nav-filter-state" role="status" aria-live="polite"></span>
+  </div>
 
   {% if nav.ready %}
   {{ row_table(nav.ready, 'ready to start · ordered by points') }}
@@ -73,39 +130,40 @@
   {% endif %}
 </section>
 
-{% if nav.epics %}
-<section id="nav-epics" aria-label="Epics">
-  <span class="sec-num"><strong>§ 02</strong>epics</span>
-  <h2>Where work is <em>grouped</em> <span class="phase-tag">{{ nav.epics | length }} groups · {{ nav.epic_children }} tickets</span></h2>
-  <p class="sec-lede">Read from the <code>parent</code> field. Open one for its map — {% if nav.mapped_epics %}{{ nav.mapped_epics }} of {{ nav.epics | length }} declare a dependency order and are drawn as a diagram; the rest are membership without a sequence.{% else %}none declares a dependency order, so each is membership without a sequence.{% endif %}</p>
-  <div class="egroup-list">
-    {% for epic in nav.epics %}{{ epic_block(epic) }}{% endfor %}
-  </div>
-</section>
-{% endif %}
+{# A section only when it has rows of its own.
 
+   It used to render unconditionally, and on any board whose blocked work all
+   sits inside epics that produced a heading, a "5 held" count, and a paragraph
+   explaining that the five were somewhere else — a section whose entire body
+   said "not here". The fact is worth keeping and was never worth a section:
+   it is one clause on the epic lede, next to the records it describes.
+
+   The unblocked board keeps its section, because "nothing waits on a live
+   blocker" is a finding about the board, and the count that proves it. #}
+{% if nav.blocked or not nav.held_total %}
 <section id="nav-blocked" aria-label="Blocked">
-  <span class="sec-num"><strong>§ 03</strong>blocked</span>
-  <h2>Waiting on <em>something live</em> <span class="phase-tag">{{ nav.held_total }} held</span></h2>
+  {{ sec_num('blocked') }}
+  <h2>Blocked <span class="phase-tag">{{ nav.held_total }} held</span></h2>
   {% if nav.blocked %}
   <p class="sec-lede">Each names the live blocker holding it.</p>
   {{ row_table(nav.blocked, 'behind a live blocker', show_blockers=true) }}
-  {% elif nav.held_total %}
-  {# Not an empty state. Every held record on this board belongs to an epic, so
-     they are all drawn in the maps above — saying "nothing is blocked" here
-     would be the opposite of true, and saying nothing at all would read as a
-     rendering failure. #}
-  <p class="empty-state">all {{ nav.held_total }} held records belong to an epic — each is drawn in its epic's map above, with the arrow that holds it</p>
   {% else %}
   <p class="empty-state">nothing on this board waits on a live blocker</p>
   {% endif %}
 </section>
+{% endif %}
 
 {% if nav.tail %}
 <section id="nav-tail" aria-label="Not competing">
-  <span class="sec-num"><strong>§ 04</strong>the rest</span>
-  <h2>Everything <em>else</em> <span class="phase-tag">{{ nav.tail | sum(attribute='count') }} records</span></h2>
-  <p class="sec-lede">Nothing here is a candidate for today. Counts are readable without opening a panel.</p>
+  {{ sec_num('not competing') }}
+  <h2>Not competing <span class="phase-tag">{{ nav.tail | sum(attribute='count') }} records</span></h2>
+  {# One panel per reason, and the reason is the panel's label.
+
+     The lede used to end "nothing here is a candidate for today", which is
+     true of the deferred panel and false of the untriaged one: band H tests
+     ``status: new`` before any startability rule runs, so those rows are out
+     on their status alone and can be the highest-pointed work on the board. #}
+  <p class="sec-lede">Off the ranking, one panel per reason. Untriaged rows are out on their status, not on merit.</p>
   <div class="nav-tail-list">
     {% for panel in nav.tail %}{{ tail_panel(panel) }}{% endfor %}
   </div>

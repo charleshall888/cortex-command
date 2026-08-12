@@ -42,6 +42,139 @@ def _write_repo(root: Path, backend: str | None) -> None:
         )
 
 
+class TestResetForNewSession(unittest.TestCase):
+    """Everything summed across polls is dropped when the session changes.
+
+    The dashboard process runs for weeks and watches many sessions, so any
+    field it accumulates has to be zeroed at the boundary or it reports one
+    session's numbers under the next session's heading.
+
+    The cost fields are why this is a correctness bug and not bookkeeping.
+    ``agent-activity.jsonl`` lives under the FEATURE's lifecycle directory,
+    not the session's, and is appended to rather than recreated — so for a
+    feature that ran last night and runs again tonight, last night's byte
+    offset is still valid and last night's dollars are still in the total.
+    Carrying them forward put the sum of every observed session into the
+    § 01 "session cost" KPI.
+    """
+
+    def _accumulated(self) -> DashboardState:
+        state = DashboardState()
+        state._active_session_id = "sessions/overnight-2026-01-01-2200"
+        state.overnight_events = [{"event": "feature_start"}]
+        state.overnight_events_offset = 4096
+        state.feature_cost_totals = {"feat-a": 2.50}
+        state.feature_cost_offsets = {"feat-a": 8000}
+        state.session_cost_total = 2.50
+        state.agent_activity_offsets = {"feat-a": 8000}
+        state.alerts = {("feat-a", "deferred"): {"first_seen": None, "notified": True}}
+        state.circuit_breaker_active = True
+        state.circuit_breaker_notified = True
+        return state
+
+    def test_the_running_totals_are_dropped(self):
+        state = self._accumulated()
+
+        state.reset_for_new_session()
+
+        self.assertEqual({}, state.feature_cost_totals)
+        self.assertIsNone(state.session_cost_total)
+
+    def test_the_per_session_log_offset_is_dropped(self):
+        """``overnight-events.log`` lives in the session dir: new file, byte 0.
+
+        Keeping this offset would seek past the start of a shorter file and
+        leave the activity stream empty for the rest of the night.
+        """
+        state = self._accumulated()
+
+        state.reset_for_new_session()
+
+        self.assertEqual([], state.overnight_events)
+        self.assertEqual(0, state.overnight_events_offset)
+
+    def test_the_per_feature_log_offsets_are_KEPT(self):
+        """``agent-activity.jsonl`` lives under the feature and is appended to.
+
+        Its offset is the mark separating previous sessions' rows from the
+        ones this session has yet to write, so zeroing it re-reads last
+        night's spend and lands on exactly the inflated total the reset
+        exists to prevent. This is the half of the rule that reads backwards,
+        which is why it is asserted rather than left to the docstring.
+        """
+        state = self._accumulated()
+
+        state.reset_for_new_session()
+
+        self.assertEqual({"feat-a": 8000}, state.feature_cost_offsets)
+        self.assertEqual({"feat-a": 8000}, state.agent_activity_offsets)
+
+    def test_the_circuit_breaker_is_rearmed(self):
+        """"Fires once per SESSION" — nothing in alerts.py ever clears it.
+
+        ``evaluate_alerts`` only ever sets ``circuit_breaker_active`` True, so
+        one halted dispatch pinned the banner and the § 01 issue count on for
+        the life of the dashboard process, while ``..._notified`` suppressed
+        the log line for a genuinely new breaker on a later night.
+        """
+        state = self._accumulated()
+
+        state.reset_for_new_session()
+
+        self.assertFalse(state.circuit_breaker_active)
+        self.assertFalse(state.circuit_breaker_notified)
+
+    def test_alerts_for_features_that_do_not_run_again_are_dropped(self):
+        """``alerts`` is only ever cleared for slugs in the CURRENT session.
+
+        A feature that alerted last night and is not in tonight's feature list
+        is never reached by the code that would clear its entry, so the alert
+        outlives the run it describes.
+        """
+        state = self._accumulated()
+
+        state.reset_for_new_session()
+
+        self.assertEqual({}, state.alerts)
+
+    def test_the_fixture_actually_accumulated_something(self):
+        # Guard: every assertion above passes vacuously against a fresh state.
+        fresh, dirty = DashboardState(), self._accumulated()
+        differing = [
+            name for name in vars(fresh)
+            if getattr(fresh, name) != getattr(dirty, name)
+        ]
+        self.assertGreaterEqual(len(differing), 6)
+
+    def test_nothing_else_on_the_state_is_touched(self):
+        """The reset's blast radius is exactly the four fields above.
+
+        Stated as a diff so a field added to ``DashboardState`` and swept up
+        by an over-broad reset is named here rather than discovered in a
+        panel that quietly went blank at 2am.
+        """
+        state = self._accumulated()
+
+        state.reset_for_new_session()
+
+        expected_still_dirty = {
+            "_active_session_id", "feature_cost_offsets", "agent_activity_offsets",
+        }
+        fresh = DashboardState()
+        still_dirty = {
+            name for name in vars(fresh)
+            if getattr(state, name) != getattr(fresh, name)
+        }
+        self.assertEqual(expected_still_dirty, still_dirty)
+
+    def test_the_session_id_survives_so_the_boundary_fires_once(self):
+        state = self._accumulated()
+
+        state.reset_for_new_session()
+
+        self.assertEqual("sessions/overnight-2026-01-01-2200", state._active_session_id)
+
+
 class TestDashboardStateDefaults(unittest.TestCase):
     """DashboardState instantiates correctly with all default fields."""
 
@@ -99,6 +232,68 @@ class TestRunPolling(unittest.IsolatedAsyncioTestCase):
             self.assertIsNotNone(state.overnight, "state.overnight should be populated")
             self.assertEqual(state.overnight["session_id"], "test-session-001")
             self.assertEqual(state.overnight["phase"], "executing")
+
+    async def test_session_cost_does_not_carry_across_a_session_change(self):
+        """The § 01 spend KPI counts THIS session, through the real poll loop.
+
+        Drives the boundary the way the runner reaches it: the
+        ``latest-overnight`` pointer is repointed at a new session directory
+        while the same dashboard process keeps polling, and the feature's
+        ``agent-activity.jsonl`` — which lives under the feature, not the
+        session, and is appended to — still holds last night's rows.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            lifecycle_dir = root / "cortex" / "lifecycle"
+            sessions = lifecycle_dir / "sessions"
+            sessions.mkdir(parents=True)
+
+            def _write_state(session_id: str) -> None:
+                d = sessions / session_id
+                d.mkdir(exist_ok=True)
+                (d / "overnight-state.json").write_text(
+                    json.dumps({
+                        "session_id": session_id, "plan_ref": "", "current_round": 1,
+                        "phase": "executing", "features": {"feat-a": {"status": "running"}},
+                        "round_history": [], "started_at": "2026-02-26T00:00:00+00:00",
+                        "updated_at": "2026-02-26T00:00:00+00:00",
+                        "paused_from": None, "integration_branch": None,
+                    }),
+                    encoding="utf-8",
+                )
+                (d / "overnight-events.log").write_text("", encoding="utf-8")
+
+            activity = lifecycle_dir / "feat-a" / "agent-activity.jsonl"
+            activity.parent.mkdir(parents=True)
+            activity.write_text(
+                json.dumps({"event": "turn_complete", "cost_usd": 2.50}) + "\n",
+                encoding="utf-8",
+            )
+
+            _write_state("overnight-night-one")
+            pointer = sessions / "latest-overnight"
+            pointer.symlink_to("overnight-night-one", target_is_directory=True)
+
+            state = DashboardState()
+            await run_polling(state, root)
+            await asyncio.sleep(3)
+            night_one = state.session_cost_total
+            self.assertTrue(night_one, "fixture never accumulated a first-session cost")
+
+            # Night two: a new session directory, the pointer moved, and the
+            # feature's activity log appended to rather than recreated.
+            _write_state("overnight-night-two")
+            with activity.open("a", encoding="utf-8") as fh:
+                fh.write(json.dumps({"event": "turn_complete", "cost_usd": 3.75}) + "\n")
+            pointer.unlink()
+            pointer.symlink_to("overnight-night-two", target_is_directory=True)
+
+            await asyncio.sleep(3)
+
+            # 3.75 is night two's own spend. 6.25 would be both nights summed
+            # under tonight's heading, which is what carrying the totals did.
+            self.assertAlmostEqual(6.25, night_one + 3.75, places=2)
+            self.assertAlmostEqual(3.75, state.session_cost_total, places=2)
 
     async def test_overnight_events_offset_advances(self):
         """A second poll of overnight-events.log does not re-emit already-seen events."""

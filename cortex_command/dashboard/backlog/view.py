@@ -119,12 +119,31 @@ _ROW_MARK = {
 # the band exists to report.
 _READY_KEYS = ("A", "B", "C", "D", "E", "E*", "G′")
 
-# The collapsed panels under § 04, in reading order: (key, label, gloss, bands).
-# Epic containers (E′) are absent because an epic is a section head in § 02,
-# not a row anywhere.
-_TAIL_PANELS: tuple[tuple[str, str, str, tuple[str, ...]], ...] = (
-    ("deferred", "held by decision", "deferral is a decision that was made, not an obstacle that appeared", ("F",)),
-    ("offboard", "untriaged · closed in place · off-board", "shown so the arithmetic closes, not because you should act on them", ("H",)),
+# The collapsed panels under the tail, in reading order: (key, label, gloss).
+# Epic containers (E′) are absent because an epic is a section head, not a row
+# anywhere.
+#
+# Band H is not a category. Its label read "untriaged · closed in place ·
+# off-board", which is the three unrelated reasons a record can land in the
+# band, printed as though they were one — and a reader could not tell which of
+# the three applied to any given row without opening the ticket. It is split
+# here on the same facts, tested in the same order, that ``bands._RULES`` used
+# to assign the band, so the split cannot disagree with the banding: no row
+# changes band, and every row still lands in exactly one panel.
+#
+# "Closed in place" is not among them, and its absence is the measurement
+# rather than an oversight. ``collect_items`` drops a terminal-status record
+# before it reaches ``active_items`` (``if is_terminal: continue``), so no such
+# record is ever in the ordering; the only terminal records that reach the
+# board at all are the closed epic heads the feed adds to ``items`` alone, and
+# those are off-board by the test below, which runs first. A panel for it would
+# be a label no row can carry — the same unreachable-arm defect as the
+# "discharged blocker" markup this table's rows used to render.
+_TAIL_PANELS: tuple[tuple[str, str, str], ...] = (
+    ("deferred", "held by decision", "somebody chose to park these"),
+    ("untriaged", "untriaged", "status: new — set a status and they rank"),
+    ("offboard", "off the board", "absent from the board's ordering"),
+    ("unruled", "matched no rule", "a status or priority the bands do not recognise"),
 )
 
 
@@ -195,6 +214,15 @@ def _corpus_of(snapshot: dict, items: dict[str, dict]) -> list[dict]:
         for row in rows or []:
             ref = normalize_ref(row.get("ref"))
             if not ref or ref in seen:
+                continue
+            # A ref the feed could not resolve gets NO stub. Stubbing it made
+            # it a known record inside ``build_graph``, which is the sole test
+            # separating an ``unresolvable`` edge from an ``external`` one — so
+            # a bare uuid left behind by a deleted ticket was classified as a
+            # real off-board blocker, printed as "#<uuid>" with a link to a
+            # page that 404s, and the ``unresolvable`` arm every downstream
+            # reader branches on was unreachable from this path.
+            if row.get("kind") == "not_found":
                 continue
             seen.add(ref)
             stub: dict[str, Any] = {"id": ref, "status": row.get("status")}
@@ -349,13 +377,24 @@ def _row(
         # board still ranks such a record — consumer repos run their own
         # statuses — but it says so on the row that makes the claim.
         "status_note": _unrecognised_status_note(record),
+        # ``href`` is None for a ref the corpus cannot name — an id or a bare
+        # uuid left behind by a deleted or never-created ticket. Such a ref
+        # linked to ``/tickets/<ref>`` is a link to a 404, and § 03's own lede
+        # promises each row "names the live blocker holding it", which a dead
+        # link does not. The epic map already draws the same dangling reference
+        # as an unlinked "names no known ticket" node; this is that treatment,
+        # in the one other place a ref reaches the page.
         "blockers": [
             {
                 "id": blocker.ref,
                 "title": blocker.title or "",
                 "status": blocker.status or "",
                 "discharged": blocker.discharged,
-                "href": "/tickets/%s" % blocker.ref,
+                "unresolvable": blocker.kind == "unresolvable",
+                "href": (
+                    None if blocker.kind == "unresolvable"
+                    else "/tickets/%s" % blocker.ref
+                ),
             }
             for blocker in row.blockers
         ],
@@ -645,12 +684,38 @@ def _epic(
 # ---------------------------------------------------------------------------
 
 
+def _tail_panel_of(row: bands_mod.Row, order_ids: frozenset[str] | None) -> str:
+    """Which tail panel a non-ready, non-blocked record belongs in.
+
+    The order of the tests is the order ``bands._RULES`` applies, and that is
+    the whole correctness argument: band H is assigned off-board-first, so a
+    record that is both absent from the ordering and ``status: new`` is banded
+    for the former. A panel split that tested ``new`` first would file it under
+    the reason the band did not use, and the label on the panel would be a
+    claim the banding does not make.
+
+    The final arm is a real destination rather than a fallthrough. A record
+    whose status or priority is outside cortex's vocabulary reaches it —
+    consumer repos run their own — and saying so is better than sweeping it
+    into "off the board", which would be false about where it sits.
+    """
+    status = _text(row.status).lower()
+    if status == "deferred":
+        return "deferred"
+    if order_ids is not None and row.id not in order_ids:
+        return "offboard"
+    if status == "new":
+        return "untriaged"
+    return "unruled"
+
+
 def _partition(
     banded: bands_mod.Bands,
     items: dict[str, dict],
     child_ids: frozenset[str],
     head_ids: frozenset[str],
     ctx: ScoreContext,
+    order_ids: frozenset[str] | None,
 ) -> dict:
     """Route every banded record to the one place on the page it appears.
 
@@ -685,10 +750,7 @@ def _partition(
     """
     ready: list[dict] = []
     blocked: list[dict] = []
-    tail_rows: dict[str, list[dict]] = {key: [] for key, _l, _g, _m in _TAIL_PANELS}
-    tail_of = {
-        member: key for key, _l, _g, members in _TAIL_PANELS for member in members
-    }
+    tail_rows: dict[str, list[dict]] = {key: [] for key, _l, _g in _TAIL_PANELS}
     seen: set[str] = set()
     heads = 0
 
@@ -707,13 +769,13 @@ def _partition(
                 ready.append(entry)
             elif band.key == "G":
                 blocked.append(entry)
-            elif band.key in tail_of:
-                tail_rows[tail_of[band.key]].append(entry)
             else:
-                # A container with no live children lands here, which is where
-                # it belongs: it is not startable, not held, and not a group
-                # anyone can open. Visible beats silently absent.
-                tail_rows["offboard"].append(entry)
+                # Everything else is tail, and the panel is chosen from the
+                # record rather than from its band letter. A container with no
+                # live children lands here too, which is where it belongs: it
+                # is not startable, not held, and not a group anyone can open.
+                # Visible beats silently absent.
+                tail_rows[_tail_panel_of(row, order_ids)].append(entry)
 
     ready.sort(key=_rank_key)
     blocked.sort(key=_rank_key)
@@ -729,7 +791,7 @@ def _partition(
             "count": len(tail_rows[key]),
             "rows": tail_rows[key],
         }
-        for key, label, gloss, _members in _TAIL_PANELS
+        for key, label, gloss in _TAIL_PANELS
         if tail_rows[key]
     ]
     return {
@@ -739,6 +801,40 @@ def _partition(
         "seen": frozenset(seen),
         "heads": heads,
     }
+
+
+def _loose_rows(page: dict) -> list[dict]:
+    """Every row drawn in a flat list — ready, blocked, and every tail panel.
+
+    The population the filter acts on, and the reason it is a list rather than
+    a count: the filter's chips are built from the values these rows carry.
+    Epic children are deliberately absent. They are drawn inside a map whose
+    geometry is computed server-side, and hiding a node from a frame would
+    leave its arrows pointing at nothing.
+    """
+    return [
+        *page["ready"],
+        *page["blocked"],
+        *(row for panel in page["tail"] for row in panel["rows"]),
+    ]
+
+
+def _facets(rows: list[dict]) -> list[dict]:
+    """The ``type`` values the loose lists actually contain, with their counts.
+
+    Derived from the rows on this page rather than from a fixed vocabulary,
+    because ``type`` is an open field: a hardcoded feature/bug/chore strip
+    offers a consumer repo three filters that match nothing while hiding the
+    two values it does use. Commonest first, so the chip that shortens the
+    longest list is the leftmost one.
+    """
+    counts: dict[str, int] = {}
+    for row in rows:
+        counts[row["type"]] = counts.get(row["type"], 0) + 1
+    return [
+        {"value": value, "count": counts[value]}
+        for value in sorted(counts, key=lambda value: (-counts[value], value))
+    ]
 
 
 def _cycles(graph: Any, items: dict[str, dict]) -> list[dict]:
@@ -786,10 +882,13 @@ def _empty_navigator(state: object) -> dict:
         "ready": [],
         "blocked": [],
         "held_total": 0,
+        "held_inside_epics": 0,
         "epics": [],
         "epic_children": 0,
         "mapped_epics": 0,
         "tail": [],
+        "facets": [],
+        "loose_total": 0,
         "cycles": [],
         "corpus": None,
         "recon": None,
@@ -818,9 +917,15 @@ def _navigator_model(state: object) -> dict:
     active = frozenset(str(tid) for tid in (snapshot.get("item_order") or []))
 
     child_ids = frozenset(tid for kids in parents.values() for tid in kids)
-    # What § 02 actually draws a heading for. Not band E′ — see _partition.
+    # What the epic section actually draws a heading for. Not band E′ — see
+    # _partition.
     head_ids = frozenset(parents)
-    page = _partition(banded, items, child_ids, head_ids, ctx)
+    # Mirrors ``bands.partition``'s own reading of the field to the letter: an
+    # absent or empty ``item_order`` is "this snapshot has no ordering", under
+    # which every record is on-board. Passing the bare frozenset instead would
+    # make an orderless snapshot file its entire tail under "off-board".
+    order_ids = active if snapshot.get("item_order") else None
+    page = _partition(banded, items, child_ids, head_ids, ctx, order_ids)
 
     layout_ctx = LayoutContext(
         children=parents,
@@ -857,17 +962,26 @@ def _navigator_model(state: object) -> dict:
         "ready": page["ready"],
         "blocked": page["blocked"],
         # Every held record on the board, including the ones drawn inside an
-        # epic map rather than listed here. § 03 needs it to explain its own
-        # emptiness: on a corpus where every blocked ticket has a parent, a
-        # bare empty section reads as "nothing is blocked", which is the
-        # opposite of true.
+        # epic map rather than listed in the blocked section.
         "held_total": sum(1 for key in band_of.values() if key == "G"),
+        # The difference between the two, which is the fact the blocked section
+        # used to render an entire empty section to state. A board whose held
+        # work all sits inside epics has nothing to list and is not unblocked;
+        # that sentence belongs on the epic section, where the records are, and
+        # a heading over an empty body is not how to say it.
+        "held_inside_epics": sum(1 for key in band_of.values() if key == "G")
+        - len(page["blocked"]),
         "epics": epics,
         "epic_children": len(child_ids),
         # How many groups have a dependency map to draw at all. Printed once in
         # the section lede so no group has to carry the explanation itself.
         "mapped_epics": sum(1 for epic in epics if epic["frame"]),
         "tail": page["tail"],
+        # The filter's vocabulary and its denominator, both measured off the
+        # rows this render produced so the control can never offer a value the
+        # page does not contain.
+        "facets": _facets(_loose_rows(page)),
+        "loose_total": len(_loose_rows(page)),
         "cycles": _cycles(graph, items),
         "corpus": {"archived": int(counts.get("archived") or 0)},
         # The completeness claim, and a real one. The comparand is the set of

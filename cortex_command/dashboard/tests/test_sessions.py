@@ -154,6 +154,72 @@ class TestSessionDetail(unittest.TestCase):
             self.assertIsNotNone(result["morning_report_html"])
             self.assertIn("<h1>", result["morning_report_html"])
 
+    def test_duration_str_is_rendered_at_session_scale(self):
+        """The span reads 'Xh Ym', the same shape the history list prints."""
+        with tempfile.TemporaryDirectory() as tmp:
+            lifecycle_dir = Path(tmp)
+            _write_session(
+                lifecycle_dir / "sessions",
+                "overnight-2026-02-26-2200",
+                "2026-02-26T22:00:00Z",
+                "2026-02-27T04:51:00Z",
+                {"feat-a": {"status": "merged"}},
+            )
+
+            result = parse_session_detail("overnight-2026-02-26-2200", lifecycle_dir)
+
+            self.assertEqual("6h 51m", result["duration_str"])
+
+
+class TestMorningReportSanitization(unittest.TestCase):
+    """The morning report goes through the same allowlist as a ticket body.
+
+    ``markdown.markdown`` passes raw HTML in its source straight through, and
+    ``morning_report_html`` reaches ``session_detail.html`` under ``| safe`` —
+    so before this it was the one ``| safe`` value on the dashboard a
+    ``<script>`` could reach. The report is agent-written and quotes material
+    the agent read, and ``DASHBOARD_HOST`` makes a non-loopback bind a
+    documented option.
+    """
+
+    def _report(self, body: str) -> str:
+        with tempfile.TemporaryDirectory() as tmp:
+            lifecycle_dir = Path(tmp)
+            _write_session(
+                lifecycle_dir / "sessions", "overnight-2026-02-26-2200",
+                "2026-02-26T22:00:00Z", "2026-02-26T23:00:00Z",
+                {"feat-a": {"status": "merged"}},
+            )
+            (lifecycle_dir / "sessions" / "overnight-2026-02-26-2200"
+             / "morning-report.md").write_text(body, encoding="utf-8")
+            detail = parse_session_detail("overnight-2026-02-26-2200", lifecycle_dir)
+            return detail["morning_report_html"]
+
+    def test_a_script_tag_does_not_survive(self):
+        html = self._report("Summary.\n\n<script>alert(1)</script>\n")
+        self.assertNotIn("<script", html)
+        # Dropped with its contents, not unwrapped — unwrapping would print the
+        # script source as prose.
+        self.assertNotIn("alert(1)", html)
+
+    def test_an_event_handler_attribute_does_not_survive(self):
+        html = self._report('Summary.\n\n<p onclick="alert(1)">click</p>\n')
+        self.assertNotIn("onclick", html)
+
+    def test_a_javascript_href_does_not_survive(self):
+        html = self._report('<a href="javascript:alert(1)">link</a>\n')
+        self.assertNotIn("javascript:", html)
+
+    def test_real_report_structure_still_renders(self):
+        # The allowlist must not cost the report what it is for: headings,
+        # tables and fenced code are what a morning report is made of.
+        html = self._report(
+            "# Overnight\n\n## Merged\n\n| feature | outcome |\n| --- | --- |\n"
+            "| alpha | merged |\n\n```python\nprint('x')\n```\n\n- one\n- two\n"
+        )
+        for tag in ("<h1>", "<h2>", "<table>", "<td>", "<pre>", "<code", "<li>"):
+            self.assertIn(tag, html)
+
 
 if __name__ == "__main__":
     unittest.main()

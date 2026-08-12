@@ -1,4 +1,4 @@
-{# The list rows — § 01 READY, § 03 BLOCKED, and the § 04 tail panels.
+{# The list rows — READY, BLOCKED, and the tail panels.
 
    One macro, three callers, because the three lists differ in exactly one way
    (blocked rows name what holds them) and it is worth being able to see that
@@ -52,6 +52,11 @@ data-ticket="{{ row.id }}"
 {%- endmacro %}
 
 {% macro row_table(rows, caption, show_blockers=false) %}
+{# The wrapper is the filter's unit of work: one table, one readout of how much
+   of it is showing. The readout is rendered empty and hidden, because the
+   server has no filter state to render — the client fills it after it applies
+   one, and an unfiltered board therefore still polls byte-identically. #}
+<div class="nav-list-wrap" data-filterable>
 <table class="nav-table nav-list">
   <caption class="nav-table__caption nav-table__caption--vh">{{ caption }}</caption>
   <thead>
@@ -65,9 +70,19 @@ data-ticket="{{ row.id }}"
   </thead>
   <tbody>
     {% for row in rows %}
-    <tr class="nav-list__row nav-list__row--{{ row.border_style }}">
+    {# The ROW is the ticket, not the id cell. The payload and the `js-ticket`
+       hook sit here so the whole row hovers and the whole row opens — a title
+       column holding 70 per cent of the table's width and doing nothing when
+       clicked is a target the eye reads as live and the pointer does not.
+
+       The anchor stays exactly where it was and stays a real anchor, so
+       cmd-click, middle-click and a browser with no JS still reach the page.
+       It carries `js-ticket-self` to tell the click handler apart from the
+       blocker links in the last cell, which point somewhere else and must
+       navigate rather than open this row. #}
+    <tr class="nav-list__row nav-list__row--{{ row.border_style }} js-ticket" {{ ticket_attrs(row) }}>
       <td class="nav-table__pts">{{ row.points }}{% if row.mark %}<span class="row-mark" title="{{ row.mark_title }}" aria-label="{{ row.mark_title }}">{{ row.mark }}</span>{% endif %}</td>
-      <td class="nav-table__id"><a class="js-ticket" href="{{ row.href }}" {{ ticket_attrs(row) }}>#{{ row.id }}</a></td>
+      <td class="nav-table__id"><a class="js-ticket-self" href="{{ row.href }}">#{{ row.id }}</a></td>
       <td class="nav-table__title">{{ row.title }}{% if row.status_note %} <span class="nav-chip nav-chip--warn">{{ row.status_note }}</span>{% endif %}</td>
       <td class="nav-table__type">{{ row.type }}</td>
       {% if show_blockers %}
@@ -78,13 +93,19 @@ data-ticket="{{ row.id }}"
          promised a faint-blocker rendering the data could never produce. The
          lapsed case is stated where it is true: the ✓ mark on the § 01 row. #}
       <td class="nav-table__why">
-        <span class="band__blockers">{% for blocker in row.blockers %}<a class="band__blocker" href="{{ blocker.href }}" title="{{ blocker.title }}">#{{ blocker.id }}</a>{% endfor %}</span>
+        {# A blocker the corpus cannot name gets no link, because there is
+           nothing at the other end of it: the ref survives as the only handle
+           the operator has, and the note says why clicking it would not help.
+           The map draws the same dangling reference the same way. #}
+        <span class="band__blockers">{% for blocker in row.blockers %}{% if blocker.href %}<a class="band__blocker" href="{{ blocker.href }}" title="{{ blocker.title }}">#{{ blocker.id }}</a>{% else %}<span class="band__blocker band__blocker--dangling" title="names no known ticket">#{{ blocker.id }} <span class="band__blocker-note">names no known ticket</span></span>{% endif %}{% endfor %}</span>
       </td>
       {% endif %}
     </tr>
     {% endfor %}
   </tbody>
 </table>
+<p class="nav-list__shown" data-shown hidden></p>
+</div>
 {% endmacro %}
 
 {# A § 04 panel: a count you can read while it is shut, and the rows behind it.
@@ -97,7 +118,10 @@ data-ticket="{{ row.id }}"
 <details class="nav-tail" id="{{ panel.slug }}">
   <summary class="nav-tail__summary">
     <span class="nav-tail__label">{{ panel.label }}</span>
-    <span class="nav-tail__count">{{ panel.count }}</span>
+    {# The unfiltered total is kept as data, not inferred from the text, so the
+       filter can restore this cell exactly rather than re-counting rows it has
+       already hidden. #}
+    <span class="nav-tail__count" data-panel-count data-total="{{ panel.count }}">{{ panel.count }}</span>
     <span class="nav-tail__gloss">{{ panel.gloss }}</span>
   </summary>
   {{ row_table(panel.rows, panel.label) }}
