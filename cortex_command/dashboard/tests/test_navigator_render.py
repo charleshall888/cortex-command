@@ -1780,6 +1780,67 @@ class TestStartableGroupsSortAboveParkedOnes(unittest.TestCase):
         self.assertEqual(["2", "1"], self._epics(items))
 
 
+class TestHeadStateComesFromTheHead(unittest.TestCase):
+    """The word on the shut line is the head's own status, never the children's.
+
+    The arm tested ``on_board``, and a deferred record is on the board — so a
+    head carrying ``status: deferred`` rendered indistinguishably from a live
+    one while its children were reported as deferred beneath it.
+
+    The tempting generalisation is to call a group deferred when every child
+    is. It states something the corpus does not: the case that prompted this
+    was a head at ``backlog`` over five deferred children, where deriving would
+    have printed a status the ticket does not carry and hidden the grooming
+    defect — the head is the thing that is wrong, and the board's job is to
+    show it, not to launder it into a consistent-looking group.
+    """
+
+    def _epics(self, items):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        nav = build_navigator(_state_for(items, Path(tmp.name)), None)
+        return {epic["id"]: epic for epic in nav["epics"]}
+
+    _CHILD = {"id": "2", "title": "A child", "type": "chore", "priority": "medium",
+              "parent": "1"}
+
+    def test_a_deferred_head_says_so(self):
+        epics = self._epics(
+            [
+                {"id": "1", "title": "Parked epic", "type": "epic",
+                 "status": "deferred", "priority": "medium"},
+                {**self._CHILD, "status": "deferred"},
+            ]
+        )
+        self.assertEqual("deferred", epics["1"]["head_state"])
+
+    def test_a_live_head_over_deferred_children_claims_nothing(self):
+        epics = self._epics(
+            [
+                {"id": "1", "title": "Live epic", "type": "epic",
+                 "status": "backlog", "priority": "medium"},
+                {**self._CHILD, "status": "deferred"},
+                {"id": "3", "title": "Another child", "type": "chore",
+                 "status": "deferred", "priority": "medium", "parent": "1"},
+            ]
+        )
+        epic = epics["1"]
+        self.assertEqual("", epic["head_state"])
+        # The children's disposition is still reported, as a count.
+        self.assertEqual(2, epic["deferred"])
+        self.assertEqual("2 deferred", epic["summary"])
+
+    def test_a_live_head_over_live_children_says_nothing(self):
+        epics = self._epics(
+            [
+                {"id": "1", "title": "Live epic", "type": "epic",
+                 "status": "backlog", "priority": "medium"},
+                {**self._CHILD, "status": "backlog"},
+            ]
+        )
+        self.assertEqual("", epics["1"]["head_state"])
+
+
 class TestTailPanelsNameOneReasonEach(_Fixture):
     """Every tail panel is one reason, and the reason is its label.
 

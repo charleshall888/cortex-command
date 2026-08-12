@@ -608,6 +608,16 @@ def _epic(
     record = items.get(epic_id)
     kids = sorted(children, key=_id_key)
 
+    # The backfilled record's own status when there is one, because it is the
+    # ticket's real status; the corpus resolution only when there is not. Keyed
+    # on the record rather than on ``on_board`` so an off-board head still
+    # reports "complete" rather than a coarser fallback.
+    status = (
+        (_text(record.get("status")) or "unset")
+        if record is not None
+        else _offslice_state(epic_id, offslice)
+    )
+
     grid = [
         {
             # Same flat merge the nodes get, for the same reason.
@@ -664,10 +674,26 @@ def _epic(
         # the ticket's real status; the corpus resolution only when there is
         # not. Keyed on the record rather than on ``on_board`` so an off-board
         # head still reports "complete" rather than a coarser fallback.
-        "status": (
-            (_text(record.get("status")) or "unset")
-            if record is not None
-            else _offslice_state(epic_id, offslice)
+        "status": status,
+        # The head's own status when that status is a finding, empty when it is
+        # not — the template prints it and makes no vocabulary decision of its
+        # own. Two cases qualify and they are the same fact: this head is not
+        # in play, whatever its children are doing. A closed head over live
+        # children is a grooming signal; a DEFERRED head said nothing at all
+        # here, because the arm tested ``on_board`` and a deferred record is on
+        # the board. Two of thirteen groups on the wild-light board carried
+        # ``status: deferred`` on the head and rendered indistinguishably from
+        # a live one.
+        #
+        # DERIVED FROM THE HEAD'S OWN RECORD, never from the children. A group
+        # whose children are all deferred is reported by ``summary`` ("5
+        # deferred"), which is a count and cannot be wrong; calling the head
+        # deferred because of them would print a status the ticket does not
+        # carry, and the corpus has that exact case — a head at ``backlog``
+        # over five deferred children, where the derivation would state a
+        # falsehood and hide the grooming defect that produced it.
+        "head_state": (
+            status if (not on_board or status == "deferred") else ""
         ),
         "count": len(kids),
         "ready": ready,

@@ -192,9 +192,18 @@ own: it is already one shut line whose summary says "5 deferred", and the fix
 for a bad ordering is the ordering.
 
 The head line carries the only things that could make you open it: how many
-children are ready, held or deferred, and — when it applies — that the epic's
-own head has closed while its children are still live, which is a grooming
-finding rather than something to bury.
+children are ready, held or deferred, and — when it applies — the head's own
+status, which is a grooming finding rather than something to bury. That word
+appears when the head has closed or been deferred while its children are still
+live; a head in the ordinary live case needs no word.
+
+**The head state is the head's own status, never an inference from the
+children.** A group whose children are all deferred is already reported as "5
+deferred", which is a count and cannot be wrong. Calling the head deferred
+because of them would print a status the ticket does not carry — and the corpus
+has that case: a head at `backlog` over five deferred children, where the
+derivation would state a falsehood and bury the grooming defect that produced
+it. The head is what is wrong there, and the board's job is to show it.
 
 Opening a group draws its children exactly once, in one of two ways:
 

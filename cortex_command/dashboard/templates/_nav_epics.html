@@ -44,11 +44,11 @@
     <a class="egroup__id js-ticket" href="{{ epic.href }}" {{ ticket_attrs(epic) }}>ε#{{ epic.id }}</a>
     <span class="egroup__title">{{ epic.title }}</span>
     <span class="egroup__counts">{{ epic.summary }}</span>
-    {# Stated only when it is a finding. A live head is the expected case and
-       needs no word; a closed head with live children underneath it is a
-       grooming signal, and burying it inside the disclosure is how the old
-       two-table split let the same ticket read two different states. #}
-    {% if not epic.on_board %}<span class="egroup__head-state">head {{ epic.status }}</span>{% endif %}
+    {# Stated only when it is a finding, and the view decides which statuses
+       qualify — a live head is the expected case and needs no word, while a
+       closed or deferred head over live children is a grooming signal that
+       belongs on the shut line rather than inside the disclosure. #}
+    {% if epic.head_state %}<span class="egroup__head-state">head {{ epic.head_state }}</span>{% endif %}
     {% if epic.frame %}<span class="egroup__mark" title="declares a dependency order" aria-label="declares a dependency order">⇄</span>{% endif %}
   </summary>
 
