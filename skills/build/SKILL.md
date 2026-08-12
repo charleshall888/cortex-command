@@ -24,7 +24,7 @@ A **`resume`** state is served phase-keyed: `state` is the current phase, `advan
 
 <!-- pause: empty-lifecycle-offer question -->
 <!-- pause: ambiguous-backlog-pick question -->
-**Passthrough routing states** carry a `next` directive — act on it: `derive-slug` (derive a 3–6 word kebab-case slug and re-run, no confirmation); `empty` (offer incomplete `cortex/lifecycle/*` lifecycles via `AskUserQuestion`, then re-run); `ambiguous-backlog` (present `candidates` via `AskUserQuestion`, then re-run); `wontfix` (run the named `cortex-lifecycle-wontfix` command and halt); `error` / `needs-feature` / `no-such-lifecycle` (report and stop).
+**Passthrough routing states** carry a `next` directive — act on it: `derive-slug` (derive a 3–6 word kebab-case slug and re-run, no confirmation); `empty` (offer incomplete `cortex/lifecycle/*` lifecycles via `AskUserQuestion`, then re-run); `ambiguous-backlog` (present `candidates` via `AskUserQuestion`, then re-run); `wontfix` (run the named `cortex-lifecycle-wontfix` command and halt); `closed` / `parked` (the backlog item already records an outcome — relay `next` and do not build); `error` / `needs-feature` / `no-such-lifecycle` (report and stop).
 
 ## Step 2: Enter the resolved state
 

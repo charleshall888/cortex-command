@@ -11,6 +11,8 @@ Route a development request to the right workflow. A named skill in the request 
 
 First match wins.
 
+**Before matching an explicit ticket id**, run `cortex-lifecycle-next <id>`. A `closed` or `parked` state means the item already records an outcome: relay it with its recorded reason and ask whether to reopen or unpark — route only on a yes. The rules below read readiness, never closure, so without this an id that triage correctly suppresses still routes as fresh work.
+
 1. **No arguments, or "what should I work on" / "what's next"** → backlog triage (Step 3).
 2. **Three or more distinct features, or a batch** → classify each as `simple` or above by rule 4's test. All above simple → `/cortex-overnight:overnight` with the feature list. All simple → implement each in this conversation. Mixed → present a table of task/routing/justification and confirm before proceeding.
 3. **Vague topic** ("not sure how to approach", "explore", "investigate") → `/cortex-core:discovery <topic>`.

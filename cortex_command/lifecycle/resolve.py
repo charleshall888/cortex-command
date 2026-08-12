@@ -40,6 +40,7 @@ from pathlib import Path
 from typing import List, Optional
 
 from cortex_command.backlog import _telemetry
+from cortex_command.backlog.generate_index import _is_deferred
 from cortex_command.backlog.resolve_item import (
     _backlog_dir,
     _build_json,
@@ -48,7 +49,9 @@ from cortex_command.backlog.resolve_item import (
     resolve,
 )
 from cortex_command.common import (
+    TERMINAL_STATUSES,
     lifecycle_staleness,
+    normalize_status_spelling,
     read_criticality,
     read_tier,
     resolve_lifecycle_phase,
@@ -66,8 +69,55 @@ KNOWN_STATES = (
     "no-such-lifecycle",
     "ambiguous-backlog",
     "new",
+    "closed",
+    "parked",
     "resume",
 )
+
+# Recorded-outcome routing (#480). Deliberately NOT folded into the `wontfix`
+# state above: that one is the *invocation mode* (`/cortex-core:lifecycle
+# wontfix <slug>`), an instruction to go close something. These two are a
+# report about an item that is already closed or parked, so conflating them
+# would change what the existing arm means.
+#
+# `closed` interpolates the status because the status IS the reason. `parked`
+# does not: parking has two sanctioned spellings (the `deferred` tag and
+# `status: deferred`), so naming one of them would misreport the other.
+_OUTCOME_NEXT = {
+    "closed": (
+        "Backlog item is `status: {status}` — already finished. Report that and stop; "
+        "do not start a lifecycle. Route only if the user explicitly asks to reopen it."
+    ),
+    "parked": (
+        "Backlog item is parked — deliberately held, and NOT finished. Surface its "
+        "recorded decision and revisit trigger, ask whether to unpark, and route only "
+        "on a yes."
+    ),
+}
+
+
+def _recorded_outcome(fm: dict) -> Optional[str]:
+    """Classify a backlog item's recorded outcome: ``closed``, ``parked``, or neither.
+
+    Terminal beats parked: an item that was parked and later finished is
+    finished, so the terminal test runs first.
+
+    ``_is_deferred`` is imported rather than re-spelled here. A second copy of
+    the parking set is precisely the drift #456 exists because of — and it
+    already recognizes both sanctioned spellings, which a reader holding only
+    ``status`` cannot reconstruct.
+    """
+    if normalize_status_spelling(fm.get("status")) in TERMINAL_STATUSES:
+        return "closed"
+    # This resolver must never crash (it is exit-0 by contract), and frontmatter
+    # is unvalidated on write — so coerce rather than trust. `tags: null` yields
+    # None, and a non-str tag would blow up the predicate's `.strip()`.
+    raw_tags = fm.get("tags")
+    tags = [t for t in raw_tags if isinstance(t, str)] if isinstance(raw_tags, list) else []
+    if _is_deferred({"status": fm.get("status") or "", "tags": tags}):
+        return "parked"
+    return None
+
 
 # route -> the single next action, phrased as a directive to the skill. The
 # skill acts on ``next`` and does not re-derive routing from ``route``.
@@ -130,7 +180,20 @@ def _resolve_backlog(feature: str) -> Optional[dict]:
         return None
     res = resolve(feature, backlog_dir)
     if res.status == "ok" and res.item is not None:
-        return _build_json(res.item, _parse_frontmatter(res.item))
+        fm = _parse_frontmatter(res.item)
+        out = _build_json(res.item, fm)
+        # The recorded outcome is attached HERE, on this resolver's own copy,
+        # rather than inside `_build_json`. Those four keys are a closed set
+        # pinned by tests/test_resolve_backlog_item.py — the
+        # `cortex-resolve-backlog-item` stdout contract — so widening them to
+        # carry `status` would change a CLI this fix has no business touching.
+        #
+        # Both fields ride every state, not just the two that route on them:
+        # on the `resume` arm the events log stays authoritative, but a reader
+        # can now see that the ticket underneath it is closed or parked.
+        out["status"] = normalize_status_spelling(fm.get("status"))
+        out["outcome"] = _recorded_outcome(fm)
+        return out
     if res.status == "ambiguous":
         return {
             "ambiguous": [
@@ -267,6 +330,34 @@ def _resolve_parsed(
         if canonical_slug is not None:
             resolved_from = feature
             feature = canonical_slug
+
+        # #480: the item's recorded outcome, before the `new` verdict below.
+        #
+        # Absence of a lifecycle directory was the ONLY evidence this arm read,
+        # so a finished or parked ticket whose directory was never created — or
+        # was archived as closure hygiene — came back as "New feature". Keying
+        # on the status rather than on the directory is what makes archiving
+        # unable to defeat the check: `cortex/lifecycle/archive/<slug>` never
+        # has to be consulted, because the answer was never in the filesystem.
+        #
+        # Scoped to this arm on purpose. Where a live directory exists the
+        # events log is authoritative and already routes correctly (measured:
+        # every live-directory row in #480's table was right), and overriding it
+        # from frontmatter would change the event-driven arm's meaning.
+        outcome = backlog.get("outcome") if isinstance(backlog, dict) else None
+        if outcome is not None:
+            out = {
+                "state": outcome,
+                "feature": feature,
+                "backlog": backlog,
+                "next": _OUTCOME_NEXT[outcome].format(
+                    status=backlog.get("status") or "unknown"
+                ),
+            }
+            if resolved_from is not None:
+                out["resolved_from"] = resolved_from
+            return out
+
         out = {
             "state": "new",
             "feature": feature,

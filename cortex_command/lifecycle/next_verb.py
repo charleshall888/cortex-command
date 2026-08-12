@@ -65,7 +65,8 @@ the identity mis-threading trap where a ticket number pasted into a
 ``{feature}`` placeholder exit-3'd a valid resume.
 
 The passthrough routing states (``derive-slug`` / ``empty`` / ``needs-feature`` /
-``wontfix`` / ``no-such-lifecycle`` / ``ambiguous-backlog`` / ``new``) are
+``wontfix`` / ``no-such-lifecycle`` / ``ambiguous-backlog`` / ``new`` /
+``closed`` / ``parked``) are
 returned verbatim from the resolver (they carry the resolver's legacy ``next``
 directive), stamped with ``protocol``.
 """
@@ -111,6 +112,11 @@ _ROUTING_PASSTHROUGH = (
     "no-such-lifecycle",
     "ambiguous-backlog",
     "new",
+    # #480 — the item's own recorded outcome. Passthrough because the resolver
+    # owns the verdict end-to-end: there is no lifecycle to project a phase
+    # from, which is the whole point of the state.
+    "closed",
+    "parked",
 )
 
 # Closed set of ``state`` values ``next`` can emit (house style). The served
