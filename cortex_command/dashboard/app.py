@@ -650,46 +650,6 @@ async def ticket_body(request: Request, item_id: str):
     )
 
 
-@app.get("/partials/ticket-card/{item_id}")
-def ticket_card(request: Request, item_id: str):
-    """Return one ticket as a modal card for the epic map.
-
-    Declared ``def``, not ``async def``, for the reason ``ticket_page`` gives:
-    ``load_ticket_page`` does disk reads and a markdown render, and Starlette
-    dispatches a non-coroutine handler to the threadpool, which is what keeps
-    that work off the four polling loops.
-
-    Composes the *same* ``load_ticket_page`` the deep-link page composes rather
-    than a lighter loader of its own. Two loaders would be two answers about
-    one ticket, and the cheaper one would be the one that drifts.
-
-    Always 200. The fragment lands inside a dialog the operator has already
-    opened, and its three arms — gated, not-found, found — each render a
-    readable card; a 404 status here would only give htmx a reason to leave the
-    dialog empty. The deep-link route keeps its 404, because that one is a
-    page you can bookmark.
-    """
-    root = _root_of(request)
-    backend = resolve_backlog_backend(root)
-    ticket = (
-        load_ticket_page(
-            item_id, root / "cortex" / "backlog", root / "cortex" / "lifecycle"
-        )
-        if backend == "cortex-backlog"
-        else None
-    )
-    return templates.TemplateResponse(
-        request,
-        "_ticket_card.html",
-        {
-            "request": request,
-            "item_id": item_id,
-            "ticket": ticket,
-            "backend": backend,
-        },
-    )
-
-
 @app.get("/partials/ticket/{item_id}/artifact/{kind}")
 def ticket_artifact_partial(request: Request, item_id: str, kind: str):
     """Return one lifecycle artifact's rendered prose for a lazily-opened panel.
