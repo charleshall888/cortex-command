@@ -28,7 +28,7 @@ agree".
     all). Real, but not something the board can reason about.
 ``live``
     Not discharged, both endpoints on the active board. Only these propagate
-    through :attr:`Graph.downstream` and :attr:`Graph.waves`.
+    through :attr:`Graph.downstream`.
 
 *The board is the active slice.* An edge is kept only when at least one of
 its endpoints is in ``items``. Two archived tickets pointing at each other
@@ -148,8 +148,6 @@ class Graph:
         direct: Slice id → its immediate live dependents. Both maps carry an
             entry for every slice id, empty set included, so consumers can
             subscript rather than ``.get``.
-        waves: Open slice id → longest-path depth over live edges. Every open
-            item is present; an unconstrained one sits at 0.
         blocked_by_titles: Blocked slice id → one ``{ref, title, status,
             kind}`` per incoming edge, ascending by ref. Only ids that have an
             incoming edge appear. ``kind`` is the edge's class, except that a
@@ -176,7 +174,6 @@ class Graph:
     external: list[tuple[str, str]]
     downstream: dict[str, set[str]]
     direct: dict[str, set[str]]
-    waves: dict[str, int]
     blocked_by_titles: dict[str, list[dict]]
     unresolvable: list[tuple[str, str]]
     cycles: list[list[str]]
@@ -211,24 +208,28 @@ def _refs(record: dict, field: str) -> list[str]:
 
 def _find_cycles(
     adjacency: dict[str, set[str]], nodes: list[str]
-) -> tuple[list[list[str]], dict[str, int]]:
-    """Return the dependency cycles in *adjacency*, and a node → cycle index.
+) -> list[list[str]]:
+    """Return the dependency cycles in *adjacency*.
 
     Tarjan's strongly-connected-components, written iteratively because the
     recursive form blows the stack on a long enough chain and this runs over
     whatever a consumer repo's corpus happens to contain.
 
     A component is a cycle when it holds more than one node, or when a single
-    node blocks itself. The component index is returned alongside so the wave
-    relaxation can withhold exactly the edges inside a cycle rather than
-    guessing at which nodes are implicated.
+    node blocks itself.
+
+    This used to also return a node → cycle index, for a wave relaxation that
+    withheld the edges inside a cycle. That relaxation and the ``waves`` map it
+    produced had no consumer and are gone; the reachability closure beneath is
+    cycle-safe on its own. What survives is the cycle list itself, which the
+    census now prints — a cycle is a corpus defect, and detecting one and
+    discarding it was the one outcome worse than not looking.
     """
     index: dict[str, int] = {}
     lowlink: dict[str, int] = {}
     on_stack: set[str] = set()
     stack: list[str] = []
     cycles: list[list[str]] = []
-    cycle_of: dict[str, int] = {}
     counter = 0
 
     def successors_of(node: str) -> Iterator[str]:
@@ -272,23 +273,13 @@ def _find_cycles(
                     if popped == node:
                         break
                 if len(component) > 1 or node in adjacency.get(node, ()):
-                    cycle_index = len(cycles)
                     cycles.append(sorted(component, key=_sort_key))
-                    for member in component:
-                        cycle_of[member] = cycle_index
             if work:
                 parent = work[-1][0]
                 lowlink[parent] = min(lowlink[parent], lowlink[node])
 
     cycles.sort(key=lambda component: _sort_key(component[0]))
-    # The sort above reorders the list the indices point into, so rebuild the
-    # map against the final positions rather than leaving stale indices.
-    cycle_of = {
-        member: position
-        for position, component in enumerate(cycles)
-        for member in component
-    }
-    return cycles, cycle_of
+    return cycles
 
 
 def _closure(
@@ -315,40 +306,6 @@ def _closure(
             frontier.extend(adjacency.get(current, ()))
         reach[source] = seen
     return reach
-
-
-def _relax_waves(
-    edges: list[tuple[str, str]], nodes: set[str], cycle_of: dict[str, int]
-) -> dict[str, int]:
-    """Assign each node its longest-path depth, bounded by the node count.
-
-    Iterative relaxation (``wave[b] = max(wave[b], wave[a] + 1)``) rather than
-    a topological sort, because a topological sort has no answer at all when
-    the input turns out to contain a cycle and this must always return
-    something. Edges internal to one cycle are withheld — inside a cycle
-    "longest path" is unbounded, and letting the bound alone stop it would
-    hand consumers a depth that is really just the iteration count.
-    """
-    usable = [
-        (blocker, blocked)
-        for blocker, blocked in edges
-        if blocker in nodes
-        and blocked in nodes
-        and not (
-            blocker in cycle_of and cycle_of[blocker] == cycle_of.get(blocked)
-        )
-    ]
-    wave = dict.fromkeys(nodes, 0)
-    for _ in range(len(nodes)):
-        changed = False
-        for blocker, blocked in usable:
-            candidate = wave[blocker] + 1
-            if candidate > wave[blocked]:
-                wave[blocked] = candidate
-                changed = True
-        if not changed:
-            break
-    return wave
 
 
 def build_graph(items: dict[str, dict], corpus: list[dict]) -> Graph:
@@ -466,23 +423,12 @@ def build_graph(items: dict[str, dict], corpus: list[dict]) -> Graph:
         forward.setdefault(blocker, set()).add(blocked)
 
     slice_ids = sorted(slice_records, key=_sort_key)
-    cycles, cycle_of = _find_cycles(forward, slice_ids)
+    cycles = _find_cycles(forward, slice_ids)
 
     direct: dict[str, set[str]] = {
         tid: set(forward.get(tid, ())) for tid in slice_ids
     }
     downstream = _closure(forward, slice_ids)
-
-    # Waves cover the *open* slice only. A terminal item still on the board
-    # (a closed epic that heads a live group) has no depth to report, and
-    # including it would let a finished ticket push its dependents a layer
-    # deeper than the work actually is.
-    open_ids = {
-        tid
-        for tid in slice_ids
-        if (status_of(tid) or "") not in TERMINAL_STATUSES
-    }
-    waves = _relax_waves(live, open_ids, cycle_of)
 
     # ---- Per-ticket blocker rows ---------------------------------------
     # Keyed on the blocked side and restricted to the slice: this feeds the
@@ -526,7 +472,6 @@ def build_graph(items: dict[str, dict], corpus: list[dict]) -> Graph:
         external=external,
         downstream=downstream,
         direct=direct,
-        waves=waves,
         blocked_by_titles=blocked_by_titles,
         unresolvable=unresolvable,
         cycles=cycles,

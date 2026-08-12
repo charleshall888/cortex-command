@@ -170,20 +170,33 @@ def test_spec_passthrough_non_empty_string() -> None:
     assert by_id[200]["spec"] == "cortex/lifecycle/example-feature/spec.md"
 
 
-def test_no_epics_emits_empty_map(tmp_path: Path) -> None:
-    """no_epics.json: items present but none have ``type: epic``.
+def test_a_named_parent_heads_a_group_even_untyped(tmp_path: Path) -> None:
+    """no_epics.json: no item is typed ``epic``, but #202 names #200 as parent.
+
+    That relationship used to be discarded. Detection was restricted to
+    ``type: epic``, so a ticket whose parent existed but was typed ``feature``
+    or ``chore`` was dropped with no error — declared in frontmatter, absent
+    from the envelope. On this repo it hid 14 tickets across 7 parents, one of
+    which has eight children.
+
+    ``type`` is not redefined by this: it still decides whether a ticket is
+    implementable work, which ``overnight/backlog.py`` reads to keep epics out
+    of selection. This function answers a different question.
 
     Also covers the empty-array edge case via tmp_path: writing a bare ``[]``
-    (no items at all) produces the same ``epics: {}`` envelope.
+    (no items at all) produces an ``epics: {}`` envelope.
     """
-    # Case 1: items present but no epics.
+    # Case 1: no item typed epic, but one names a parent that exists.
     fixture = FIXTURES / "no_epics.json"
     result = _run_wrapper(str(fixture))
     assert result.returncode == 0, (
         f"expected exit 0, got {result.returncode}\nstderr={result.stderr!r}"
     )
     parsed = json.loads(result.stdout)
-    assert parsed["epics"] == {}
+    assert list(parsed["epics"]) == ["200"], parsed["epics"]
+    assert [c["id"] for c in parsed["epics"]["200"]["children"]] == [202]
+    # #201 names nobody and nobody names it, so it heads no group.
+    assert "201" not in parsed["epics"]
     assert parsed["schema_version"] == "1"
 
     # Case 2: empty items array via tmp_path.

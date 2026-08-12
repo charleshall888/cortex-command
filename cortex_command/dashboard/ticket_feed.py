@@ -369,6 +369,14 @@ def build_backlog_snapshot(
     for epic_id in epics["epics"]:
         if epic_id in items or epic_id not in by_id:
             continue
+        # Typed epics only, even though the envelope now also groups under any
+        # ticket another names as its parent. The backfill exists to give a
+        # *container* a row; widening it to every named parent put five closed
+        # ordinary tickets onto this board's off-board band, and each of those
+        # then dragged its own parent in behind it. The navigator resolves an
+        # off-board group head through `offslice` and needs no record here.
+        if by_id[epic_id].get("type") != "epic":
+            continue
         items[epic_id] = _display_record(by_id[epic_id])
 
     offslice = _resolve_offslice(active_items, items, status_by_id, titles_by_id)

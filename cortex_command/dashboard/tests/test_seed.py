@@ -406,12 +406,15 @@ class TestFeedSnapshot(_RootTestCase):
                 "empty group",
             )
 
-    def test_snapshot_drops_a_child_whose_parent_is_not_an_epic(self):
-        # 009 names 001 — a feature — as its parent, so the epic map drops the
-        # relationship silently while the raw frontmatter keeps it.
+    def test_snapshot_keeps_a_child_whose_parent_is_not_an_epic(self):
+        # 009 names 001 — a feature — as its parent. That relationship used to
+        # be dropped silently: declared in frontmatter, absent from the
+        # envelope, no error anywhere. Detection now takes any named parent, so
+        # the child reaches its group under the head it actually names.
         self.assertEqual(self.snapshot["items"]["9"]["parent"], "001")
-        for epic in self.snapshot["epics"]["epics"].values():
-            self.assertNotIn(9, [child["id"] for child in epic["children"]])
+        self.assertIn(
+            9, [child["id"] for child in self.snapshot["epics"]["epics"]["1"]["children"]]
+        )
 
     def test_snapshot_reports_all_four_blocker_outcomes(self):
         # Internal, non-terminal: blocks 007 and is why it is ineligible.

@@ -434,26 +434,6 @@ def test_closure_never_leaves_the_slice():
     assert graph.direct["1"] == set()
 
 
-def test_waves_are_longest_path_over_live_edges():
-    items = {
-        "1": _record("1", "backlog", blocked_by=[], blocks=["2", "3"]),
-        "2": _record("2", "backlog", blocked_by=[], blocks=["3"]),
-        "3": _record("3", "backlog", blocked_by=[], blocks=[]),
-    }
-    graph = build_graph(items, list(items.values()))
-    # #3 is reachable in one hop and in two; the longer path wins.
-    assert graph.waves == {"1": 0, "2": 1, "3": 2}
-
-
-def test_waves_exclude_terminal_items():
-    items = {
-        "1": _record("1", "complete", blocked_by=[], blocks=[]),
-        "2": _record("2", "backlog", blocked_by=["1"], blocks=[]),
-    }
-    graph = build_graph(items, list(items.values()))
-    assert graph.waves == {"2": 0}
-
-
 def test_cycle_terminates_and_is_reported():
     items = {
         "1": _record("1", "backlog", blocked_by=["3"], blocks=["2"]),
@@ -462,8 +442,9 @@ def test_cycle_terminates_and_is_reported():
     }
     graph = build_graph(items, list(items.values()))
     assert graph.cycles == [["1", "2", "3"]]
-    # Bounded, and not inflated to the iteration count.
-    assert max(graph.waves.values()) <= len(items)
+    # Terminates. `_closure` is cycle-safe on its own — a node already seen is
+    # never expanded twice — which is why the wave relaxation that used to
+    # consume the cycle index could go without taking this guarantee with it.
     assert graph.downstream["1"] == {"2", "3"}
 
 
@@ -471,7 +452,7 @@ def test_self_block_is_a_cycle_and_does_not_hang():
     items = {"1": _record("1", "backlog", blocked_by=["1"], blocks=[])}
     graph = build_graph(items, list(items.values()))
     assert graph.cycles == [["1"]]
-    assert graph.waves == {"1": 0}
+    # Excluded from its own reachable set even though the cycle reaches it.
     assert graph.downstream["1"] == set()
 
 
@@ -498,7 +479,6 @@ def test_empty_inputs_yield_a_schema_complete_graph():
     assert graph.declared_by == {}
     assert graph.live == graph.discharged == graph.external == []
     assert graph.downstream == graph.direct == {}
-    assert graph.waves == {}
     assert graph.blocked_by_titles == {}
     assert graph.unresolvable == []
     assert graph.cycles == []
@@ -581,20 +561,6 @@ def test_wild_light_frozen_slice_keystone_leverage():
     assert live_blocked == {"242", "278", "388", "417", "430"}
 
 
-def test_wild_light_frozen_slice_waves():
-    graph = build_graph(wild_light_slice(), wild_light_corpus())
-    assert {tid: depth for tid, depth in graph.waves.items() if depth} == {
-        "242": 1,
-        "278": 1,
-        "388": 2,
-        "417": 2,
-        "430": 1,
-    }
-    # #103 is abandoned and therefore carries no depth.
-    assert "103" not in graph.waves
-    assert len(graph.waves) == len(wild_light_slice()) - 1
-
-
 def test_wild_light_frozen_slice_names_its_blockers():
     """The blocked row must be able to print the blocker's id *and* title."""
     graph = build_graph(wild_light_slice(), wild_light_corpus())
@@ -618,8 +584,8 @@ def test_cortex_command_frozen_slice_is_degenerate_but_complete():
     assert set(graph.direct) == set(items)
     assert all(not dependents for dependents in graph.direct.values())
     # `should-have` is outside the documented status vocabulary and must not
-    # be mistaken for terminal.
-    assert set(graph.waves) == set(items)
+    # be mistaken for terminal, so every record still reaches the closure maps.
+    assert set(graph.downstream) == set(items)
 
 
 # ---------------------------------------------------------------------------

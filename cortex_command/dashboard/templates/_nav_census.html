@@ -107,6 +107,19 @@
   </p>
   {% endif %}
 
+  {# A corpus defect, so it prints only when there is one and it prints loudly.
+     Two tickets that block each other both sit in band G forever, each
+     truthfully explained as "waiting on a live blocker" — the board cannot say
+     the useful thing about them from the row alone. #}
+  {% if census.cycles %}
+  <p class="recon recon--broken census__cycles">
+    {{ census.cycles | length }} dependency
+    {{ 'cycle' if census.cycles | length == 1 else 'cycles' }} — these block each other
+    and nothing can start them:
+    {% for ring in census.cycles %}<span class="census__ring">{% for ref in ring.refs %}<a href="{{ ref.href }}">#{{ ref.id }}</a>{% if not loop.last %} → {% endif %}{% endfor %} → <a href="{{ ring.refs[0].href }}">#{{ ring.refs[0].id }}</a></span>{% endfor %}
+  </p>
+  {% endif %}
+
   {% if census.reconciliation %}
   <p class="recon{% if not census.reconciliation.ok %} recon--broken{% endif %}">
     {{ census.reconciliation.sum }} = {{ census.reconciliation.total }}

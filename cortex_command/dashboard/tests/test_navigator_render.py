@@ -587,6 +587,65 @@ class TestEveryGroupReachesTheSection(_Fixture):
                         self.assertIn(tid, member)
 
 
+class TestCyclesAreDisclosed(unittest.TestCase):
+    """A dependency cycle reaches the page instead of being detected and dropped.
+
+    The graph has always run Tarjan's SCC on every poll; nothing rendered the
+    result. That is worse than not looking: two tickets blocking each other
+    both land in band G, each explained as "waiting on a live blocker", which
+    is true of both and actionable for neither.
+    """
+
+    CYCLE_CORPUS: tuple[tuple[int, str], ...] = (
+        (1, "---\nid: 1\ntitle: \"First half of the ring\"\ntype: feature\n"
+            "status: backlog\npriority: medium\nblocked-by: [2]\n"
+            "updated: 2026-03-01\n---\nbody.\n"),
+        (2, "---\nid: 2\ntitle: \"Second half of the ring\"\ntype: feature\n"
+            "status: backlog\npriority: medium\nblocked-by: [1]\n"
+            "updated: 2026-03-01\n---\nbody.\n"),
+    )
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls._tmp = tempfile.TemporaryDirectory()
+        cls.state = _state_for(cls.CYCLE_CORPUS, Path(cls._tmp.name))
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        cls._tmp.cleanup()
+
+    def test_the_fixture_actually_contains_a_cycle(self):
+        # The guard: every assertion below passes vacuously on a corpus whose
+        # blocker keys the loader never read.
+        nav = build_navigator(self.state, None)
+        self.assertEqual(1, len(nav["census"]["cycles"]))
+        self.assertEqual(
+            ["1", "2"], [r["id"] for r in nav["census"]["cycles"][0]["refs"]]
+        )
+
+    def test_the_cycle_reaches_the_markup(self):
+        # Structural, not prose: one `census__ring` per cycle, and both members
+        # linked inside it. Asserting the sentence would pin wording that is
+        # free to change; the ring is the machine token whose absence means
+        # the disclosure silently stopped rendering.
+        nav = build_navigator(self.state, None)
+        html = _render("navigator.html", nav=nav)
+        self.assertEqual(len(nav["census"]["cycles"]), html.count('class="census__ring"'))
+        ring = html.split('class="census__ring"')[1]
+        for tid in ("1", "2"):
+            self.assertIn('href="/tickets/%s"' % tid, ring)
+        self.assertEqual([], _parse(html).nested_anchors)
+
+    def test_a_healthy_corpus_prints_nothing(self):
+        # An absence assertion, and the reason the disclosure is affordable:
+        # it costs zero pixels on every corpus that has no cycle.
+        with tempfile.TemporaryDirectory() as tmp:
+            clean = _state_for(_SMALL_CORPUS, Path(tmp))
+            nav = build_navigator(clean, None)
+            self.assertEqual([], nav["census"]["cycles"])
+            self.assertNotIn("census__ring", _render("navigator.html", nav=nav))
+
+
 class TestOneDefinitionOfStartable(_Fixture):
     """Every "startable" number on the page counts the same records.
 

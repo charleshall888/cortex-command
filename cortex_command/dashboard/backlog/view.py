@@ -607,6 +607,29 @@ def _field(banded: bands_mod.Bands, items: dict[str, dict]) -> list[dict]:
     return segments
 
 
+def _cycles(graph: Any, items: dict[str, dict]) -> list[dict]:
+    """Dependency cycles, as printable rings.
+
+    The graph has always detected these — Tarjan's SCC, on every poll — and
+    nothing ever rendered the result. That is the one outcome worse than not
+    looking: a corpus where #a blocks #b blocks #a is a defect no ranking can
+    resolve, both tickets sit in band G waiting on each other forever, and the
+    board's own explanation for each ("waiting on a live blocker") is true and
+    useless.
+
+    Empty on a healthy corpus, and the census prints nothing at all then.
+    """
+    return [
+        {
+            "refs": [
+                {"id": tid, "title": _title_of(tid, items), "href": "/tickets/%s" % tid}
+                for tid in ring
+            ]
+        }
+        for ring in getattr(graph, "cycles", []) or []
+    ]
+
+
 def _census(banded: bands_mod.Bands) -> dict:
     """The legend that *is* the distribution readout.
 
@@ -665,6 +688,8 @@ def _census(banded: bands_mod.Bands) -> dict:
         "groups": groups,
         "legend": legend,
         "borders": borders,
+        # Filled by the caller, which is the only place holding the graph.
+        "cycles": [],
         # Filled by the caller: the corpus-wide counts the retired ledger bar
         # used to carry. They are not derivable from the partition — the
         # partition only ever sees the active slice — so they travel beside it
@@ -710,6 +735,7 @@ def _empty_navigator(state: object) -> dict:
             "groups": [],
             "legend": [],
             "borders": [],
+            "cycles": [],
             "reconciliation": None,
             "corpus": None,
         },
@@ -755,6 +781,7 @@ def _navigator_model(state: object) -> dict:
     ranked = contenders(ctx)
 
     census = _census(banded)
+    census["cycles"] = _cycles(graph, items)
     # The half of the retired ledger bar the board itself cannot see: what
     # sits outside the active slice these eleven bands describe.
     #
@@ -782,8 +809,9 @@ def _navigator_model(state: object) -> dict:
     # behind it. Groups whose container is off the slice are included rather
     # than routed to a separate table — see :func:`_group`.
     band_of = {row.id: band.key for band in banded for row in band.rows}
+    active = frozenset(str(tid) for tid in (snapshot.get("item_order") or []))
     groups = [
-        _group(epic_id, parents[epic_id], items, band_of, offslice, graph.live)
+        _group(epic_id, parents[epic_id], items, band_of, active, offslice, graph.live)
         for epic_id in sorted(parents, key=_id_key)
     ]
     groups.sort(key=lambda group: (-group["count"], _id_key(group["id"])))
@@ -887,6 +915,7 @@ def _group(
     children: list[str],
     items: dict[str, dict],
     band_of: dict[str, str],
+    active: frozenset[str],
     offslice: dict | None,
     live: list[tuple[str, str]],
 ) -> dict:
@@ -898,15 +927,27 @@ def _group(
     read ``complete`` in a frame and ``off board`` in the tail. One builder,
     one vocabulary, no drift.
     """
-    on_board = epic_id in items
+    # "On the board" means the head is in the board's ACTIVE set, which is
+    # ``item_order`` and neither of the two nearby sets that look like it.
+    # ``items`` is wider: the snapshot backfills a closed head into it so a
+    # heading has a record to render with. The band partition is wider still,
+    # because it runs over ``items`` and routes those backfilled heads into
+    # band H. Testing either one called a completed parent on-board and drew
+    # its group with the live border.
+    on_board = epic_id in active
+    record = items.get(epic_id)
     return {
         "id": epic_id,
         "title": _title_of(epic_id, items, offslice),
         "href": "/tickets/%s" % epic_id,
         "on_board": on_board,
+        # The backfilled record's own status when there is one, because it is
+        # the ticket's real status; the corpus resolution only when there is
+        # not. Keyed on the record rather than on ``on_board`` so an off-board
+        # head still reports "complete" rather than a coarser fallback.
         "status": (
-            _text(items[epic_id].get("status")) or "unset"
-            if on_board
+            (_text(record.get("status")) or "unset")
+            if record is not None
             else _offslice_state(epic_id, offslice)
         ),
         "count": len(children),

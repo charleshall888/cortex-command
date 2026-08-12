@@ -132,18 +132,47 @@ def build_epic_map(items: list[dict], strict_schema: bool = True) -> dict:
             if sv != "1":
                 raise SchemaVersionError(sv)
 
-    # Discover epic ids.
+    # Discover group heads: items typed `epic`, plus any item another item
+    # actually names as its parent.
+    #
+    # The second half is the fix for a silent drop. Restricting heads to
+    # `type: epic` meant a ticket declaring `parent: 357` was discarded when
+    # #357 happened to be typed `chore` — the ticket named a parent, the parent
+    # existed, and the grouping vanished with no error. On this repo that hid
+    # 14 tickets across 7 parents, one of which (#357) has eight children and
+    # is an epic in everything but its `type` field.
+    #
+    # `type` is not being redefined here. It carries a structural role (is this
+    # implementable work?) that ``overnight/backlog.py`` reads to exclude epics
+    # from selection, and that gate is untouched. This function answers a
+    # different question — who are this ticket's children — and the honest
+    # answer to that is whoever names it, which is the rule the dashboard's
+    # own grouping already used.
     epic_ids: set[int] = set()
+    known_ids: set[int] = set()
+    named_parents: set[int] = set()
     for item in items:
         if not isinstance(item, dict):
             continue
+        try:
+            known_ids.add(int(item["id"]))
+        except (KeyError, TypeError, ValueError):
+            pass
         if item.get("type") == "epic":
             try:
                 epic_ids.add(int(item["id"]))
             except (KeyError, TypeError, ValueError):
                 continue
+        parent_id = normalize_parent(item.get("parent"))
+        if parent_id is not None:
+            named_parents.add(parent_id)
 
-    # Group children by their normalized parent, restricted to detected epics.
+    # A named parent only becomes a head if it resolves to a real item; a
+    # dangling ref is a data defect, not a group, and inventing an empty group
+    # for it would print a heading with no ticket behind it.
+    epic_ids |= named_parents & known_ids
+
+    # Group children by their normalized parent, restricted to detected heads.
     children_by_epic: dict[int, list[dict]] = {eid: [] for eid in epic_ids}
     for item in items:
         if not isinstance(item, dict):

@@ -232,6 +232,13 @@ exactly one band`) is the rendered half of an assertion the test suite also
 makes. A routing miss would drop a ticket off a read-only board silently, which
 is the worst failure this surface has available to it.
 
+**Dependency cycles.** When two records block each other, the census names the
+ring (`#a → #b → #a`) in the error colour. The graph has always detected these
+— Tarjan's SCC, on every poll — and nothing rendered the result, which is worse
+than not looking: both tickets land in "behind a live blocker" and the board's
+per-row explanation is true of each and actionable for neither. The line costs
+nothing on a healthy corpus, where it does not render at all.
+
 **One definition of startable.** Band G′ — a hold whose blocker has already
 completed — counts as startable in § 01's header, in § 03's first run, in § 05's
 census group, and in band A's own rationale. It was previously counted into some

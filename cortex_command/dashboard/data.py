@@ -1614,9 +1614,17 @@ def load_ticket_page(item_id: str, backlog_dir: Path, lifecycle_dir: Path) -> di
         if artifact_dir is not None and (artifact_dir / f"{kind}.md").is_file()
     ]
 
-    children: list[dict] | None = None
-    if ticket_type == "epic":
-        children = _resolve_epic_children(item_id, backlog_dir)
+    # Ask for children regardless of type, because heading a group is not a
+    # property of `type`. A ticket typed `chore` that eight others name as
+    # their parent has eight children, and gating the lookup on `type: epic`
+    # is what kept #357's from ever reaching this page.
+    #
+    # `None` still means "no children section at all", and an empty list still
+    # means "a container with nothing active left in it" — so a typed epic
+    # keeps its empty state, and an ordinary ticket nobody names stays silent.
+    children: list[dict] | None = _resolve_epic_children(item_id, backlog_dir)
+    if not children and ticket_type != "epic":
+        children = None
 
     return {
         "id": body["id"],

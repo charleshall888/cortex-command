@@ -191,13 +191,21 @@ class TestOffsliceResolution(_CorpusTestCase):
             {"title": "The Blocker", "status": "complete"}, snapshot["offslice"]["9"]
         )
 
-    def test_offslice_parent_is_resolved_too(self):
-        """A parent that is not an epic never reaches ``items``.
+    def test_a_non_epic_parent_heads_a_group_and_resolves_offslice(self):
+        """A parent that is not typed ``epic`` still heads its group.
 
-        ``build_epic_map`` detects a container by ``type: epic``, so an
-        ordinary ticket named as someone's parent is invisible to the epic
-        envelope and to the closed-epic backfill beneath it. On the
-        development corpus that is four groups, every one of them complete.
+        ``build_epic_map`` used to detect a container by ``type: epic`` alone,
+        so an ordinary ticket named as someone's parent was invisible to the
+        epic envelope — the relationship was declared in frontmatter and
+        dropped with no error. On this repo that hid 14 tickets across 7
+        parents. Detection now also takes any id another item names.
+
+        The closed-epic backfill deliberately did *not* widen with it. It
+        exists to give a container a row, and following detection put five
+        closed ordinary tickets onto the board's off-board band. So the head
+        stays out of ``items`` and out of ``item_order``, and the navigator
+        resolves it through ``offslice`` — which is where a ticket the board
+        points at but does not carry has always been answered.
         """
         _write_item(
             self.backlog_dir,
@@ -212,9 +220,14 @@ class TestOffsliceResolution(_CorpusTestCase):
 
         snapshot = self.build(titles_by_id={"7": "Not An Epic"})
 
+        # A heading, not a row: the board's active set must not grow.
         self.assertNotIn("7", snapshot["items"])
+        self.assertNotIn("7", snapshot["item_order"])
+        # Still resolvable, so the group heading can print a real title.
         self.assertEqual("Not An Epic", snapshot["offslice"]["7"]["title"])
         self.assertEqual("complete", snapshot["offslice"]["7"]["status"])
+        # And the relationship the old rule discarded is now on the envelope.
+        self.assertIn(1, [c["id"] for c in snapshot["epics"]["epics"]["7"]["children"]])
 
     def test_an_id_on_the_board_is_not_listed_as_offslice(self):
         _write_item(
