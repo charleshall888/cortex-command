@@ -155,100 +155,154 @@ Monitors active interactive pipeline execution (separate from overnight). Visibl
 
 ## Backlog view (`/backlog`)
 
-One page, five sections, all served from the same 30 s slow-poll snapshot so the
-census can never reconcile against a partition a different swap produced. It
-answers one question — what should I work on next, and why that.
+One page, four sections, all served from the same 30 s slow-poll snapshot so the
+reconciliation can never close over a partition a different swap produced.
 
-The epic map was a fourth peer view (`/epics`) until it was folded in here as
-§ 04. It drew one SVG frame per epic with at least two children: longest-path
-wave columns, right-angled elbows routed through reserved lanes, a dashed
-enclosure for the children no sibling constrains, and a per-epic arrowhead
-marker. On the development corpus those five frames drew **two arrows between
-them** — ten of eleven groups declare no `blocked_by` edge between siblings at
-all — and on cortex-command's own slice the page rendered "nothing to map"
-under its own nav tab. Every non-geometric column it carried (each child's
-state, border style, points, and "why it sits here") was this page's own band
-partition re-projected onto a second surface. What it uniquely knew is now a
-list of groups and a line of ordering text beneath the field it groups.
+It answers two questions and refuses a third. It says **what is on this board**
+and **how that work is structured**. It does not say what you should work on —
+there is no pick, no alternate, no swap condition, no counterfactual and no
+ledger. Ranking by points and drawing the dependency structure is the whole job;
+choosing is `/cortex-core:dev`'s.
 
-### 1. The Pick
+**One record, one appearance.** A ticket whose `parent` resolves to a real
+ticket is drawn inside that epic's map and nowhere else. An epic container is a
+section heading and never a row. So the lists in § 01 and § 03 are *loose*
+records only, and § 02 is where everything else lives. The rule is applied in
+exactly one place (`view._partition`); a second site is how the same ticket comes
+to read one thing in a list and another in a frame.
 
-The highest-ranked startable record, with the full ledger that argues for it:
-one row per scoring term, the raw frontmatter each term read, and the points it
-contributed. Plus the counterfactual — which records become startable the moment
-this one closes.
+A parent that does **not** resolve to a real ticket is treated as no parent, so
+a typo in a `parent` field leaves its ticket loose and visible rather than
+moving it into a phantom epic named after the typo and off the board entirely.
 
-Rank is leverage over declared priority: a ticket holding four others outranks a
-`priority: high` holding nothing. The staleness term is measured against the
-corpus's own latest `updated`, never the wall clock, which is what makes an
-unchanged poll render byte-identically under `hx-swap="morph"`.
+### 1. Ready
 
-### 2. Next Best
+Every loose startable record, ordered by points, highest first — across bands
+rather than within them, because a band boundary in the middle of a
+points-sorted run is an inversion a reader can see and cannot explain.
 
-Ranks 2 and 3, each with the condition under which it beats the pick, derived
-from the per-term differences between the two ledgers rather than written by
-hand. Three total picks is what the corpus supports — roughly thirteen distinct
-scores over forty-eight startable rows.
+Four columns: points, id, title, type. The board previously printed seven. Two
+of the three that went were blank most of the time — "why it sits here" was
+empty on 54 of 78 rows and the rank on 46 of 51 startable ones — and between
+them they took the width that wrapped half the titles onto a second line. The
+band letter went because the section a row sits in already says what the letter
+said.
 
-### 3. The Field
+What survives of the band is a single glyph in the points cell, on three bands
+out of eleven: `⚷` holds other work, `▸` already in flight, `✓` its declared
+blocker has already closed. Sparse by construction, so a mark reads as an
+exception rather than as a column.
 
-Every record in the active slice, in one table, split into disposition runs
-(startable today, behind a live blocker, held by decision, epic containers,
-untriaged/off-board). The band letter is a column rather than a section
-heading, and where a band is ranked the rank rides in the same cell (`A1`,
-`C2`).
+No per-row "reason" column. The dominant scoring term is `priority` on 49 of 51
+startable rows on the largest real corpus, so such a column would print the same
+word forty-nine times. The points number is the ordering claim; the hover card
+carries the working for any single row on demand.
 
-This replaced ten band blocks, each with its own header and its own `<thead>`.
-The bands survive as the finer grain inside each run; what went is nine table
-heads and ten headings, for a reader who now learns one row grammar instead of
-ten. The per-band rationale moved to the § 05 legend, printed once each.
+### 2. Epics
 
-A row's "why it sits here" is blank wherever the band label *is* the reason —
-under MEDIUM · STARTABLE a per-row "medium · chore" restates the run heading and
-calls it a reason.
+One collapsed `<details>` per parent group, largest first. The head line carries
+the only things that could make you open it: how many children are ready, held
+or deferred, and — when it applies — that the epic's own head has closed while
+its children are still live, which is a grooming finding rather than something
+to bury.
 
-### 4. Epics
+Opening a group draws its children exactly once, in one of two ways:
 
-One block per parent group: the epic's own id, title, child count and status,
-then its children with their board state. Groups whose container sits off the
-active slice are listed here too, in the same vocabulary, rather than in a
-second table with its own — which is how one off-slice ticket used to read
-`complete` in a frame and `off board` in the tail.
+- **A group that declares a dependency gets the SVG frame** — longest-path wave
+  columns, a reserved lane per external blocker, right-angled elbows routed
+  through lanes the layout knows are empty, a dashed enclosure for the children
+  no sibling constrains, and a per-epic arrowhead marker. Marked `⇄` in the head
+  line.
+- **A group that declares none gets a plain grid of child tiles.** No dashed
+  box, no "no ordering declared" verdict.
 
-Ordering is read from `blocked_by` between siblings and from nothing else, and
-prints only where a group declares one, grouped by blocker (`#242 → #388,
-#417`). The section lede carries the aggregate, so no group has to state that it
-has no order. The whole section is absent when no record declares a `parent`.
+That gate is the whole answer to the measurement this renderer was once retired
+over. It was removed because five frames drew two arrows between them — but what
+it emitted for a group with *no* edges was a dashed box around an unordered
+list, and those boxes were most of its output. Fed the same corpus today the
+engine draws **nine arrows across four groups**, including a three-wave spine
+and a populated external-blocker lane. So the geometry stays and is gated on
+whether there is anything to draw.
 
-### 5. Key & Census
+External blockers are drawn, and they are the majority case: on the largest real
+corpus 3 of 5 live edges point into an epic from a ticket that is not one of its
+children. The lane that places them is why a per-epic frame can draw them at
+all.
 
-Three tables and a reconciliation line: every record by disposition, what each
-band letter asserts, and what each border style claims. The border style is the
-channel that survives monochrome and colour-blindness, so it is stated in words
-rather than left to be inferred from the swatch.
+Every coordinate comes from `epic_layout` and **nothing measures text**. A node
+is a `<foreignObject>` the server sized and placed, holding ordinary HTML; CSS
+wraps and clamps the title inside a box whose dimensions were already decided.
+The fonts are not bundled and Georgia is what renders — which is harmless,
+because a wider font wraps sooner instead of overflowing a box sized to a
+guessed advance.
 
-The reconciliation line (`2 + 1 + 2 + … = 78 · every record on this board is in
-exactly one band`) is the rendered half of an assertion the test suite also
-makes. A routing miss would drop a ticket off a read-only board silently, which
-is the worst failure this surface has available to it.
+### 3. Blocked
 
-**Dependency cycles.** When two records block each other, the census names the
-ring (`#a → #b → #a`) in the error colour. The graph has always detected these
-— Tarjan's SCC, on every poll — and nothing rendered the result, which is worse
-than not looking: both tickets land in "behind a live blocker" and the board's
-per-row explanation is true of each and actionable for neither. The line costs
-nothing on a healthy corpus, where it does not render at all.
+Loose records waiting on a live blocker, each naming what holds it. A blocker
+that has already closed is struck through rather than hidden: the edge is why
+the row was ever held, and its closing is the news.
 
-**One definition of startable.** Band G′ — a hold whose blocker has already
-completed — counts as startable in § 01's header, in § 03's first run, in § 05's
-census group, and in band A's own rationale. It was previously counted into some
-and out of others, so the page printed "51 startable" above a census reading 49
-with nothing reconciling them.
+On a corpus where every held ticket belongs to an epic this list is empty, and
+the section says so explicitly — it names the total held count and points at the
+maps, because a bare empty section would read as "nothing is blocked", which is
+the opposite of true.
+
+### 4. The rest
+
+Collapsed panels for everything that is not a candidate today: held by decision,
+and untriaged / closed in place / off-board. The count is readable without
+opening a panel.
+
+### Hover and click
+
+Every ticket on the page — list row, frame node, epic child tile — is a
+`.js-ticket` anchor carrying its own `data-t-*` payload. Hovering paints a card
+from values this render already computed, so it costs no request and cannot lag
+behind the pointer; clicking opens the ticket in a `<dialog>`.
+
+The three shapes expose the *same* keys (`view._hover` is merged flat into each).
+That is load-bearing: nesting the payload under a `preview` key on nodes but not
+on rows made a single shared macro read four of six attributes as `Undefined` on
+every node in every frame, which renders as the empty string with no error
+anywhere.
+
+The card and the dialog live **outside** the poll target. An element inside it
+is destroyed every 30 seconds — a dialog would be torn out from under a reader
+mid-sentence, and a card would be left describing a row that no longer exists.
+
+The anchors keep working as anchors: only an unmodified left-click is
+intercepted, so cmd-click, middle-click, "open in new tab" and a browser with no
+JS all still reach `/tickets/{id}`. Keyboard Enter *is* intercepted, so the
+keyboard has the same capability the pointer does.
+
+### The reconciliation footer
+
+`78 on this board · 32 ready · 30 inside epics · 5 epic heads · 0 blocked · 11
+not competing ✓`
+
+Decomposed by **where on the page a reader can find the record**, so it doubles
+as the table of contents the page otherwise lacks. It compares the set of ids
+the partition actually routed against the slice it was handed.
+
+The line it replaced compared the sum of the band counts against the sum of the
+band counts — the same expression on both sides — so it printed "every record on
+this board is in exactly one band" unconditionally, including on a board that
+had dropped one. Its failure branch was unreachable code. The structural
+guarantee that no record can vanish is the catch-all routing rule in `bands.py`,
+and it always was.
+
+**Dependency cycles.** When two records block each other the page names the ring
+(`#a → #b → #a`) in the error colour. The graph has always detected these —
+Tarjan's SCC, on every poll — and for a long time nothing rendered the result,
+which is worse than not looking: both tickets land in "behind a live blocker"
+and the per-row explanation is true of each and actionable for neither. The line
+costs nothing on a healthy corpus, where it does not render at all.
 
 **Ticket descriptions.** A ticket's markdown body is not carried in the 30 s
 snapshot: this repo's backlog is ~1.5 MB across 400+ files, so embedding bodies
 would morph hundreds of KB into the DOM twice a minute to show prose nobody
-asked for. The per-ticket reader is `/tickets/{id}`.
+asked for. The body is fetched per modal open, and the per-ticket reader is
+`/tickets/{id}`.
 
 
 ---

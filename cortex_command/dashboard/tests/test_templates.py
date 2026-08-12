@@ -313,6 +313,58 @@ class TestStructuralElements(unittest.TestCase):
         self.assertIn('id="feature-cards"', html)
 
 
+class TestMorphSwapIsWiredCorrectly(unittest.TestCase):
+    """The two defects that made ``hx-swap="morph"`` a lie for its whole life.
+
+    Both were invisible together and only became visible when the first was
+    fixed, which is why they are pinned together.
+
+    1. The extension was loaded from ``htmx-ext-idiomorph``, a package that has
+       never existed on npm (the real one is ``idiomorph``). The URL 404'd, so
+       ``window.Idiomorph`` was undefined, htmx found no extension claiming
+       "morph", and every panel silently fell through to ``defaultSwapStyle``,
+       which is innerHTML.
+
+    2. With the extension actually loaded, a bare ``morph`` is *outerHTML*
+       morphing: it matches the incoming content against the polled element
+       itself. Every partial here returns inner content rather than a root
+       matching its host, so idiomorph replaced each host outright — taking
+       ``hx-get`` and ``hx-trigger`` with it. The dashboard rendered once and
+       then never polled again.
+
+    Both assertions are about a machine token whose absence fails silently:
+    nothing errors, nothing logs, and the page looks right until you wait.
+    """
+
+    def test_the_morph_extension_is_not_the_package_that_does_not_exist(self):
+        html = _render(DashboardState())
+        self.assertNotIn("htmx-ext-idiomorph", html)
+
+    def test_the_morph_extension_is_actually_loaded(self):
+        html = _render(DashboardState())
+        self.assertIn("idiomorph", html)
+
+    def test_no_polled_element_uses_bare_outerhtml_morph(self):
+        """A bare ``morph`` destroys the element carrying the poll attributes."""
+        for template in ("base.html", "backlog.html"):
+            with self.subTest(template=template):
+                source = (
+                    Path(__file__).resolve().parents[1] / "templates" / template
+                ).read_text()
+                self.assertNotIn('hx-swap="morph"', source)
+
+    def test_the_polled_elements_still_declare_a_morph_swap(self):
+        """Non-vacuity guard for the assertion above.
+
+        Without this, deleting every ``hx-swap`` on the dashboard would make
+        the absence test pass while turning off morphing entirely.
+        """
+        source = (
+            Path(__file__).resolve().parents[1] / "templates" / "base.html"
+        ).read_text()
+        self.assertGreater(source.count('hx-swap="morph:innerHTML"'), 5)
+
+
 class TestSiblingTemplateTitleFallback(unittest.TestCase):
     """feature_cards.html / escalations_panel.html slug-fallback under the
     title-clear — the deliberate spec.md:69 behavior change. Pins the two

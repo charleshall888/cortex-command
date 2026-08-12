@@ -62,6 +62,14 @@ PARTIAL_ROUTES = [
     # resolves — see ticket_artifact_partial's docstring. Ticket 1 and its
     # spec.md are seeded by fixture_root below.
     "/partials/ticket/1/artifact/spec",
+    # The modal card the board and the epic maps open. Always 200 for the same
+    # reason the body partial is: the fragment lands inside a <dialog> the
+    # operator has already opened, so a status code there would only give htmx
+    # a reason to leave it empty. Listed here because this route was once
+    # deleted for having no caller anywhere — "not in a template, not in a
+    # test, not in the route smoke list" — and the smoke list is the cheapest
+    # of those three to keep honest.
+    "/partials/ticket-card/1",
 ]
 
 # Page + health routes that must render 200. ``/backlog`` is

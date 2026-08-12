@@ -1,35 +1,29 @@
 {% extends "base.html" %}
 {# The Backlog view — the navigator, a peer of the Overnight view.
 
-   This page answers one question: what should I work on next, and why that.
-   The old triage board answered a different one — it printed the whole active
-   slice in `priority then id` order behind six disclosures and left the
-   ranking to the reader. It has been retired; § 03 renders every record it
-   rendered, on first paint, in one table with the band as a column.
+   The page answers two questions and refuses a third. It says what is on this
+   board, and how that work is structured; it does not say what you should work
+   on. There is no pick, no alternate, no swap condition, no counterfactual and
+   no ledger — ranking by points and drawing the dependency structure is the
+   whole job, and choosing is the `/dev` skill's.
 
-   The ledger bar that used to head this page is gone too, folded into § 04:
-   it was a stacked distribution bar with a hover-only key, and the census
-   states its counts against the band letters and border styles that explain
-   them. One element deleted rather than restyled.
+   ONE RECORD, ONE APPEARANCE. A ticket that declares a resolvable parent is
+   drawn inside that epic's map and nowhere else; an epic container is a
+   section heading and never a row. The lists are loose records only. The rule
+   lives in `view._partition` — one site, because a second one is how the same
+   ticket comes to read one thing in a list and another in a frame.
 
-   Not a like-for-like swap, and § 04 does not claim to be one. The bar counted
-   every file in `cortex/backlog/` by frontmatter status; the census describes
-   the active slice. The difference is the terminal tail — records closed in
-   place, which § 04 counts as neither active nor archived and says so in its
-   own copy. Left out deliberately: adding the two scope numbers together
-   would print a repo total wrong by an order of magnitude.
+   The epic map is back, and it is drawn only where it has something to draw.
+   It was retired on a measurement — five frames, two arrows — that its own
+   corpus has since outgrown: fed today's data the same engine draws nine
+   arrows across four groups, with a real spine and a populated external-blocker
+   lane. What it emitted for a group with NO edges was a dashed box around an
+   unordered list, and that was most of its output. So the geometry is gated on
+   `has_edges` and the other groups render as a plain child grid.
 
-   The epic map was a peer page until it was folded in here as § 04. It drew
-   one SVG frame per epic — wave columns, lane-routed elbows, a per-epic
-   arrowhead marker — and on the dev slice those frames carried two arrows
-   between them, because ten of eleven groups declare no intra-group edge. Its
-   every other column (state, border style, points, "why") was this page's own
-   band partition re-projected onto a second surface. What it uniquely knew is
-   now a list of groups and a line of ordering text under the field it groups.
-
-   The page shell owns the navigator's poll target and nothing else. All the
-   sections arrive in one fragment so the census cannot reconcile against a
-   partition a different swap produced.
+   The page shell owns the poll target and nothing else. All the sections
+   arrive in one fragment so the reconciliation cannot close over a partition a
+   different swap produced.
 
    Section numbering restarts at § 01 because the register is per-view. #}
 {% set view = 'backlog' %}
@@ -38,15 +32,62 @@
 {# One poll target, four sections inside it. A <div> rather than a <section>
    because the fragment emits real <section> elements of its own, each with its
    own register mark in the editorial margin, and a section nested inside a
-   section would inherit that margin twice. The id is stable across swaps so
-   idiomorph keys on it. #}
-<div id="navigator-panel" aria-label="Backlog navigator" aria-live="polite"
-     hx-get="/partials/navigator{{ repo_query }}" hx-trigger="load, every 30s" hx-swap="morph">
+   section would inherit that margin twice. The id is stable across swaps.
+
+   `morph:innerHTML`, not bare `morph`. Bare `morph` is outerHTML morphing: it
+   matches the incoming content against THIS element, and since the fragment's
+   roots are the four <section>s and none of them is #navigator-panel,
+   idiomorph replaces the panel outright — taking `hx-get` and `hx-trigger`
+   with it, so the board renders once and never polls again. That was invisible
+   for as long as the extension 404'd and htmx fell back to innerHTML; fixing
+   the CDN URL is what made the swap style start mattering. Every polled panel
+   in base.html carries the same correction for the same reason.
+
+   No aria-live. The subtree is entirely replaced every 30 seconds, so a polite
+   live region here announces the whole backlog to a screen reader twice a
+   minute — the status strip inside the fragment is where a change announcement
+   belongs, not the board. #}
+<div id="navigator-panel" role="region" aria-label="Backlog navigator"
+     hx-get="/partials/navigator{{ repo_query }}" hx-trigger="load, every 30s" hx-swap="morph:innerHTML">
   <section class="section-primary">
-    <span class="sec-num"><strong>§ 01</strong>the pick</span>
+    <span class="sec-num"><strong>§ 01</strong>ready</span>
     <p class="empty-state">loading the navigator</p>
   </section>
 </div>
+
+{# The hover card and the modal live OUTSIDE the poll target, and that
+   placement is the whole reason they survive. An element inside
+   #navigator-panel is destroyed every 30 seconds — a dialog would be torn out
+   from under an operator mid-read, and a card would be left describing a row
+   that no longer exists.
+
+   One of each per page, so they cannot collide with themselves however many
+   rows and nodes the board draws. Both are filled by delegated handlers in
+   base.html that key on `.js-ticket`, so neither knows anything about which
+   section the ticket came from. #}
+<div id="epic-hover" class="hovercard" hidden aria-hidden="true">
+  <p class="hovercard__title"><span class="hovercard__id"></span> <span class="hovercard__name"></span></p>
+  <p class="hovercard__chips">
+    <span class="nav-chip hovercard__status"></span>
+    <span class="nav-chip hovercard__priority"></span>
+    <span class="nav-chip hovercard__type"></span>
+    <span class="nav-chip nav-chip--lev hovercard__unblocks"></span>
+    <span class="nav-chip nav-chip--pts hovercard__points"></span>
+  </p>
+  <p class="hovercard__hint">click to read the ticket</p>
+</div>
+
+{# The h2 placeholder is not decoration: aria-labelledby points into fetched
+   content, so without it the dialog's accessible name dangles between
+   showModal() and the response landing. #}
+<dialog id="ticket-modal" class="ticket-modal" aria-labelledby="ticket-modal-title">
+  <form method="dialog" class="ticket-modal__dismiss">
+    <button value="close" aria-label="close ticket">close ✕</button>
+  </form>
+  <div id="ticket-modal-body" class="ticket-modal__body">
+    <h2 id="ticket-modal-title" class="ticket-card__title">loading ticket</h2>
+  </div>
+</dialog>
 
 <div class="handoff">
   <span>live session state lives in the <a href="/" class="text-brand-primary">overnight view</a></span>

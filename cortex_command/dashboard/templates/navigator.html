@@ -1,9 +1,22 @@
-{# Surface A, the polled fragment: § 01 THE PICK through § 04 KEY & CENSUS.
+{# The polled fragment: § 01 READY through § 04 THE REST.
 
    The page shell in ``backlog.html`` owns the poll target and nothing else, so
    the four sections arrive together on every swap and cannot drift out of
-   agreement with each other — the census reconciles against the same partition
-   the board rendered, in the same render.
+   agreement with each other — the reconciliation line closes over the same
+   partition the sections rendered, in the same render.
+
+   ONE RECORD, ONE APPEARANCE. A ticket that declares a resolvable parent is
+   drawn inside that epic's map and nowhere else; an epic container is a
+   heading and never a row. The lists here are loose records only. That rule
+   lives in ``view._partition`` and this template does not know it — which is
+   the point, because a second site applying it is how the same ticket comes to
+   read one thing in a list and another in a frame.
+
+   THE BOARD DOES NOT ARGUE. There is no pick, no alternate, no swap condition,
+   no counterfactual and no ledger. It ranks by points and shows structure;
+   what to work on is the ``/dev`` skill's question. The points column is what
+   makes the ordering falsifiable and the hover card carries the working for
+   any single row on demand.
 
    Every value below comes from ``view.build_navigator``. This template does no
    arithmetic, resolves no ids and knows no vocabulary — so the two silent
@@ -11,35 +24,32 @@
    ``items`` resolving to the bound dict METHOD; int child ids against a
    str-keyed map) cannot reach here, because nothing in this file touches a
    snapshot. That is the point of the view-model, not a happy accident. #}
-{% from "_nav_pick.html" import hero, alternate %}
-{% from "_nav_field.html" import field_table %}
-{% from "_nav_groups.html" import group_block %}
-{% from "_nav_census.html" import census_block %}
+{% from "_nav_rows.html" import row_table, tail_panel %}
+{% from "_nav_epics.html" import epic_block %}
 
 {% if nav.backend != 'cortex-backlog' %}
 {# The same gate every other backlog read sits behind. Under a non-local
    backend there is no cortex/backlog/ to read and the surface stands down
    rather than reporting an empty corpus it never looked at. #}
 <section class="section-primary" aria-label="Backlog navigator">
-  <span class="sec-num"><strong>§ 01</strong>navigator</span>
-  <h2>What should I <em>work on</em> <span class="phase-tag">{{ 'disabled' if nav.backend == 'none' else 'external' }}</span></h2>
+  <span class="sec-num"><strong>§ 01</strong>backlog</span>
+  <h2>The <em>backlog</em> <span class="phase-tag">{{ 'disabled' if nav.backend == 'none' else 'external' }}</span></h2>
   <p class="empty-state">{% if nav.backend == 'none' %}backlog tracking disabled{% else %}backlog tracked externally via `{{ nav.backend }}`{% endif %}</p>
 </section>
 
 {% elif not nav.available %}
 <section class="section-primary" aria-label="Backlog navigator">
-  <span class="sec-num"><strong>§ 01</strong>navigator</span>
-  <h2>What should I <em>work on</em> <span class="phase-tag">awaiting first poll</span></h2>
+  <span class="sec-num"><strong>§ 01</strong>backlog</span>
+  <h2>The <em>backlog</em> <span class="phase-tag">awaiting first poll</span></h2>
   <p class="empty-state">loading the navigator</p>
 </section>
 
 {% else %}
-<section id="nav-pick" class="section-primary" aria-label="The pick">
-  <span class="sec-num"><strong>§ 01</strong>the pick</span>
-  <h2>What should I <em>work on</em> <span class="phase-tag">{{ nav.contender_count }} startable of {{ nav.slice_total }}</span></h2>
+<section id="nav-ready" class="section-primary" aria-label="Ready">
+  <span class="sec-num"><strong>§ 01</strong>ready</span>
+  <h2>What you can <em>start</em> <span class="phase-tag">{{ nav.ready | length }} of {{ nav.slice_total }}</span></h2>
   <div class="stream-line">
     <span>doc · cortex/backlog/*.md frontmatter</span>
-    <span>rank · leverage over declared priority</span>
     {# The corpus's own "today". The staleness term is measured against the
        latest `updated` anywhere in the slice and never against the wall clock,
        which is both what makes an unchanged poll render byte-identically and
@@ -48,49 +58,95 @@
     {% if nav.stale %}<span>stale · frozen at {{ nav.polled_ts | format_elapsed }}</span>{% endif %}
     <span class="ml-auto">refresh · 30s</span>
   </div>
+  <p class="sec-lede">Nothing holds these and none belongs to an epic. Ordered by points, highest first.</p>
 
-  {% if nav.pick %}
-  {{ hero(nav.pick) }}
+  {% if nav.ready %}
+  {{ row_table(nav.ready, 'ready to start · ordered by points') }}
+  <p class="nav-key">
+    <span class="nav-key__item"><span class="row-mark">⚷</span> holds other work</span>
+    <span class="nav-key__item"><span class="row-mark">▸</span> already in flight</span>
+    <span class="nav-key__item"><span class="row-mark">✓</span> declared blocker has already closed</span>
+    <span class="nav-key__item nav-key__pts">pts · priority 40/30/18/8 · +14 per ticket unblocked · +20 in flight · +10 carries a spec · +6 defect · +1 per week untouched</span>
+  </p>
   {% else %}
-  <p class="empty-state">nothing on this board is startable — every record is held, deferred, closed or untriaged</p>
+  <p class="empty-state">nothing loose is startable — every startable record belongs to an epic, or the board is held, deferred and closed</p>
   {% endif %}
 </section>
 
-{% if nav.alternates %}
-<section id="nav-alternates" aria-label="Alternates">
-  {# "next best" rather than "alternates": the register mark sits in a ~60px
-     margin column and wraps at spaces, so a single long token breaks mid-word
-     ("ALTERNATE / S"). Two short words wrap cleanly. #}
-  <span class="sec-num"><strong>§ 02</strong>next best</span>
-  <h2>If not <em>that one</em> <span class="phase-tag">{% if nav.alternates | length == 1 %}rank 2{% else %}ranks 2–{{ nav.alternates | length + 1 }}{% endif %}</span></h2>
-  <p class="sec-lede">{% if nav.alternates | length == 1 %}This row states{% else %}Each row states{% endif %} the condition under which it beats the pick, derived from the differences between the two ledgers.</p>
-  <div class="alt-grid">
-    {% for entry in nav.alternates %}{{ alternate(entry) }}{% endfor %}
+{% if nav.epics %}
+<section id="nav-epics" aria-label="Epics">
+  <span class="sec-num"><strong>§ 02</strong>epics</span>
+  <h2>Where work is <em>grouped</em> <span class="phase-tag">{{ nav.epics | length }} groups · {{ nav.epic_children }} tickets</span></h2>
+  <p class="sec-lede">Read from the <code>parent</code> field. Open one for its map — {% if nav.mapped_epics %}{{ nav.mapped_epics }} of {{ nav.epics | length }} declare a dependency order and are drawn as a diagram; the rest are membership without a sequence.{% else %}none declares a dependency order, so each is membership without a sequence.{% endif %}</p>
+  <div class="egroup-list">
+    {% for epic in nav.epics %}{{ epic_block(epic) }}{% endfor %}
   </div>
 </section>
 {% endif %}
 
-<section id="nav-field" aria-label="The field">
-  <span class="sec-num"><strong>§ 03</strong>the field</span>
-  <h2>The <em>field</em> <span class="phase-tag">{{ nav.slice_total }} records</span></h2>
-  <p class="sec-lede">Every record on the board, in the first band whose rule it satisfies, grouped into the dispositions those bands describe. The band letter is a column; what each letter claims is in the key below.</p>
-  {{ field_table(nav.field, nav.groups | length > 0) }}
+<section id="nav-blocked" aria-label="Blocked">
+  <span class="sec-num"><strong>§ 03</strong>blocked</span>
+  <h2>Waiting on <em>something live</em> <span class="phase-tag">{{ nav.held_total }} held</span></h2>
+  {% if nav.blocked %}
+  <p class="sec-lede">Each names the live blocker holding it.</p>
+  {{ row_table(nav.blocked, 'behind a live blocker', show_blockers=true) }}
+  {% elif nav.held_total %}
+  {# Not an empty state. Every held record on this board belongs to an epic, so
+     they are all drawn in the maps above — saying "nothing is blocked" here
+     would be the opposite of true, and saying nothing at all would read as a
+     rendering failure. #}
+  <p class="empty-state">all {{ nav.held_total }} held records belong to an epic — each is drawn in its epic's map above, with the arrow that holds it</p>
+  {% else %}
+  <p class="empty-state">nothing on this board waits on a live blocker</p>
+  {% endif %}
 </section>
 
-{% if nav.groups %}
-<section id="nav-groups" aria-label="Epic groups">
-  <span class="sec-num"><strong>§ 04</strong>epics</span>
-  <h2>The <em>groups</em> <span class="phase-tag">{{ nav.groups | length }} groups · {{ nav.group_children }} children</span></h2>
-  <p class="sec-lede">Read from the <code>parent</code> field, and — for ordering — from <code>blocked_by</code> between siblings and nothing else. {% if nav.ordered_groups %}{{ nav.ordered_groups }} of {{ nav.groups | length }} declare any internal order at all; the rest are membership without a sequence.{% else %}No group declares an internal order: every one of them is membership without a sequence.{% endif %}</p>
-  <div class="egroup-grid">
-    {% for group in nav.groups %}{{ group_block(group) }}{% endfor %}
+{% if nav.tail %}
+<section id="nav-tail" aria-label="Not competing">
+  <span class="sec-num"><strong>§ 04</strong>the rest</span>
+  <h2>Everything <em>else</em> <span class="phase-tag">{{ nav.tail | sum(attribute='count') }} records</span></h2>
+  <p class="sec-lede">Nothing here is a candidate for today. Counts are readable without opening a panel.</p>
+  <div class="nav-tail-list">
+    {% for panel in nav.tail %}{{ tail_panel(panel) }}{% endfor %}
   </div>
 </section>
 {% endif %}
 
-<section id="nav-census" aria-label="Key and census">
-  <span class="sec-num"><strong>§ 0{{ 5 if nav.groups else 4 }}</strong>key &amp; census</span>
-  <h2>Key &amp; <em>census</em> <span class="phase-tag">{{ nav.slice_total }} records</span></h2>
-  {{ census_block(nav.census) }}
-</section>
+{# A corpus defect, so it prints only when there is one and it prints loudly.
+   Two tickets that block each other both sit held forever, each truthfully
+   explained as "waiting on a live blocker" — the board cannot say the useful
+   thing about them from the row alone. #}
+{% if nav.cycles %}
+<p class="recon recon--broken">
+  {{ nav.cycles | length }} dependency
+  {{ 'cycle' if nav.cycles | length == 1 else 'cycles' }} — these block each other
+  and nothing can start them:
+  {% for ring in nav.cycles %}<span class="census__ring">{% for ref in ring.refs %}<a href="{{ ref.href }}">#{{ ref.id }}</a>{% if not loop.last %} → {% endif %}{% endfor %} → <a href="{{ ring.refs[0].href }}">#{{ ring.refs[0].id }}</a></span>{% endfor %}
+</p>
+{% endif %}
+
+{# The completeness claim, and a real one.
+
+   The line this replaced compared the sum of the band counts against the sum
+   of the band counts and could not fail: it printed "every record on this
+   board is in exactly one band" unconditionally, including on a board that had
+   dropped one. What is compared here is the set of ids the partition actually
+   routed against the slice it was handed, so a record that reached no section
+   makes this line say so.
+
+   It also doubles as the table of contents the page otherwise lacks: the
+   decomposition is by where a reader can find the record, not by a band letter
+   nothing else on the page uses. #}
+{% if nav.recon %}
+<p class="recon{% if not nav.recon.ok %} recon--broken{% endif %}">
+  {{ nav.recon.total }} on this board ·
+  {{ nav.recon.ready }} ready ·
+  {{ nav.recon.children }} inside epics ·
+  {{ nav.recon.heads }} epic heads ·
+  {{ nav.recon.blocked }} blocked ·
+  {{ nav.recon.tail }} not competing
+  {%- if nav.recon.ok %} ✓{% else %} — records are missing from this page{% endif %}
+  {% if nav.corpus and nav.corpus.archived %}<span class="recon__corpus">beyond this board · {{ nav.corpus.archived }} archived · records closed in place are counted by neither</span>{% endif %}
+</p>
+{% endif %}
 {% endif %}

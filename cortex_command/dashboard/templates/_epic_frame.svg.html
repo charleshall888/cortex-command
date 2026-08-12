@@ -1,0 +1,88 @@
+{# One epic's dependency frame. Consumes ``epic_layout``'s geometry verbatim —
+   every x, y, width, height and path `d` below was computed in Python and no
+   coordinate is derived here.
+
+   **Nothing measures text.** A node is a ``<foreignObject>`` the server sized
+   and placed, holding ordinary HTML: CSS wraps and clamps the title inside a
+   box whose dimensions were already decided. The fonts are still not bundled
+   and Georgia is still what renders — that is harmless, because a wider font
+   wraps sooner instead of overflowing a box sized to a guessed advance. The
+   collisions in three of five prototypes came from estimating glyph widths,
+   which nothing here does.
+
+   The frame no longer carries its own head or its roster table. The head is
+   the disclosure summary that opened it, and the roster was the same four
+   columns the boxes and the hover card carry between them, at roughly the
+   height of the frame it annotated.
+
+   The anchor is HTML and its text content is its accessible name, so there is
+   no ``<title>`` child: browsers render that as an OS tooltip, which arrives
+   grey and unstyled next to the hover card. The svg is ``role="group"`` rather
+   than ``role="img"`` — an image role would hide the anchors inside it, and
+   they are the only way through to the tickets.
+
+   The arrowhead marker id is namespaced per epic. A shared id makes every
+   frame after the first depend on the first staying in the DOM, and on a page
+   that swaps its panels the first frame will leave. #}
+{% from "_nav_rows.html" import ticket_attrs %}
+
+{% macro frame_svg(epic) %}
+{% set f = epic.frame %}
+{# Printed only when some children ARE ordered, which is the only case the
+   counts add anything to. This arm never renders for an unordered group,
+   because an unordered group has no frame at all. #}
+<p class="epic-verdict epic-verdict--partial">{{ f.verdict }}</p>
+
+{# Stable id so the horizontal scroll position survives a swap: the element is
+   matched by id and preserved rather than replaced. #}
+<div class="epic-pan" id="{{ f.pan_id }}">
+  <svg class="epic-svg" viewBox="0 0 {{ f.width }} {{ f.height }}" width="{{ f.width }}" height="{{ f.height }}"
+       role="group" aria-label="dependency frame for epic {{ epic.id }} — {{ f.constrained }} of {{ f.total }} children constrained by a sibling">
+    <defs>
+      <marker id="{{ f.marker_id }}" viewBox="0 0 8 8" refX="7" refY="4"
+              markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path class="epic-arrow" d="M 0 0 L 8 4 L 0 8 z"></path>
+      </marker>
+    </defs>
+
+    {% if f.pool_box %}
+    <rect class="pool-box" x="{{ f.pool_box[0] }}" y="{{ f.pool_box[1] }}"
+          width="{{ f.pool_box[2] }}" height="{{ f.pool_box[3] }}" rx="2"></rect>
+    <text class="pool-label" x="{{ f.pool_label.x }}" y="{{ f.pool_label.y }}">UNDECLARED ORDER</text>
+    {% endif %}
+
+    {% if f.externals %}
+    <text class="pool-label" x="{{ f.ext_label.x }}" y="{{ f.ext_label.y }}">EXTERNAL BLOCKERS</text>
+    {% endif %}
+
+    {% for e in f.elbows %}
+    <path class="edge edge--{{ e.kind }}" d="{{ e.path }}" marker-end="url(#{{ f.marker_id }})"></path>
+    {% endfor %}
+
+    {% for n in f.nodes %}
+    {# The href stays real and stays first. The card and the modal are
+       progressive enhancement over it: a middle-click, a cmd-click, a
+       right-click "open in new tab", a keyboard Enter and a browser with no JS
+       all still reach /tickets/{id}. The script intercepts only the plain
+       left-click.
+
+       The preview travels as data- attributes rather than being fetched on
+       hover: every value here was computed for this frame already, so the card
+       can paint on the first mousemove instead of chasing the pointer with a
+       request. #}
+    <foreignObject x="{{ n.x }}" y="{{ n.y }}" width="244" height="68">
+      <a xmlns="http://www.w3.org/1999/xhtml" href="{{ n.href }}"
+         class="node-link node--{{ n.border_style }} js-ticket"
+         {# Explicit, because the box's own text runs the id straight into the
+            state word ("#431complete") — the two are separated visually by a
+            flex gap, which carries no whitespace into the accessible name. #}
+         aria-label="#{{ n.id }} {{ n.title }}"
+         {{ ticket_attrs(n) }}>
+        <span class="node-head">#{{ n.id }}<span class="node-state">{{ n.state }}</span></span>
+        <span class="node-title">{{ n.title }}</span>
+      </a>
+    </foreignObject>
+    {% endfor %}
+  </svg>
+</div>
+{% endmacro %}

@@ -1,0 +1,76 @@
+{# § 02 EPICS — every group, closed, with its map behind the disclosure.
+
+   This is where an epic's children live, and the only place they live. A child
+   is not repeated in the ready or blocked lists, and it is not repeated inside
+   this section either: the frame draws it, or the grid draws it, never both.
+
+   Two renderings, one child list, chosen by whether the group declares any
+   dependency at all:
+
+   * A group with edges gets the SVG frame — wave columns, an external-blocker
+     lane, right-angled elbows and a dashed enclosure for the children nothing
+     constrains. Every coordinate came from ``epic_layout`` and nothing here
+     measures text.
+   * A group with none gets a plain grid of child tiles. This is the case the
+     geometry was retired over: a dashed box drawn around an unordered list,
+     once per group, was most of what the old renderer emitted. Ten of eleven
+     groups take this arm, and it costs no coordinates at all.
+
+   The head line is what an operator reads while the group is shut, so it
+   carries the only things that could make them open it: how many children are
+   ready, held or deferred, and whether the head itself has closed while its
+   children are still live. Zero-valued clauses are dropped upstream — "0 held"
+   on nine of eleven groups would bury the two that hold something.
+
+   The disclosure is a native <details>. Esc, keyboard operation and the
+   implicit expanded state are the browser's job rather than script this
+   dashboard would have to carry and get right, and the id-keyed open-state
+   store in base.html reattaches it after a swap without any code here. #}
+{% from "_epic_frame.svg.html" import frame_svg %}
+{% from "_nav_rows.html" import ticket_attrs %}
+
+{% macro epic_block(epic) %}
+<details class="egroup egroup--{{ 'on' if epic.on_board else 'off' }}" id="{{ epic.details_id }}">
+  <summary class="egroup__summary">
+    {# The epic's own ticket, reachable. A real <a> inside the <summary>, which
+       is safe rather than a conflict: the delegated click handler calls
+       preventDefault, and toggling a <details> IS the default action of
+       activating its summary — so a click on the id opens the modal and does
+       not expand the group, while a click anywhere else on the summary still
+       expands it. Two hit targets, two outcomes, one control.
+
+       Before this the head carried an `href` no template rendered, so an epic
+       was the one ticket on the page you could not open. #}
+    <a class="egroup__id js-ticket" href="{{ epic.href }}" {{ ticket_attrs(epic) }}>ε#{{ epic.id }}</a>
+    <span class="egroup__title">{{ epic.title }}</span>
+    <span class="egroup__counts">{{ epic.summary }}</span>
+    {# Stated only when it is a finding. A live head is the expected case and
+       needs no word; a closed head with live children underneath it is a
+       grooming signal, and burying it inside the disclosure is how the old
+       two-table split let the same ticket read two different states. #}
+    {% if not epic.on_board %}<span class="egroup__head-state">head {{ epic.status }}</span>{% endif %}
+    {% if epic.frame %}<span class="egroup__mark" title="declares a dependency order" aria-label="declares a dependency order">⇄</span>{% endif %}
+  </summary>
+
+  <div class="egroup__body">
+    {% if epic.frame %}
+      {{ frame_svg(epic) }}
+    {% else %}
+    {# The no-edge arm. Tiles rather than a table: there are at most nine of
+       them, they carry no ordering to align down a column, and the same tile
+       shape is what the frame draws, so a reader who opens two groups sees one
+       vocabulary. #}
+    <ul class="ekids">
+      {% for kid in epic.children %}
+      <li class="ekid ekid--{{ kid.border_style }}">
+        <a class="ekid__link js-ticket" href="{{ kid.href }}" {{ ticket_attrs(kid) }}>
+          <span class="ekid__head">#{{ kid.id }}<span class="ekid__state">{{ kid.state }}</span></span>
+          <span class="ekid__title">{{ kid.title }}</span>
+        </a>
+      </li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+  </div>
+</details>
+{% endmacro %}

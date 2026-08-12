@@ -1,0 +1,105 @@
+{# The list rows — § 01 READY, § 03 BLOCKED, and the § 04 tail panels.
+
+   One macro, three callers, because the three lists differ in exactly one way
+   (blocked rows name what holds them) and it is worth being able to see that
+   they do not differ in any others. A reader learns one row grammar.
+
+   FOUR COLUMNS. The board used to print seven. Two of the three that went were
+   blank most of the time: "why it sits here" was empty on 54 of 78 rows and
+   the rank was empty on 46 of 51 startable ones, and between them they took
+   the width that wrapped half the titles onto a second line. The band letter
+   went because the section a row is in already says what the letter said.
+
+   What survives of the band is a single glyph in the points cell, present on
+   three bands out of eleven — a keyholder, a resumable, a lapsed hold. Sparse
+   by construction, so it reads as an exception rather than as a column.
+
+   The rows are a real <table>. Not a styling preference: the title column is
+   `table-layout` free and carries the full untruncated title, and the points
+   column is tabular-nums, so a reader can compare seventy rows down a column
+   that a flex run could never hold still. A row's position is never computed
+   from a character advance — the fonts are not bundled and Georgia is what
+   renders.
+
+   Exactly one <a> per cell that has one. The blocker links are siblings of the
+   id link, never descendants: nested anchors are invalid HTML and they
+   shattered 41% of one prototype's board.
+
+   Every row is `.js-ticket` carrying its own `data-t-*` payload, so the hover
+   card paints from values this render already computed and the click opens the
+   modal. The href stays real and stays first, so cmd-click, middle-click,
+   "open in new tab" and a browser with no JS all still reach the page. #}
+
+{# The hover payload, from whichever hoverable dict the caller has.
+
+   A list row, a frame node and an epic child tile all answer to the SAME keys
+   — see ``view._hover``, which is merged flat into each of them. The first cut
+   of this nested the payload under a ``preview`` key on nodes and tiles but
+   not on rows, so this macro read four of six attributes as Undefined on every
+   node in every frame and rendered them as empty strings, with no error
+   anywhere. One shape is what lets this macro have no branch in it. #}
+{% macro ticket_attrs(row) -%}
+data-ticket="{{ row.id }}"
+   data-t-title="{{ row.title }}"
+   data-t-state="{{ row.state }}"
+   data-t-status="{{ row.status }}"
+   data-t-priority="{{ row.priority }}"
+   data-t-type="{{ row.type }}"
+   data-t-unblocks="{{ row.unblocks }}"
+   {%- if row.points is not none %}
+   data-t-points="{{ row.points }}"
+   {%- endif %}
+{%- endmacro %}
+
+{% macro row_table(rows, caption, show_blockers=false) %}
+<table class="nav-table nav-list">
+  <caption class="nav-table__caption nav-table__caption--vh">{{ caption }}</caption>
+  <thead>
+    <tr>
+      <th scope="col" class="nav-table__pts">pts</th>
+      <th scope="col" class="nav-table__id">id</th>
+      <th scope="col" class="nav-table__title">title</th>
+      <th scope="col" class="nav-table__type">type</th>
+      {% if show_blockers %}<th scope="col" class="nav-table__why">waiting on</th>{% endif %}
+    </tr>
+  </thead>
+  <tbody>
+    {% for row in rows %}
+    <tr class="nav-list__row nav-list__row--{{ row.border_style }}">
+      <td class="nav-table__pts">{{ row.points }}{% if row.mark %}<span class="row-mark" title="{{ row.mark_title }}" aria-label="{{ row.mark_title }}">{{ row.mark }}</span>{% endif %}</td>
+      <td class="nav-table__id"><a class="js-ticket" href="{{ row.href }}" {{ ticket_attrs(row) }}>#{{ row.id }}</a></td>
+      <td class="nav-table__title">{{ row.title }}{% if row.status_note %} <span class="nav-chip nav-chip--warn">{{ row.status_note }}</span>{% endif %}</td>
+      <td class="nav-table__type">{{ row.type }}</td>
+      {% if show_blockers %}
+      {# Only the live blockers, because only those can reach this cell. A band-G
+         row carries its `holding` refs and a band-G′ row carries its `lapsed`
+         ones, and G′ renders in § 01 where this column does not exist — so a
+         "discharged" arm here was unreachable markup, and the lede above it
+         promised a faint-blocker rendering the data could never produce. The
+         lapsed case is stated where it is true: the ✓ mark on the § 01 row. #}
+      <td class="nav-table__why">
+        <span class="band__blockers">{% for blocker in row.blockers %}<a class="band__blocker" href="{{ blocker.href }}" title="{{ blocker.title }}">#{{ blocker.id }}</a>{% endfor %}</span>
+      </td>
+      {% endif %}
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endmacro %}
+
+{# A § 04 panel: a count you can read while it is shut, and the rows behind it.
+
+   Collapsed on the server, always. Per-operator open state is replayed by the
+   client after the swap — rendering it here would make the fragment differ per
+   viewer and break the byte-identical-poll property the whole surface rests
+   on. The id is keyed on the panel, never on its position. #}
+{% macro tail_panel(panel) %}
+<details class="nav-tail" id="{{ panel.slug }}">
+  <summary class="nav-tail__summary">
+    <span class="nav-tail__label">{{ panel.label }}</span>
+    <span class="nav-tail__count">{{ panel.count }}</span>
+    <span class="nav-tail__gloss">{{ panel.gloss }}</span>
+  </summary>
+  {{ row_table(panel.rows, panel.label) }}
+</details>
+{% endmacro %}
