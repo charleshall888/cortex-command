@@ -5,7 +5,7 @@
    The old triage board answered a different one — it printed the whole active
    slice in `priority then id` order behind six disclosures and left the
    ranking to the reader. It has been retired; § 03 renders every record it
-   rendered, on first paint, banded.
+   rendered, on first paint, in one table with the band as a column.
 
    The ledger bar that used to head this page is gone too, folded into § 04:
    it was a stacked distribution bar with a hover-only key, and the census
@@ -19,7 +19,15 @@
    own copy. Left out deliberately: adding the two scope numbers together
    would print a repo total wrong by an order of magnitude.
 
-   The page shell owns the navigator's poll target and nothing else. All four
+   The epic map was a peer page until it was folded in here as § 04. It drew
+   one SVG frame per epic — wave columns, lane-routed elbows, a per-epic
+   arrowhead marker — and on the dev slice those frames carried two arrows
+   between them, because ten of eleven groups declare no intra-group edge. Its
+   every other column (state, border style, points, "why") was this page's own
+   band partition re-projected onto a second surface. What it uniquely knew is
+   now a list of groups and a line of ordering text under the field it groups.
+
+   The page shell owns the navigator's poll target and nothing else. All the
    sections arrive in one fragment so the census cannot reconcile against a
    partition a different swap produced.
 
@@ -38,11 +46,6 @@
     <span class="sec-num"><strong>§ 01</strong>the pick</span>
     <p class="empty-state">loading the navigator</p>
   </section>
-</div>
-
-<div class="handoff">
-  <span>epic structure lives in the <a href="/epics" class="text-brand-primary">epic map</a></span>
-  <span class="phase-label">which epics declare an order, which only look like they do</span>
 </div>
 
 <div class="handoff">

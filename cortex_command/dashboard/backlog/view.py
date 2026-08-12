@@ -1,10 +1,10 @@
-"""View-models for the backlog navigator's two surfaces.
+"""View-models for the backlog navigator.
 
 This is the only module in the package that knows what a *section* is. The four
 helpers beneath it answer separate questions — what depends on what
 (:mod:`.graph`), what is it worth (:mod:`.score`), where does it sit
-(:mod:`.bands`), where is it drawn (:mod:`.epic_layout`) — and none of them
-knows that the answers get arranged into "§ 01 THE PICK" and "§ 03 THE BOARD".
+(:mod:`.bands`) — and none of them knows that the answers get arranged into
+"§ 01 THE PICK" and "§ 03 THE FIELD".
 Keeping that knowledge here is what lets a template be a template: every
 sentence, count and coordinate a template prints is computed below and handed
 over as a plain dict, so the Jinja layer has no arithmetic and no vocabulary
@@ -19,8 +19,8 @@ poll for data the poller already holds, and the corpus argument
 :func:`~.graph.build_graph` wants is reconstructible from the snapshot: the
 slice records *are* the corpus for every id on the board, and the snapshot's
 ``blocked_why`` already carries the resolved status and title of every ref
-pointing off it. ``root`` is therefore accepted (the routes resolve it anyway,
-and both builders sit beside the ``data.py`` builders that do take it) and
+pointing off it. ``root`` is therefore accepted (the route resolves it anyway,
+and this builder sits beside the ``data.py`` builders that do take it) and
 deliberately unread.
 
 **The same snapshot renders byte-identically.** Every collection built here is
@@ -43,13 +43,6 @@ from typing import Any
 
 from cortex_command.dashboard.backlog import bands as bands_mod
 from cortex_command.dashboard.backlog.bands import OPEN_STATUSES
-from cortex_command.dashboard.backlog.epic_layout import (
-    PAD,
-    POOL_INSET,
-    SPINE_HEAD_H,
-    LayoutContext,
-    layout_epic,
-)
 from cortex_command.dashboard.backlog.graph import build_graph, normalize_ref
 from cortex_command.dashboard.backlog.score import (
     TERM_META,
@@ -65,49 +58,6 @@ from cortex_command.dashboard.backlog.score import (
 # ranked entry would be asserting a difference the scores cannot carry.
 ALTERNATE_COUNT = 2
 
-# Below this, an epic collapses to a row in THE TAIL rather than getting a
-# frame. A diagram of one node is a box with nothing to say about ordering.
-FRAME_MIN_CHILDREN = 2
-
-# Band letter → the one- or two-word state label a node box may carry in SVG.
-# Two words is the ceiling because the contract caps SVG text at three-word
-# labels, and it is a *label* rather than a truncated title: a shortened title
-# would be a width guess against an unbundled font, which is the specific
-# defect the whole no-text-metrics rule exists to prevent. Full titles are
-# rendered as HTML, in the table beneath each frame.
-_NODE_STATE = {
-    "A": "ready",
-    "B": "in flight",
-    "C": "ready",
-    "D": "ready",
-    "E": "ready",
-    "E*": "ready",
-    "E′": "epic",
-    "F": "deferred",
-    "G": "held",
-    "G′": "lapsed",
-    "H": "off board",
-}
-
-# Band letter → border style, so a node in a frame carries the same channel the
-# same record carries in its band row on surface A. Mirrors ``bands._BAND_META``
-# by key rather than importing the tuple, because the frame needs a *default*
-# for an id the partition never saw (an external blocker off the slice) and a
-# lookup with a default is the honest expression of that.
-_BORDER_OF_BAND = {
-    "A": "solid",
-    "B": "solid",
-    "C": "solid",
-    "D": "solid",
-    "E": "solid",
-    "E*": "solid",
-    "E′": "dotted",
-    "F": "dotted",
-    "G": "dashed",
-    "G′": "ghost",
-    "H": "ghost",
-}
-
 # Term key → the noun phrase that term becomes inside the swap sentence. The
 # ledger's own labels are column headings ("Is a defect", "Sat untouched") and
 # lowercasing one into a clause produces "if is a defect matters more to you".
@@ -122,12 +72,19 @@ _SWAP_CLAUSE = {
     "stale": "how long it has sat",
 }
 
-# The census groups the eleven bands into the five dispositions an operator
-# distinguishes when they ask "what is on this board". The grouping is here and
-# not in bands.py because it is a *legend*, and a legend is a section.
-_CENSUS_GROUPS: tuple[tuple[str, str, tuple[str, ...]], ...] = (
-    ("startable", "startable today", ("A", "B", "C", "D", "E", "E*")),
-    ("lapsed", "hold lapsed — startable and looks blocked", ("G′",)),
+# The eleven bands, grouped into the dispositions an operator distinguishes
+# when they ask "what is on this board". One constant, read twice: § 03 splits
+# the field table on it and § 06 counts the census against it, so the two
+# cannot disagree about which records are startable.
+#
+# Band G′ sits inside "startable today" and not in a group of its own. A hold
+# whose blocker already completed IS startable — that is the entire finding the
+# band exists to report — and giving it a separate census line is what made
+# § 01 print "51 startable" over a census reading 49, with nothing on the page
+# reconciling them. The lapsed nuance survives where it belongs: on the row,
+# in the band letter and its "why" sentence.
+_FIELD_SEGMENTS: tuple[tuple[str, str, tuple[str, ...]], ...] = (
+    ("startable", "startable today", ("A", "B", "C", "D", "E", "E*", "G′")),
     ("blocked", "behind a live blocker", ("G",)),
     ("deferred", "held by decision", ("F",)),
     ("container", "epic containers", ("E′",)),
@@ -559,15 +516,40 @@ def _band_slug(key: str) -> str:
     return "".join(out) or "x"
 
 
-def _row(row: bands_mod.Row, items: dict[str, dict]) -> dict:
-    """One band row, with its blockers resolved to printable references."""
+def _row(
+    row: bands_mod.Row,
+    items: dict[str, dict],
+    band_key: str = "",
+    show_why: bool = True,
+) -> dict:
+    """One field row, with its blockers resolved to printable references.
+
+    ``band`` and ``epic`` are columns rather than section headers. § 03 was ten
+    separate tables, each with its own head and its own ``<thead>``; the band
+    is one letter and repeating it down a column costs less than nine extra
+    table heads, and it leaves the reader one scan direction instead of ten.
+    """
+    parent = normalize_ref((items.get(row.id) or {}).get("parent"))
     return {
         "id": row.id,
         "title": row.title,
         "href": "/tickets/%s" % row.id,
         "points": row.points,
         "rank": row.rank,
-        "why": row.why,
+        # Blanked where the band label IS the reason. Under MEDIUM · STARTABLE
+        # a per-row "medium · chore" restated the run heading and called it a
+        # reason; band F's rows each repeated the band's own rationale verbatim.
+        # The band is a column now, so the suppression has to travel per row —
+        # a single run mixes bands that explain themselves with bands that do
+        # not, and printing the run's widest answer for all of them is how the
+        # restatement came back.
+        "why": row.why if show_why else "",
+        "band": band_key,
+        # The parent id only. The title lives once, in § 05, because a title
+        # repeated on each of nine children is the duplication the two-page
+        # split was made of.
+        "epic": parent or "",
+        "epic_href": "/tickets/%s" % parent if parent else "",
         "status": row.status or "unset",
         "priority": row.priority or "unset",
         "type": row.type or "unset",
@@ -584,19 +566,45 @@ def _row(row: bands_mod.Row, items: dict[str, dict]) -> dict:
     }
 
 
-def _band(band: bands_mod.Band, items: dict[str, dict]) -> dict:
-    """One band, ready to render. Empty bands are filtered by the caller."""
-    return {
-        "key": band.key,
-        "slug": _band_slug(band.key),
-        "label": band.label,
-        "count": band.count,
-        "rationale": band.rationale,
-        "border_style": band.border_style,
-        "show_rank": band.show_rank,
-        "show_why": band.show_why,
-        "rows": [_row(row, items) for row in band.rows],
-    }
+def _field(banded: bands_mod.Bands, items: dict[str, dict]) -> list[dict]:
+    """§ 03 THE FIELD — every record, one table, split into disposition runs.
+
+    This replaced ten band blocks, each a header plus its own ``<table>`` with
+    its own ``<thead>``. The bands are not gone: the band letter is a column
+    and the ordering within a run is still the partition's. What is gone is
+    nine table heads, nine repeated column rows and ten section headers, for a
+    reader who now learns one row grammar instead of scanning ten.
+
+    The per-band rationale moves to the § 06 legend, printed once each, which
+    is where a legend belongs — it was never a property of the rows beneath it.
+    """
+    by_key = {band.key: band for band in banded if band.count}
+    segments = []
+    for key, label, members in _FIELD_SEGMENTS:
+        present = [by_key[m] for m in members if m in by_key]
+        if not present:
+            continue
+        segments.append(
+            {
+                "key": key,
+                "label": label,
+                "slug": "nav-seg-%s" % key,
+                "count": sum(band.count for band in present),
+                "border_style": present[0].border_style,
+                # Any band in the run wanting a rank column gives the whole run
+                # one: a column that appears and disappears mid-table is a
+                # different table, and the reader is promised one grammar. The
+                # "why" is the opposite case and is decided per row — see
+                # :func:`_row`.
+                "show_rank": any(band.show_rank for band in present),
+                "rows": [
+                    _row(row, items, band_key=band.key, show_why=band.show_why)
+                    for band in present
+                    for row in band.rows
+                ],
+            }
+        )
+    return segments
 
 
 def _census(banded: bands_mod.Bands) -> dict:
@@ -609,7 +617,7 @@ def _census(banded: bands_mod.Bands) -> dict:
     """
     by_key = {band.key: band for band in banded}
     groups = []
-    for key, gloss, members in _CENSUS_GROUPS:
+    for key, gloss, members in _FIELD_SEGMENTS:
         present = [by_key[m] for m in members if m in by_key]
         count = sum(band.count for band in present)
         if not count:
@@ -619,8 +627,8 @@ def _census(banded: bands_mod.Bands) -> dict:
                 "key": key,
                 "gloss": gloss,
                 "count": count,
-                # Key AND slug: the letters are jump links to the band blocks
-                # in § 03, whose ids come from the same injective slug rule.
+                # The letters jump to the run they name in § 03.
+                "slug": "nav-seg-%s" % key,
                 "bands": [
                     {"key": band.key, "slug": _band_slug(band.key)}
                     for band in present
@@ -629,6 +637,22 @@ def _census(banded: bands_mod.Bands) -> dict:
                 "border_style": present[0].border_style if present else "solid",
             }
         )
+
+    # What each band letter claims. This is the copy that used to head each of
+    # the ten band blocks in § 03; the letters now live in a column there, and
+    # a rationale repeated above every table was a legend pretending to be a
+    # section heading. Printed once each, only for bands that have rows.
+    legend = [
+        {
+            "key": band.key,
+            "label": band.label,
+            "rationale": band.rationale,
+            "count": band.count,
+            "border_style": band.border_style,
+        }
+        for band in banded
+        if band.count
+    ]
 
     borders = []
     for style, gloss in _BORDER_GLOSS.items():
@@ -639,6 +663,7 @@ def _census(banded: bands_mod.Bands) -> dict:
     parts = [band for band in banded if band.count]
     return {
         "groups": groups,
+        "legend": legend,
         "borders": borders,
         # Filled by the caller: the corpus-wide counts the retired ledger bar
         # used to carry. They are not derivable from the partition — the
@@ -646,7 +671,6 @@ def _census(banded: bands_mod.Bands) -> dict:
         # rather than pretending to be one of its groups.
         "corpus": None,
         "reconciliation": {
-            "parts": [{"key": band.key, "count": band.count} for band in parts],
             "sum": " + ".join(str(band.count) for band in parts),
             "total": sum(band.count for band in parts),
             "slice_total": banded.total,
@@ -678,9 +702,13 @@ def _empty_navigator(state: object) -> dict:
         "contender_count": 0,
         "pick": None,
         "alternates": [],
-        "bands": [],
+        "field": [],
+        "groups": [],
+        "group_children": 0,
+        "ordered_groups": 0,
         "census": {
             "groups": [],
+            "legend": [],
             "borders": [],
             "reconciliation": None,
             "corpus": None,
@@ -704,7 +732,8 @@ def _navigator_model(state: object) -> dict:
     if snapshot is None:
         return _empty_navigator(state)
 
-    items, _graph, ctx, _parents = _context(snapshot)
+    items, graph, ctx, parents = _context(snapshot)
+    offslice = _offslice_of(snapshot)
     banded = bands_mod.partition(items, ctx, item_order=snapshot.get("item_order"))
 
     # The handshake bands.py asks for, and the reason § 01 can never name a
@@ -747,6 +776,18 @@ def _navigator_model(state: object) -> dict:
         for i, tid in enumerate(ranked[1 : 1 + ALTERNATE_COUNT])
     ]
 
+    # § 05. Every group the parent map knows, largest first: the epic holding
+    # nine children is the one a reader came for, and burying it under a
+    # two-child group because its id sorts earlier is an ordering with no claim
+    # behind it. Groups whose container is off the slice are included rather
+    # than routed to a separate table — see :func:`_group`.
+    band_of = {row.id: band.key for band in banded for row in band.rows}
+    groups = [
+        _group(epic_id, parents[epic_id], items, band_of, offslice, graph.live)
+        for epic_id in sorted(parents, key=_id_key)
+    ]
+    groups.sort(key=lambda group: (-group["count"], _id_key(group["id"])))
+
     return {
         "available": True,
         "backend": _backend(state),
@@ -761,211 +802,101 @@ def _navigator_model(state: object) -> dict:
         "contender_count": len(ranked),
         "pick": pick,
         "alternates": alternates,
-        # Zero-count bands are dropped here, not in the template: the
-        # reconciliation above still counted them, so the arithmetic in § 04
-        # closes over the same partition the board rendered.
-        "bands": [_band(band, items) for band in banded if band.count],
+        # Zero-count bands are dropped inside _field, not in the template: the
+        # reconciliation still counted them, so the arithmetic in § 06 closes
+        # over the same partition the field rendered.
+        "field": _field(banded, items),
+        "groups": groups,
+        "group_children": sum(group["count"] for group in groups),
+        # How many groups declare any internal ordering at all. Printed once in
+        # the section lede so no group has to carry the explanation itself.
+        "ordered_groups": sum(1 for group in groups if group["order"]),
         "census": census,
     }
 
 
 # ---------------------------------------------------------------------------
-# Surface B
+# § 05 EPIC GROUPS
 # ---------------------------------------------------------------------------
 
+# Band letter → the one- or two-word state a child chip carries. A *label*
+# rather than a truncated title: a shortened title would be a width guess
+# against an unbundled font. Full titles are in the field table above.
+_CHILD_STATE = {
+    "A": "ready",
+    "B": "in flight",
+    "C": "ready",
+    "D": "ready",
+    "E": "ready",
+    "E*": "ready",
+    "E′": "epic",
+    "F": "deferred",
+    "G": "held",
+    "G′": "lapsed",
+    "H": "off board",
+}
 
-def _preview(
-    tid: str,
-    ctx: ScoreContext,
-    items: dict[str, dict],
-    why_of: dict[str, str],
-    offslice: dict | None = None,
-) -> dict:
-    """The facts a hover card shows, resolved from data already computed.
+# Band letter → border style, so a child chip carries the same channel the
+# same record carries in its field row. Mirrors ``bands._BAND_META`` by key
+# rather than importing the tuple, because a chip needs a *default* for an id
+# the partition never saw (a child off the slice) and a lookup with a default
+# is the honest expression of that.
+_BORDER_OF_BAND = {
+    "A": "solid",
+    "B": "solid",
+    "C": "solid",
+    "D": "solid",
+    "E": "solid",
+    "E*": "solid",
+    "E′": "dotted",
+    "F": "dotted",
+    "G": "dashed",
+    "G′": "ghost",
+    "H": "ghost",
+}
 
-    Deliberately carries no ticket *body*. The body is a per-request read
-    (``load_ticket_body``'s docstring gives the size argument — folding bodies
-    into a polled fragment would morph hundreds of KB into the DOM twice a
-    minute), so hover shows the classification, which is free, and the modal
-    fetches the prose, which is not. Hover therefore costs no request and
-    cannot lag behind the pointer.
 
-    ``why`` is the band's own gloss for this record — the same sentence the
-    board prints under "why it sits here", so the two surfaces cannot drift
-    into telling the operator different stories about one ticket.
+def _group_order(children: list[str], live: list[tuple[str, str]]) -> list[dict]:
+    """Intra-group ordering as printable ``blocker → blocked`` statements.
+
+    This replaced a per-epic SVG frame that solved longest-path waves, routed
+    right-angled elbows through reserved lanes and namespaced an arrowhead
+    marker per epic. What it drew, on the whole dev slice, was two arrows: ten
+    of eleven groups declare no intra-group edge at all, so ten frames were a
+    dashed box round an unordered list. Two relations are a sentence.
+
+    Grouped by blocker rather than emitted per edge, so one ticket holding two
+    siblings reads ``#242 → #388, #417`` and not as two near-identical lines.
     """
-    record = items.get(tid) or {}
-    on_slice = tid in items
-    direct = ctx.direct_of(tid) if on_slice else ()
-    onward = ctx.downstream_of(tid) if on_slice else ()
-    # An off-board blocker has a status the corpus knows, and it is the single
-    # most useful thing the card can say about it: "complete" means the arrow
-    # you just hovered is a hold that has already lapsed. Reading only `items`
-    # printed "unset" for every one of them, which is the same wrong answer
-    # "not on this board" used to give in the roster.
-    known = (offslice or {}).get(tid) or {}
-    return {
-        "status": _text(record.get("status")) or _text(known.get("status")) or "unset",
-        "priority": _text(record.get("priority")) or "unset",
-        "type": _text(record.get("type")) or "unset",
-        "points": score_of(tid, ctx).total if on_slice else None,
-        "why": why_of.get(tid, ""),
-        "unblocks": "%d direct / %d downstream" % (len(direct), len(onward)),
-    }
-
-
-def _node(
-    tid: str,
-    xy: tuple[int, int],
-    items: dict[str, dict],
-    band_of: dict[str, str],
-    offslice: dict,
-    *,
-    external: bool = False,
-    preview: dict | None = None,
-) -> dict:
-    """One node box: a coordinate, a link, and a label of at most two words.
-
-    The full title travels as ``title`` for the SVG ``<title>`` child (the
-    accessible name) and for the HTML table beneath the frame. It is never
-    drawn as SVG text — the fonts are not bundled, Georgia is what renders,
-    and a box sized to a guessed advance is the defect this rule exists to
-    prevent.
-
-    ``preview`` is the same facts again in a form the hover card reads off
-    ``data-`` attributes. It is not a second source: both come from the one
-    band partition this frame was built against.
-    """
-    key = band_of.get(tid, "")
-    return {
-        "id": tid,
-        "x": xy[0],
-        "y": xy[1],
-        "title": _title_of(tid, items, offslice),
-        # State and border say what the ticket IS, never where it sits. Being
-        # external to this epic is already carried by the left-hand column and
-        # its caption, so spending the label on "external" spent it on the one
-        # fact the position had already made. Most external blockers are on the
-        # board — #331 heads the whole ranked field — and half of the rest are
-        # complete, which is the useful word: it says this arrow's hold has
-        # already lapsed. A ghost border is then true rather than conventional,
-        # matching the census key's own gloss for it.
-        "state": _NODE_STATE.get(key, "on board")
-        if tid in items
-        else _offslice_state(tid, offslice),
-        "border_style": _BORDER_OF_BAND.get(key, "solid")
-        if tid in items
-        else "ghost",
-        "href": "/tickets/%s" % tid,
-        "external": external,
-        "preview": preview or {},
-    }
-
-
-def _frame(
-    epic_id: str,
-    children: list[str],
-    ctx: ScoreContext,
-    items: dict[str, dict],
-    band_of: dict[str, str],
-    layout_ctx: LayoutContext,
-    why_of: dict[str, str],
-    offslice: dict,
-) -> dict:
-    """One epic frame: the geometry, plus the table that carries the names."""
-    layout = layout_epic(epic_id, layout_ctx)
-    external_set = set(layout.externals)
-
-    nodes = [
-        _node(
-            tid,
-            layout.pos[tid],
-            items,
-            band_of,
-            offslice,
-            external=tid in external_set,
-            preview=_preview(tid, ctx, items, why_of, offslice),
-        )
-        for tid in sorted(layout.pos, key=_id_key)
+    member = set(children)
+    holds: dict[str, list[str]] = {}
+    for blocker, blocked in live:
+        if blocker in member and blocked in member:
+            holds.setdefault(blocker, []).append(blocked)
+    return [
+        {
+            "blocker": blocker,
+            "blocked": sorted(holds[blocker], key=_id_key),
+        }
+        for blocker in sorted(holds, key=_id_key)
     ]
-    record = items.get(epic_id) or {}
-
-    return {
-        "id": epic_id,
-        "title": _title_of(epic_id, items, offslice),
-        "href": "/tickets/%s" % epic_id,
-        "status": _text(record.get("status")) or "unset",
-        "on_board": epic_id in items,
-        "verdict": layout.verdict,
-        "constrained": layout.constrained,
-        "total": layout.total,
-        "width": layout.width,
-        "height": layout.height,
-        "wrapped": layout.wrapped,
-        "ncols": layout.ncols,
-        "marker_id": layout.marker_id,
-        # Per-epic, so two frames on one page cannot collide, and stable, so
-        # the pan container's scrollLeft survives an idiomorph swap.
-        "pan_id": "epic-pan-%s" % epic_id,
-        "pool_box": layout.pool_box,
-        # Where the enclosure's own two-word label sits. Computed here because
-        # it is geometry, and because the inset it depends on is a layout
-        # constant the template has no business knowing. The enclosure reserves
-        # a 30px caption band above its first node row, so the label clears the
-        # box edge and the nodes by well over the 8px the SVG-text rule
-        # requires — it is the only string on this surface drawn as SVG text
-        # that is not inside a node box, and it is inside this one.
-        "pool_label": (
-            {"x": layout.pool_box[0] + POOL_INSET, "y": layout.pool_box[1] + 20}
-            if layout.pool_box
-            else None
-        ),
-        # The externals column's own heading, in the caption band the layout
-        # already reserves above the first node row. It replaces a per-epic
-        # prose line that said the same thing in eight more words, one frame
-        # below where the reader needed it. Two words, inside the frame, at the
-        # top of the column it names.
-        "ext_label": (
-            {"x": PAD, "y": PAD + SPINE_HEAD_H - 12} if layout.externals else None
-        ),
-        "spine": layout.spine,
-        "pool": layout.pool,
-        "externals": layout.externals,
-        "elbows": layout.elbows,
-        "nodes": nodes,
-        # The names, as HTML. Ordered spine-then-pool-then-external so the
-        # table reads in the same order the frame does.
-        "roster": [
-            {
-                **_ref(tid, items, offslice),
-                "points": score_of(tid, ctx).total if tid in items else 0,
-                "state": _NODE_STATE.get(band_of.get(tid, ""), "")
-                or _offslice_state(tid, offslice),
-                "external": tid in external_set,
-                # The roster row is the same ticket as the node above it, so it
-                # opens the same hover card and the same modal. Carrying the
-                # payload twice keeps the two affordances from disagreeing.
-                "preview": _preview(tid, ctx, items, why_of, offslice),
-            }
-            for tid in list(layout.spine) + list(layout.pool) + list(layout.externals)
-        ],
-    }
 
 
-def _tail_row(
+def _group(
     epic_id: str,
     children: list[str],
     items: dict[str, dict],
     band_of: dict[str, str],
-    offslice: dict,
+    offslice: dict | None,
+    live: list[tuple[str, str]],
 ) -> dict:
-    """One THE TAIL row — a group too small, or too off-board, for a frame.
+    """One epic group: who it is, what is in it, and any declared order.
 
-    Which of the two rules sent it here is readable from the row's own
-    columns: the child count is printed, and the status resolves to the
-    parent's own — "complete" for every off-board parent on the development
-    corpus. Both used to be restated as a prose note per row, which on five
-    rows meant one sentence four times.
+    Renders whether or not the container is on the board. A group whose parent
+    sits off the slice used to be routed to a separate tail table with a
+    different state vocabulary, which is how the same off-slice ticket came to
+    read ``complete`` in a frame and ``off board`` in the tail. One builder,
+    one vocabulary, no drift.
     """
     on_board = epic_id in items
     return {
@@ -973,25 +904,29 @@ def _tail_row(
         "title": _title_of(epic_id, items, offslice),
         "href": "/tickets/%s" % epic_id,
         "on_board": on_board,
-        # One status, wherever it had to be resolved from. It replaces the
-        # prose "why it is here" note: an off-board parent reads "complete",
-        # which both explains the row's presence and is the fact the reader
-        # actually wants, where "parent is not on this board" was a statement
-        # about the board printed four times in five rows.
         "status": (
-            _text((items.get(epic_id) or {}).get("status")) or "unset"
+            _text(items[epic_id].get("status")) or "unset"
             if on_board
             else _offslice_state(epic_id, offslice)
         ),
         "count": len(children),
         "children": [
             {
-                **_ref(tid, items, offslice),
-                "state": _NODE_STATE.get(band_of.get(tid, ""), "off board"),
+                "id": tid,
+                "title": _title_of(tid, items, offslice),
+                "href": "/tickets/%s" % tid,
+                "state": (
+                    _CHILD_STATE.get(band_of[tid], "ready")
+                    if tid in band_of
+                    else _offslice_state(tid, offslice)
+                ),
+                "border_style": _BORDER_OF_BAND.get(band_of.get(tid, ""), "ghost"),
             }
-            for tid in children
+            for tid in sorted(children, key=_id_key)
         ],
+        "order": _group_order(children, live),
     }
+
 
 
 def scope_links(model: object, suffix: str) -> object:
@@ -1027,98 +962,6 @@ def scope_links(model: object, suffix: str) -> object:
         return [scope_links(item, suffix) for item in model]
     return model
 
-
-def _empty_epic_map(state: object) -> dict:
-    """A schema-complete epic view-model with nothing in it."""
-    return {
-        "available": False,
-        "backend": _backend(state),
-        "stale": False,
-        "polled_ts": "",
-        "frames": [],
-        "tail": [],
-        "frame_min": FRAME_MIN_CHILDREN,
-        "group_total": 0,
-        "child_total": 0,
-        "declared": 0,
-    }
-
-
-def _epic_map_model(state: object) -> dict:
-    """Build surface B — the epic map.
-
-    Args:
-        state: The dashboard state. Only ``backlog_snapshot`` and
-            ``backlog_backend`` are read.
-        root: Accepted and deliberately unread — see the module docstring.
-
-    Returns:
-        A view-model carrying one frame per epic with at least
-        :data:`FRAME_MIN_CHILDREN` children on the board, and one tail row for
-        every other group. Every group in the parent map reaches exactly one of
-        the two.
-    """
-    snapshot = _snapshot(state)
-    if snapshot is None:
-        return _empty_epic_map(state)
-
-    items, graph, ctx, parents = _context(snapshot)
-    offslice = _offslice_of(snapshot)
-    banded = bands_mod.partition(items, ctx, item_order=snapshot.get("item_order"))
-    band_of = {row.id: band.key for band in banded for row in band.rows}
-    # The board's own "why it sits here" sentence, keyed by ticket, so a hover
-    # card on this surface repeats surface A's reason rather than inventing a
-    # second one.
-    why_of = {row.id: row.why for band in banded for row in band.rows}
-
-    layout_ctx = LayoutContext(
-        children=parents,
-        live_edges=graph.live,
-        discharged_edges=graph.discharged,
-    )
-
-    frames: list[dict] = []
-    tail: list[dict] = []
-    for epic_id in sorted(parents, key=_id_key):
-        children = parents[epic_id]
-        # A group whose container is off the slice cannot render a frame
-        # header — there is no title, status or link to head it with — and the
-        # design routes it to the tail with its membership stated instead of
-        # drawing a frame titled after a ticket nobody can open.
-        if len(children) < FRAME_MIN_CHILDREN or epic_id not in items:
-            tail.append(_tail_row(epic_id, children, items, band_of, offslice))
-        else:
-            frames.append(
-                _frame(
-                    epic_id, children, ctx, items, band_of, layout_ctx, why_of, offslice
-                )
-            )
-
-    # Frames read largest first: the epic holding nine children is the one an
-    # operator opens this page for, and burying it under a two-child frame
-    # because its id sorts later is an ordering with no claim behind it.
-    frames.sort(key=lambda frame: (-frame["total"], _id_key(frame["id"])))
-
-    return {
-        "available": True,
-        "backend": _backend(state),
-        "stale": bool(snapshot.get("stale")),
-        "polled_ts": _text(snapshot.get("polled_ts")),
-        "frames": frames,
-        "tail": tail,
-        # The frame/tail threshold, so the empty arm can state the rule it just
-        # applied without the template hard-coding the number.
-        "frame_min": FRAME_MIN_CHILDREN,
-        "group_total": len(parents),
-        "child_total": sum(len(kids) for kids in parents.values()),
-        # How many groups declare any internal ordering at all. Printed once in
-        # the section lede so the per-epic verdict lines do not each have to
-        # carry the explanation — the defect that made the losing prototype's
-        # densest copy its least informative.
-        "declared": sum(1 for frame in frames if frame["constrained"]),
-    }
-
-
 def build_navigator(
     state: object, root: object = None, *, link_suffix: str = ""
 ) -> dict:
@@ -1131,10 +974,3 @@ def build_navigator(
     for why this is not threaded through the builders.
     """
     return scope_links(_navigator_model(state), link_suffix)
-
-
-def build_epic_map(
-    state: object, root: object = None, *, link_suffix: str = ""
-) -> dict:
-    """Surface B's view-model, with every href scoped to the caller's repo."""
-    return scope_links(_epic_map_model(state), link_suffix)

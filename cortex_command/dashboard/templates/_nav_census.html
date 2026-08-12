@@ -1,4 +1,4 @@
-{# § 04 THE KEY & CENSUS — the legend that *is* the distribution readout.
+{# THE KEY & CENSUS — the legend that *is* the distribution readout.
 
    This replaces a stacked distribution bar rather than restyling it. Merging
    the census into the key deletes a whole element and puts each count against
@@ -16,7 +16,7 @@
    failure this surface has available to it. Printing the sum makes the failure
    visible to the operator on the same page the test makes it visible to CI. #}
 
-{% macro census_block(census, slice_total) %}
+{% macro census_block(census) %}
 <div class="census">
   <table class="nav-table">
     <caption class="nav-table__caption">every record on this board, by disposition</caption>
@@ -30,14 +30,41 @@
     <tbody>
       {% for group in census.groups %}
       <tr>
-        {# Linked, because §03 is ten bands of vertical distance and this is
-           the only place that lists all of them in one view. The anchors are
-           the band blocks' own server-rendered ids. #}
+        {# The letters jump to the run they name in § 03, whose ids are
+           server-rendered from the same constant this table is built from. #}
         <th scope="row" class="census__keys">
-          <span class="census__swatch census__swatch--{{ group.border_style }}" aria-hidden="true"></span>{% for band in group.bands %}<a class="census__jump" href="#nav-band-{{ band.slug }}">{{ band.key }}</a>{% if not loop.last %} {% endif %}{% endfor %}
+          <span class="census__swatch census__swatch--{{ group.border_style }}" aria-hidden="true"></span><a class="census__jump" href="#{{ group.slug }}">{% for band in group.bands %}{{ band.key }}{% if not loop.last %} {% endif %}{% endfor %}</a>
         </th>
         <td>{{ group.gloss }}</td>
         <td class="nav-table__pts">{{ group.count }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {# What each band letter claims. This copy used to head each of the ten band
+     blocks in § 03 — a rationale printed above every table, restating for its
+     rows a rule that is a property of the partition and not of them. The
+     letters are a column there now; the claims are here, once each. #}
+  <table class="nav-table census__legend">
+    <caption class="nav-table__caption">band — the rule each letter asserts</caption>
+    <thead>
+      <tr>
+        <th scope="col">band</th>
+        <th scope="col">label</th>
+        <th scope="col">what the rule says</th>
+        <th scope="col" class="nav-table__pts">count</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for band in census.legend %}
+      <tr>
+        <th scope="row" class="census__keys">
+          <span class="band-mark band-mark--{{ band.border_style }}">{{ band.key }}</span>
+        </th>
+        <td class="census__band-label">{{ band.label }}</td>
+        <td class="nav-table__why">{{ band.rationale }}</td>
+        <td class="nav-table__pts">{{ band.count }}</td>
       </tr>
       {% endfor %}
     </tbody>

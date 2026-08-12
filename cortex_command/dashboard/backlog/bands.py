@@ -41,9 +41,12 @@ only ``Graph.live``, while band G also holds a record whose blocker sits
 outside the slice or resolves to nothing. An unresolvable hold is still a
 hold, and the readiness partition the rest of the dashboard sits behind
 treats external blockers as blocking. A caller assembling the page should
-therefore pass the union of bands A–E* into ``ScoreContext.contender_ids``,
-which exists for exactly this handshake, so the §01 pick can never name a
-ticket the board draws as blocked.
+therefore pass the union of bands A–E* **plus G′** into
+``ScoreContext.contender_ids``, which exists for exactly this handshake, so the
+§01 pick can never name a ticket the board draws as blocked. G′ belongs in that
+union because a hold whose blocker already completed is discharged — those are
+the cheapest picks on the board, and the band exists to surface them, not to
+hide them from the ranking.
 
 Nothing in this module renders. It returns plain dataclasses; the templates
 decide what a border style looks like.
@@ -781,7 +784,14 @@ def partition(records: object, ctx: object, *, item_order: object = None) -> Ban
     for tid in ids:
         members[assignment[tid][0]].append(tid)
 
-    startable = sum(len(members[key]) for key in STARTABLE_KEYS)
+    # Band G′ counts as startable here, and the "+ G′" is not incidental. A
+    # hold whose blocker already completed IS startable — the whole point of
+    # the band — and it is the population § 01 ranks over. Counting it out of
+    # this denominator is what made band A read "2 of 49 startable" beneath a
+    # header announcing 51.
+    startable = sum(len(members[key]) for key in STARTABLE_KEYS) + len(
+        members.get("G′", [])
+    )
 
     bands: list[Band] = []
     covered: set[str] = set()

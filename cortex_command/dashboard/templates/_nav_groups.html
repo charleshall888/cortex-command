@@ -1,0 +1,49 @@
+{# § 05 EPIC GROUPS — what is grouped, how big, and what declares an order.
+
+   This replaced a whole peer page. That page drew one SVG frame per epic with
+   at least two children: longest-path wave columns, right-angled elbows routed
+   through reserved lanes, a per-epic arrowhead marker, a dashed enclosure for
+   the children no sibling constrains, and a separate tail table for the groups
+   too small to frame. On the dev slice it drew two arrows — ten of eleven
+   groups declare no intra-group edge at all — and on the repo it ships from it
+   rendered "nothing to map" under its own nav tab.
+
+   What it uniquely knew fits here: which groups exist, how big each is, and
+   the ordering statements, as text. Everything else it showed — each child's
+   state, border style, points and "why" — was surface A's own band partition
+   re-projected, and surface A is now the table directly above this one.
+
+   Frames and tail are one list. A group whose container sits off the slice
+   used to get a different table with a different state vocabulary, which is
+   how the same ticket read "complete" in a frame and "off board" in the tail. #}
+
+{% macro group_block(group) %}
+<div class="egroup egroup--{{ 'on' if group.on_board else 'off' }}">
+  <div class="egroup__head">
+    <a class="egroup__id" href="{{ group.href }}">ε#{{ group.id }}</a>
+    <h3 class="egroup__title">{{ group.title }}</h3>
+    <span class="egroup__meta">{{ group.count }} {{ 'child' if group.count == 1 else 'children' }} · {{ group.status }}</span>
+  </div>
+
+  {# Printed only where there is an order to state. A line reading "no ordering
+     declared" above every one of ten groups restates the picture in words once
+     per group; the section lede already gives the aggregate. #}
+  {% if group.order %}
+  <p class="egroup__order">
+    <span class="egroup__order-label">order</span>
+    {% for hold in group.order %}<span class="egroup__chain"><a href="/tickets/{{ hold.blocker }}">#{{ hold.blocker }}</a> →
+      {%- for tid in hold.blocked %} <a href="/tickets/{{ tid }}">#{{ tid }}</a>{{ ',' if not loop.last }}{% endfor %}</span>{% endfor %}
+  </p>
+  {% endif %}
+
+  <ul class="egroup__kids">
+    {% for kid in group.children %}
+    <li class="egroup__kid egroup__kid--{{ kid.border_style }}">
+      <a href="{{ kid.href }}">#{{ kid.id }}</a>
+      <span class="egroup__kid-state">{{ kid.state }}</span>
+      <span class="egroup__kid-title">{{ kid.title }}</span>
+    </li>
+    {% endfor %}
+  </ul>
+</div>
+{% endmacro %}

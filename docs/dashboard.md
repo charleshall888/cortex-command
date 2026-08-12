@@ -155,29 +155,94 @@ Monitors active interactive pipeline execution (separate from overnight). Visibl
 
 ## Backlog view (`/backlog`)
 
-Two panels, both served from the same 30 s slow-poll snapshot.
+One page, five sections, all served from the same 30 s slow-poll snapshot so the
+census can never reconcile against a partition a different swap produced. It
+answers one question — what should I work on next, and why that.
 
-### 1. Backlog Ledger
+The epic map was a fourth peer view (`/epics`) until it was folded in here as
+§ 04. It drew one SVG frame per epic with at least two children: longest-path
+wave columns, right-angled elbows routed through reserved lanes, a dashed
+enclosure for the children no sibling constrains, and a per-epic arrowhead
+marker. On the development corpus those five frames drew **two arrows between
+them** — ten of eleven groups declare no `blocked_by` edge between siblings at
+all — and on cortex-command's own slice the page rendered "nothing to map"
+under its own nav tab. Every non-geometric column it carried (each child's
+state, border style, points, and "why it sits here") was this page's own band
+partition re-projected onto a second surface. What it uniquely knew is now a
+list of groups and a line of ordering text beneath the field it groups.
 
-Leads with **readiness** — how many active items are ready to pick up — followed by blocked, active, and completed counts, then the status distribution across `cortex/backlog/`. Provides context on what's queued for the next session without leaving the dashboard.
+### 1. The Pick
 
-The lede reads the readiness partition from the same ticket-feed snapshot § 02 renders, not the status histogram, and falls back to the completed/tracked ratio when no snapshot has been polled yet. It previously led with completion share, which is the one number on this panel that cannot change what an operator does next: the denominator grows with every ticket filed, so the percentage falls while the project is going well, and a given value reads the same for a healthy queue and an abandoned one.
+The highest-ranked startable record, with the full ledger that argues for it:
+one row per scoring term, the raw frontmatter each term read, and the points it
+contributed. Plus the counterfactual — which records become startable the moment
+this one closes.
 
-### 2. Triage Board
+Rank is leverage over declared priority: a ticket holding four others outranks a
+`priority: high` holding nothing. The staleness term is measured against the
+corpus's own latest `updated`, never the wall clock, which is what makes an
+unchanged poll render byte-identically under `hx-swap="morph"`.
 
-Every active ticket as a row, grouped one section per epic with a flat list beneath for items no epic parents, sourced from the same backlog snapshot as § 01. Rows carry status, priority, and type, plus an ineligibility reason, unresolved blocker refs, or a deferral flag where they apply — the persistent answer to "what should I work on, and what's blocked on what" without re-running triage in a session. Rows are non-navigational disclosures; the per-ticket reader is a separate surface.
+### 2. Next Best
 
-Status, priority, and type each occupy a fixed column, so each vocabulary is scannable down the board rather than only readable per row. An ineligibility reason renders in full on its own line beneath the row it belongs to, and a blocked row is marked on its leading edge: the reason answers half of what this view is for, and it previously clipped to an ellipsis with the full text reachable only through a `title` tooltip — invisible to touch, to keyboard, and to most screen-reader flows.
+Ranks 2 and 3, each with the condition under which it beats the pick, derived
+from the per-term differences between the two ledgers rather than written by
+hand. Three total picks is what the corpus supports — roughly thirteen distinct
+scores over forty-eight startable rows.
 
-**Ticket descriptions.** Expanding a row renders that ticket's markdown body — headings, fenced code, and tables — above its classification and readiness fields. The body is fetched once per row per page load from `/partials/ticket/{id}`, not carried in the 30 s snapshot: this repo's backlog is ~1.5 MB across 416 files, so embedding bodies would morph hundreds of KB into the DOM twice a minute to show prose nobody asked for. Only an opened row pays. The loaded description is `hx-preserve`d, so a poll landing while the row is open does not replace it with the placeholder.
+### 3. The Field
 
-The row's own summary stays non-navigational — the fetch renders in place, so opening a row moves the operator nowhere. The expanded area carries one link out, to that ticket's `/tickets/{id}` page, which is where the lifecycle artifacts live; the two surfaces are connected rather than divergent readers of the same ticket. Ids resolve padding-agnostically (`7` finds `007-*.md`) and fall back to `cortex/backlog/archive/`, so a blocker pointing at a closed ticket is still readable. The route is behind the same backend gate as every other backlog read.
+Every record in the active slice, in one table, split into disposition runs
+(startable today, behind a live blocker, held by decision, epic containers,
+untriaged/off-board). The band letter is a column rather than a section
+heading, and where a band is ranked the rank rides in the same cell (`A1`,
+`C2`).
 
-Rendered HTML is filtered to an allowlist of the tags Markdown emits, dropping raw HTML carried in from the file. Ticket bodies routinely quote material the repo did not author — pasted error output, a GitHub issue, a tool transcript — and Python-Markdown has no safe mode, so an injected `<script>` would otherwise run with the dashboard's origin. Filtering happens after rendering rather than by escaping the source, because escaping first double-escapes every fenced code block.
+This replaced ten band blocks, each with its own header and its own `<thead>`.
+The bands survive as the finer grain inside each run; what went is nine table
+heads and ten headings, for a reader who now learns one row grammar instead of
+ten. The per-band rationale moved to the § 05 legend, printed once each.
 
-An unrecognized tag carrying no attributes — the bare `<slug>`, `<path>`, `<ts>` placeholders specs and plans write in prose — survives as escaped literal text rather than being dropped. Deleting it was silent: the filter emitted no error and the reader saw `cortex/lifecycle//research.md` with no indication anything was missing, across 5% of lifecycle artifacts and 1.1% of ticket bodies. An *attributed* unrecognized tag is still dropped, which is what keeps `<img src=x onerror=…>` and `<div onclick=…>` from reaching the page as text.
+A row's "why it sits here" is blank wherever the band label *is* the reason —
+under MEDIUM · STARTABLE a per-row "medium · chore" restates the run heading and
+calls it a reason.
 
-An epic's own row **is** its group's heading, so each active ticket renders exactly once. (An epic is nobody's child, so a children-only exclusion previously left it in the flat list as well — rendering the same ticket twice, the second time labelled "Unparented", which a group-heading epic is not.) The heading carries the epic's own status, priority, and disposition alongside its active-child count.
+### 4. Epics
+
+One block per parent group: the epic's own id, title, child count and status,
+then its children with their board state. Groups whose container sits off the
+active slice are listed here too, in the same vocabulary, rather than in a
+second table with its own — which is how one off-slice ticket used to read
+`complete` in a frame and `off board` in the tail.
+
+Ordering is read from `blocked_by` between siblings and from nothing else, and
+prints only where a group declares one, grouped by blocker (`#242 → #388,
+#417`). The section lede carries the aggregate, so no group has to state that it
+has no order. The whole section is absent when no record declares a `parent`.
+
+### 5. Key & Census
+
+Three tables and a reconciliation line: every record by disposition, what each
+band letter asserts, and what each border style claims. The border style is the
+channel that survives monochrome and colour-blindness, so it is stated in words
+rather than left to be inferred from the swatch.
+
+The reconciliation line (`2 + 1 + 2 + … = 78 · every record on this board is in
+exactly one band`) is the rendered half of an assertion the test suite also
+makes. A routing miss would drop a ticket off a read-only board silently, which
+is the worst failure this surface has available to it.
+
+**One definition of startable.** Band G′ — a hold whose blocker has already
+completed — counts as startable in § 01's header, in § 03's first run, in § 05's
+census group, and in band A's own rationale. It was previously counted into some
+and out of others, so the page printed "51 startable" above a census reading 49
+with nothing reconciling them.
+
+**Ticket descriptions.** A ticket's markdown body is not carried in the 30 s
+snapshot: this repo's backlog is ~1.5 MB across 400+ files, so embedding bodies
+would morph hundreds of KB into the DOM twice a minute to show prose nobody
+asked for. The per-ticket reader is `/tickets/{id}`.
+
 
 ---
 

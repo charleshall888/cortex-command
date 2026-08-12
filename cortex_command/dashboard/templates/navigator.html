@@ -12,7 +12,8 @@
    str-keyed map) cannot reach here, because nothing in this file touches a
    snapshot. That is the point of the view-model, not a happy accident. #}
 {% from "_nav_pick.html" import hero, alternate %}
-{% from "_nav_band.html" import band_block %}
+{% from "_nav_field.html" import field_table %}
+{% from "_nav_groups.html" import group_block %}
 {% from "_nav_census.html" import census_block %}
 
 {% if nav.backend != 'cortex-backlog' %}
@@ -69,16 +70,27 @@
 </section>
 {% endif %}
 
-<section id="nav-board" aria-label="The board">
-  <span class="sec-num"><strong>§ 03</strong>the board</span>
-  <h2>The <em>board</em> <span class="phase-tag">{{ nav.slice_total }} records · {{ nav.bands | length }} bands</span></h2>
-  <p class="sec-lede">Every record on the board, in the first band whose rule it satisfies.</p>
-  {% for band in nav.bands %}{{ band_block(band) }}{% endfor %}
+<section id="nav-field" aria-label="The field">
+  <span class="sec-num"><strong>§ 03</strong>the field</span>
+  <h2>The <em>field</em> <span class="phase-tag">{{ nav.slice_total }} records</span></h2>
+  <p class="sec-lede">Every record on the board, in the first band whose rule it satisfies, grouped into the dispositions those bands describe. The band letter is a column; what each letter claims is in the key below.</p>
+  {{ field_table(nav.field, nav.groups | length > 0) }}
 </section>
 
+{% if nav.groups %}
+<section id="nav-groups" aria-label="Epic groups">
+  <span class="sec-num"><strong>§ 04</strong>epics</span>
+  <h2>The <em>groups</em> <span class="phase-tag">{{ nav.groups | length }} groups · {{ nav.group_children }} children</span></h2>
+  <p class="sec-lede">Read from the <code>parent</code> field, and — for ordering — from <code>blocked_by</code> between siblings and nothing else. {% if nav.ordered_groups %}{{ nav.ordered_groups }} of {{ nav.groups | length }} declare any internal order at all; the rest are membership without a sequence.{% else %}No group declares an internal order: every one of them is membership without a sequence.{% endif %}</p>
+  <div class="egroup-grid">
+    {% for group in nav.groups %}{{ group_block(group) }}{% endfor %}
+  </div>
+</section>
+{% endif %}
+
 <section id="nav-census" aria-label="Key and census">
-  <span class="sec-num"><strong>§ 04</strong>key &amp; census</span>
+  <span class="sec-num"><strong>§ 0{{ 5 if nav.groups else 4 }}</strong>key &amp; census</span>
   <h2>Key &amp; <em>census</em> <span class="phase-tag">{{ nav.slice_total }} records</span></h2>
-  {{ census_block(nav.census, nav.slice_total) }}
+  {{ census_block(nav.census) }}
 </section>
 {% endif %}

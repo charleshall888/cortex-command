@@ -27,7 +27,7 @@ from fastapi.templating import Jinja2Templates
 
 from cortex_command.common import _resolve_user_project_root
 from cortex_command.lifecycle_config import resolve_backlog_backend
-from cortex_command.dashboard.backlog.view import build_epic_map, build_navigator
+from cortex_command.dashboard.backlog.view import build_navigator
 from cortex_command.dashboard.data import (
     build_swim_lane_data,
     load_ticket_artifact,
@@ -444,21 +444,6 @@ async def backlog_view(request: Request):
     )
 
 
-@app.get("/epics")
-async def epics_view(request: Request):
-    """Render the epic map — surface B, a peer page of the navigator.
-
-    Shell only, for the same reason ``/backlog`` is: the frames are geometry
-    computed from the 30s snapshot, so they belong to the polled fragment and
-    not to a page render that would freeze them until a reload.
-    """
-    return templates.TemplateResponse(
-        request,
-        "epics.html",
-        _ctx(request),
-    )
-
-
 @app.get("/sessions")
 async def sessions_list(request: Request):
     """Render the session history list page."""
@@ -640,21 +625,6 @@ def navigator_panel(request: Request):
         "navigator.html",
         _ctx(request, nav=build_navigator(_state(request), _root_of(request),
                                  link_suffix=_repo_context(request)["repo_query"])),
-    )
-
-
-@app.get("/partials/epic-map")
-def epic_map_panel(request: Request):
-    """Return surface B — the epic frames and the tail table.
-
-    Declared ``def`` for the same reason as ``navigator_panel`` above: the
-    layout for every frame on the page is computed here, per poll.
-    """
-    return templates.TemplateResponse(
-        request,
-        "epic_map.html",
-        _ctx(request, epics=build_epic_map(_state(request), _root_of(request),
-                                link_suffix=_repo_context(request)["repo_query"])),
     )
 
 

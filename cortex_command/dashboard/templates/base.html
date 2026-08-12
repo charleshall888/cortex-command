@@ -2670,14 +2670,14 @@
         letter-spacing: -0.012em;
         color: var(--color-ink-1);
       }
-      .nav-hero__id, .alt__id, .epic-frame__id {
+      .nav-hero__id, .alt__id, .egroup__id {
         font-family: var(--font-mono);
         font-size: 0.72em;
         color: var(--color-ochre);
         text-decoration: none;
         border-bottom: 1px solid color-mix(in srgb, var(--color-ochre) 45%, transparent);
       }
-      .nav-hero__id:hover, .alt__id:hover, .epic-frame__id:hover { color: var(--color-ochre-soft); }
+      .nav-hero__id:hover, .alt__id:hover, .egroup__id:hover { color: var(--color-ochre-soft); }
       .nav-hero__title { flex: 1 1 20ch; }
 
       .nav-chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 12px; }
@@ -2700,53 +2700,6 @@
         border-color: color-mix(in srgb, var(--color-ochre) 65%, transparent);
       }
 
-      /* ── Epic-map hover card ────────────────────────────────────────────
-         Fixed-position so it escapes .epic-pan's overflow clip — a card
-         absolutely positioned inside the pan container would be cut off by
-         the very scroll box the node lives in. pointer-events:none so the
-         card can never sit between the pointer and the node it describes and
-         start a mouseout/mouseover flicker loop. */
-      .hovercard {
-        position: fixed;
-        z-index: 60;
-        max-width: 440px;
-        padding: 12px 14px 10px;
-        background: var(--color-parchment-3);
-        border: 1px solid var(--color-rule-soft);
-        border-radius: 3px;
-        box-shadow: 0 6px 22px rgba(0, 0, 0, 0.45);
-        pointer-events: none;
-        font-family: var(--font-mono);
-        font-size: 11px;
-        line-height: 1.5;
-      }
-      .hovercard[hidden] { display: none; }
-      .hovercard__title {
-        font-family: var(--font-serif);
-        font-size: 14px;
-        line-height: 1.35;
-        color: var(--color-ink-1);
-        margin: 0 0 8px;
-      }
-      .hovercard__id { color: var(--color-ochre); font-family: var(--font-mono); font-size: 12px; }
-      .hovercard__chips { display: flex; flex-wrap: wrap; gap: 5px; margin: 0 0 8px; }
-      /* An empty chip is a fact the ticket does not carry; drawing its border
-         anyway would read as a value that failed to load. */
-      .hovercard__chips .nav-chip:empty { display: none; }
-      .hovercard__why {
-        margin: 0;
-        color: var(--color-ink-3);
-        border-top: 1px dotted var(--color-rule-soft);
-        padding-top: 7px;
-      }
-      .hovercard__why:empty { display: none; }
-      .hovercard__hint {
-        margin: 7px 0 0;
-        color: var(--color-ink-4);
-        font-size: 10px;
-        letter-spacing: 0.06em;
-        text-transform: uppercase;
-      }
 
       /* ── Ticket modal ───────────────────────────────────────────────────
          A native <dialog>, so Esc, the top layer, focus trapping and inertness
@@ -2845,13 +2798,13 @@
       }
       .cf__body--none { font-style: italic; color: var(--color-ink-faint); }
       .cf__body--minor { font-size: 12px; color: var(--color-ink-faint); }
-      .cf__body a, .epic-tail__members a, .band__blocker {
+      .cf__body a, .band__blocker {
         font-family: var(--font-mono);
         font-size: 0.92em;
         color: var(--color-ochre);
         text-decoration: none;
       }
-      .cf__body a:hover, .epic-tail__members a:hover, .band__blocker:hover { color: var(--color-ochre-soft); }
+      .cf__body a:hover, .band__blocker:hover { color: var(--color-ochre-soft); }
 
       /* ── the ledger ─────────────────────────────────────────────── */
       .ledger {
@@ -2995,59 +2948,76 @@
       .alt__ledger > summary:hover { color: var(--color-ochre); }
       .alt__ledger[open] > summary { color: var(--color-ink-2); }
 
-      /* ── § 03 the board ─────────────────────────────────────────── */
-      .band {
-        margin: 0 0 22px;
-        padding-left: 14px;
-        border-left-width: 3px;
-        border-left-color: var(--color-rule-soft);
+      /* ── § 03 the field ─────────────────────────────────────────── */
+      /* One table, one row grammar. This replaced ten band blocks, each with
+         its own head and its own <thead>: the band is a column now, and the
+         disposition runs are hairlines on a <tbody> rather than ten headings,
+         so the column grid never breaks from the first row to the last. */
+      .nav-field { margin-top: 6px; }
+      .nav-field__rule th {
+        padding: 16px 8px 5px;
+        border-bottom: 1px solid var(--color-rule-soft);
+        text-align: left;
+        font-weight: 400;
       }
-      /* Border style is the fourth channel and the one that survives
-         monochrome. It groups band CLASSES — startable, not-a-task, held,
-         lapsed — because four values cannot carry eleven distinctions and
-         pretending otherwise would make the channel decorative. */
-      .band--solid  { border-left-style: solid;  border-left-color: var(--color-blue); }
-      .band--dotted { border-left-style: dotted; border-left-color: var(--color-ochre); }
-      .band--dashed { border-left-style: dashed; border-left-color: var(--color-ink-3); }
-      .band--ghost  { border-left-style: solid;  border-left-color: color-mix(in srgb, var(--color-ink-faint) 40%, transparent); }
-      .band__head {
-        display: flex;
-        align-items: baseline;
-        gap: 12px;
-        flex-wrap: wrap;
-        margin-bottom: 6px;
-      }
-      .band__letter {
-        font-family: var(--font-serif);
-        font-size: 22px;
-        line-height: 1;
-        color: var(--color-ochre);
-        min-width: 1.4em;
-      }
-      .band__label {
-        margin: 0;
+      /* The run's own claim, in the border channel that survives monochrome —
+         the same style the rows beneath it carry. */
+      .nav-field__run--solid  .nav-field__rule th { border-bottom-style: solid; border-bottom-color: var(--color-blue); }
+      .nav-field__run--dotted .nav-field__rule th { border-bottom-style: dotted; border-bottom-color: var(--color-ochre); }
+      .nav-field__run--dashed .nav-field__rule th { border-bottom-style: dashed; border-bottom-color: var(--color-ink-3); }
+      .nav-field__run--ghost  .nav-field__rule th { border-bottom-color: color-mix(in srgb, var(--color-ink-faint) 40%, transparent); }
+      .nav-field__run-label {
         font-family: var(--font-mono);
-        font-size: 11.5px;
-        font-weight: 500;
-        letter-spacing: var(--register);
+        font-size: 10.5px;
+        letter-spacing: 0.16em;
         text-transform: uppercase;
-        color: var(--color-ink-1);
-      }
-      .band__count {
-        font-family: var(--font-mono);
-        font-size: 11.5px;
-        font-variant-numeric: tabular-nums slashed-zero;
         color: var(--color-ink-2);
-        border: 1px solid var(--color-rule-soft);
-        padding: 0 6px;
       }
-      .band__rationale {
-        flex: 1 1 20ch;
-        text-align: right;
-        font-family: var(--font-serif);
-        font-style: italic;
-        font-size: 12.5px;
+      .nav-field__run-count {
+        font-family: var(--font-mono);
+        font-size: 10.5px;
         color: var(--color-ink-faint);
+        margin-left: 10px;
+        font-variant-numeric: tabular-nums slashed-zero;
+      }
+      /* The band letter, as a column. Sized to the widest key (E*, G') so the
+         column never reflows between runs. */
+      .band-mark {
+        display: inline-block;
+        min-width: 2.4ch;
+        font-family: var(--font-mono);
+        font-size: 10px;
+        letter-spacing: 0.04em;
+        color: var(--color-ink-faint);
+        border-left: 2px solid var(--color-rule-soft);
+        padding-left: 5px;
+      }
+      .band-mark--solid  { border-left-color: var(--color-blue); }
+      .band-mark--dotted { border-left-color: var(--color-ochre); border-left-style: dotted; }
+      .band-mark--dashed { border-left-color: var(--color-ink-3); border-left-style: dashed; }
+      .band-mark--ghost  { border-left-color: color-mix(in srgb, var(--color-ink-faint) 40%, transparent); }
+      .nav-table__band, .nav-table__epic { white-space: nowrap; width: 1%; }
+      /* The title takes every pixel the fixed columns do not. Without this the
+         browser hands "why it sits here" a share proportional to its widest
+         cell, and half the field wrapped to two lines to pay for a column that
+         is empty on the runs whose label already IS the reason. */
+      .nav-field .nav-table__title { width: 62%; }
+      .nav-field .nav-table__why { width: 22%; }
+      .nav-table__epic a {
+        font-family: var(--font-mono);
+        font-size: 10.5px;
+        color: var(--color-ochre);
+        text-decoration: none;
+      }
+      .nav-table__epic a:hover { color: var(--color-ochre-soft); }
+      .nav-table__none { color: var(--color-ink-4); }
+      .census__band-label {
+        font-family: var(--font-mono);
+        font-size: 10.5px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--color-ink-3);
+        white-space: nowrap;
       }
       .band__blockers { display: inline-flex; gap: 8px; margin-left: 8px; }
       .band__blocker--lapsed { color: var(--color-ink-faint); text-decoration: line-through; }
@@ -3104,6 +3074,11 @@
         grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
         gap: 22px;
       }
+      /* The legend spans the whole grid row. The other two census tables are a
+         key and a count and sit happily in a 400px column; this one carries a
+         sentence per band, and in a third of the width every one of its ten
+         rows wrapped to three lines. */
+      .census__legend { grid-column: 1 / -1; }
       .census__keys { white-space: nowrap; font-weight: 400; color: var(--color-ink-1); }
       .census__jump { color: var(--color-ink-1); text-decoration: none; border-bottom: 1px dotted var(--color-rule-soft); }
       .census__jump:hover { color: var(--color-ochre); border-bottom-color: var(--color-ochre); }
@@ -3130,138 +3105,96 @@
       }
       .recon--broken { color: var(--c-state-failed); }
 
-      /* ── surface B: the epic frames ─────────────────────────────── */
-      .epic-frame {
-        margin: 0 0 30px;
-        padding-bottom: 24px;
-        border-bottom: 1px dashed var(--color-rule-soft);
+      /* ── § 04 the epic groups ───────────────────────────────────── */
+      /* What replaced the SVG frames. A group is a heading, an optional line
+         of ordering text and a list of its children — no geometry, because on
+         the dev slice the frames drew two arrows across eleven groups and ten
+         of them had nothing to order. */
+      .egroup-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+        gap: 22px 30px;
       }
-      .epic-frame:last-child { border-bottom: none; }
-      .epic-frame__head {
+      .egroup {
+        border-left: 2px solid var(--color-rule-soft);
+        padding-left: 14px;
+      }
+      .egroup--off { border-left-style: dotted; }
+      .egroup__head {
         display: flex;
         align-items: baseline;
-        gap: 14px;
-        flex-wrap: wrap;
-      }
-      .epic-frame__title {
-        margin: 0;
-        font-family: var(--font-serif);
-        font-weight: 400;
-        font-size: 18px;
-        line-height: 1.3;
-        color: var(--color-ink-1);
-        display: flex;
         gap: 10px;
-        align-items: baseline;
         flex-wrap: wrap;
+        margin-bottom: 6px;
       }
-      .epic-frame__meta {
+      .egroup__title {
+        font-size: 14px;
+        font-weight: 600;
+        margin: 0;
+        flex: 1 1 16ch;
+        color: var(--color-ink-1);
+      }
+      .egroup__meta {
         font-family: var(--font-mono);
         font-size: 10px;
-        letter-spacing: var(--register);
-        text-transform: uppercase;
-        color: var(--color-ink-faint);
-      }
-      .epic-verdict {
-        font-family: var(--font-mono);
-        font-size: 11px;
-        letter-spacing: 0.04em;
-        color: var(--color-ink-3);
-        margin: 6px 0 4px;
-      }
-      .epic-verdict--partial { color: var(--color-ochre); }
-      /* Horizontal pan only. The server already knows the frame's exact width
-         and height, so nothing reflows on a morph swap and no JS recomputes a
-         coordinate. */
-      .epic-pan { overflow-x: auto; overflow-y: hidden; padding-bottom: 6px; }
-      .epic-svg { display: block; max-width: none; }
-
-      /* A node is an HTML box inside a <foreignObject> the server sized and
-         placed. The box carries the ticket's TITLE, which is the thing an
-         operator is actually looking for and which used to live only in a
-         table underneath the diagram.
-
-         This does not relax the no-text-metrics rule, it satisfies it the
-         other way: nothing here computes a width from a character advance.
-         The <foreignObject> is exactly 244x68 because the layout said so, and
-         CSS wraps and clamps inside it. The fonts are still not bundled and
-         Georgia is still what renders — and now that is fine, because a font
-         that measures wider simply wraps sooner. */
-      .node-link {
-        display: flex;
-        flex-direction: column;
-        gap: 3px;
-        box-sizing: border-box;
-        width: 100%;
-        height: 100%;
-        padding: 7px 11px;
-        overflow: hidden;
-        text-decoration: none;
-        cursor: pointer;
-        background: var(--color-parchment-3);
-        border: 1.5px solid var(--color-rule-soft);
-        border-radius: 2px;
-      }
-      .node--solid  { border-color: var(--color-blue); }
-      .node--dotted { border-style: dotted; border-color: var(--color-ochre); }
-      .node--dashed { border-style: dashed; border-color: var(--color-ink-3); }
-      .node--ghost  { border-color: var(--color-ink-faint); background: none; opacity: 0.62; }
-      .node-link:hover {
-        background: color-mix(in srgb, var(--color-blue) 12%, var(--color-parchment-3));
-        border-color: var(--color-ochre);
-        opacity: 1;
-      }
-      .node-head {
-        display: flex;
-        align-items: baseline;
-        gap: 8px;
-        font-family: var(--font-mono);
-        font-size: 11px;
-        line-height: 1;
-        color: var(--color-ochre);
-      }
-      .node-state {
-        margin-left: auto;
-        font-size: 9px;
         letter-spacing: 0.06em;
         text-transform: uppercase;
         color: var(--color-ink-faint);
+        white-space: nowrap;
       }
-      /* Two lines, then an ellipsis. A third line would collide with the box
-         floor on the longest titles in the corpus, and the hover card carries
-         the full string for anything that clips. */
-      .node-title {
-        display: -webkit-box;
-        -webkit-line-clamp: 2;
-        -webkit-box-orient: vertical;
-        overflow: hidden;
-        font-size: 11.5px;
-        line-height: 1.28;
-        color: var(--color-ink-2);
-      }
-      .pool-box {
-        fill: none;
-        stroke: var(--color-ink-3);
-        stroke-width: 1;
-        stroke-dasharray: 7 5;
-      }
-      .pool-label {
+      .egroup__order {
         font-family: var(--font-mono);
-        font-size: 10px;
-        letter-spacing: 0.1em;
-        fill: var(--color-ink-faint);
+        font-size: 10.5px;
+        color: var(--color-ochre);
+        margin: 0 0 8px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px 14px;
       }
-      .edge { fill: none; stroke-width: 1.5; }
-      .edge--live { stroke: var(--color-ochre); }
-      .edge--external { stroke: var(--color-ink-3); stroke-dasharray: 5 4; }
-      .edge--discharged { stroke: var(--color-ink-faint); stroke-opacity: 0.5; stroke-dasharray: 2 4; }
-      .epic-arrow { fill: var(--color-ochre); }
-      .epic-tail__off td { color: var(--color-ink-faint); }
-      /* Capped, so the membership run cannot starve the title column. Titles
-         wrapped to five lines beside a membership cell holding half the table
-         before this; both are prose and the title is the one being looked up. */
-      .epic-tail__members { font-size: 10.5px; color: var(--color-ink-3); max-width: 46%; }
-      .epic-tail__state { color: var(--color-ink-faint); }
+      .egroup__order-label {
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: var(--color-ink-faint);
+      }
+      .egroup__order a { color: var(--color-ochre); text-decoration: none; }
+      .egroup__order a:hover { color: var(--color-ochre-soft); }
+      .egroup__kids { list-style: none; margin: 0; padding: 0; }
+      .egroup__kid {
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+        padding: 2px 0 2px 10px;
+        font-size: 11px;
+        line-height: 1.5;
+        border-left: 2px solid transparent;
+      }
+      /* The same channel a row carries in § 03: style before colour. */
+      .egroup__kid--solid  { border-left-color: var(--color-blue); }
+      .egroup__kid--dotted { border-left-color: var(--color-ochre); border-left-style: dotted; }
+      .egroup__kid--dashed { border-left-color: var(--color-ink-3); border-left-style: dashed; }
+      .egroup__kid--ghost  { border-left-color: color-mix(in srgb, var(--color-ink-faint) 40%, transparent); }
+      .egroup__kid a {
+        font-family: var(--font-mono);
+        color: var(--color-ochre);
+        text-decoration: none;
+        white-space: nowrap;
+      }
+      .egroup__kid a:hover { color: var(--color-ochre-soft); }
+      .egroup__kid-state {
+        font-family: var(--font-mono);
+        font-size: 9.5px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--color-ink-faint);
+        white-space: nowrap;
+        min-width: 8ch;
+      }
+      .egroup__kid-title {
+        color: var(--color-ink-3);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
 
       /* ── Drop italic-WONK header treatment on deep sections ──────── */
       section#activity-stream h2 em,
@@ -3302,12 +3235,12 @@
          does not set it keeps the original masthead. #}
       {% set view = view | default('overnight') %}
       <div class="manuscript-meta">
-        <span>§ 00 · {% if view == 'backlog' %}backlog navigator · read-only{% elif view == 'epics' %}epic map · read-only{% elif view == 'history' %}session archive · read-only{% else %}overnight runner · live{% endif %}</span>
+        <span>§ 00 · {% if view == 'backlog' %}backlog navigator · read-only{% elif view == 'history' %}session archive · read-only{% else %}overnight runner · live{% endif %}</span>
         <span class="reg-divider"></span>
         <span>doc · cortex-command/dashboard</span>
         {% if view == 'overnight' %}<span>rev R{% if state is defined and state.overnight %}{{ state.overnight.current_round }}{% else %}0{% endif %}</span>{% endif %}
       </div>
-      <h1>cortex <em>{% if view == 'backlog' %}backlog{% elif view == 'epics' %}epics{% elif view == 'history' %}history{% else %}overnight{% endif %}</em></h1>
+      <h1>cortex <em>{% if view == 'backlog' %}backlog{% elif view == 'history' %}history{% else %}overnight{% endif %}</em></h1>
       <div class="crest">
         <nav>
           {# Every nav link carries the current repo, so switching view keeps
@@ -3316,7 +3249,6 @@
              they were before the registry existed. #}
           <a href="/{{ repo_query }}" class="nav-link {% if request.url.path == '/' %}nav-link-active{% endif %}">Overnight</a>
           <a href="/backlog{{ repo_query }}" class="nav-link {% if request.url.path.startswith('/backlog') %}nav-link-active{% endif %}">Backlog</a>
-          <a href="/epics{{ repo_query }}" class="nav-link {% if request.url.path.startswith('/epics') %}nav-link-active{% endif %}">Epics</a>
           <a href="/sessions{{ repo_query }}" class="nav-link {% if request.url.path.startswith('/sessions') %}nav-link-active{% endif %}">History</a>
         </nav>
         {# The repo switcher appears only when there is a choice to make. A
@@ -3454,151 +3386,6 @@
       document.body.addEventListener('htmx:afterSettle', restoreAll);
     })();
 
-    // Epic-map hover card and ticket modal.
-    //
-    // Every listener is delegated from document, never bound to a node. The
-    // epic map morph-swaps its whole panel every 30s, so per-node handlers
-    // would have to be rebound on afterSettle and would leak one closure per
-    // node per poll. Delegation makes the swap a non-event.
-    //
-    // The anchors keep working as anchors. Only an unmodified left-click is
-    // intercepted; cmd/ctrl/shift/alt-click, middle-click, the context menu
-    // and keyboard activation all fall through to /tickets/{id}, which is
-    // also the whole no-JS story.
-    (function () {
-      var card = document.getElementById('epic-hover');
-      var modal = document.getElementById('ticket-modal');
-      if (!card) return;
-
-      var GAP = 16;          // pointer clearance, both axes
-      var fields = {
-        id: card.querySelector('.hovercard__id'),
-        name: card.querySelector('.hovercard__name'),
-        status: card.querySelector('.hovercard__status'),
-        priority: card.querySelector('.hovercard__priority'),
-        type: card.querySelector('.hovercard__type'),
-        unblocks: card.querySelector('.hovercard__unblocks'),
-        points: card.querySelector('.hovercard__points'),
-        why: card.querySelector('.hovercard__why')
-      };
-
-      function hide() { card.hidden = true; }
-
-      function place(x, y) {
-        // Measure after filling, then flip rather than clamp: a card pinned to
-        // the viewport edge sits under the pointer, and under the pointer is
-        // where the node is.
-        var box = card.getBoundingClientRect();
-        var left = x + GAP;
-        var top = y + GAP;
-        if (left + box.width > window.innerWidth - 8) left = x - box.width - GAP;
-        if (top + box.height > window.innerHeight - 8) top = y - box.height - GAP;
-        card.style.left = Math.max(8, left) + 'px';
-        card.style.top = Math.max(8, top) + 'px';
-      }
-
-      function show(el, x, y) {
-        var pts = el.getAttribute('data-t-points');
-        fields.id.textContent = '#' + (el.getAttribute('data-ticket') || '');
-        fields.name.textContent = el.getAttribute('data-t-title') || '';
-        fields.status.textContent = 'status · ' + (el.getAttribute('data-t-status') || '');
-        fields.priority.textContent = 'priority · ' + (el.getAttribute('data-t-priority') || '');
-        fields.type.textContent = 'type · ' + (el.getAttribute('data-t-type') || '');
-        fields.unblocks.textContent = 'unblocks · ' + (el.getAttribute('data-t-unblocks') || '');
-        // An off-slice blocker has no score. Blanking the chip empties it, and
-        // :empty hides it — a "0 pts" there would be a number we did not compute.
-        fields.points.textContent = pts === null ? '' : pts + ' pts';
-        fields.why.textContent = el.getAttribute('data-t-why') || '';
-        card.hidden = false;
-        place(x, y);
-      }
-
-      document.addEventListener('mouseover', function (ev) {
-        if (modal && modal.open) return;
-        var el = ev.target.closest && ev.target.closest('.js-ticket');
-        if (el) show(el, ev.clientX, ev.clientY); else hide();
-      });
-
-      document.addEventListener('mousemove', function (ev) {
-        if (card.hidden) return;
-        var el = ev.target.closest && ev.target.closest('.js-ticket');
-        if (el) place(ev.clientX, ev.clientY); else hide();
-      });
-
-      // A scroll moves the node out from under a card positioned in viewport
-      // coordinates, so the card stops describing what it points at.
-      window.addEventListener('scroll', hide, true);
-
-      if (!modal || typeof modal.showModal !== 'function') return;
-
-      var body = document.getElementById('ticket-modal-body');
-      // Both, because they answer different halves of "put me back".
-      //
-      // The element is exact: one ticket appears twice on this page, as a node
-      // in the frame and as a row in the roster beneath it, and returning a
-      // roster click to the diagram is not where the operator was. The id is
-      // the durable fallback — the map morph-swaps every 30s, so a reference
-      // held across an open modal may be detached by the time it closes, and
-      // the node for that ticket is still the right place to land.
-      var openerEl = null;
-      var openerId = null;
-
-      document.addEventListener('click', function (ev) {
-        if (ev.defaultPrevented || ev.button !== 0) return;
-        if (ev.metaKey || ev.ctrlKey || ev.shiftKey || ev.altKey) return;
-        var el = ev.target.closest && ev.target.closest('.js-ticket');
-        if (!el) return;
-        var id = el.getAttribute('data-ticket');
-        if (!id) return;
-        ev.preventDefault();
-        hide();
-        openerEl = el;
-        openerId = id;
-        body.innerHTML = '<p class="empty-state">loading ticket</p>';
-        modal.showModal();
-        window.htmx.ajax('GET', '/partials/ticket-card/' + encodeURIComponent(id), {
-          target: '#ticket-modal-body',
-          swap: 'innerHTML'
-        });
-      });
-
-      // Click outside the card closes it. <dialog> counts the backdrop as the
-      // dialog itself for hit-testing, so "the target is the dialog" means the
-      // pointer was on the backdrop and not on any child.
-      modal.addEventListener('click', function (ev) {
-        if (ev.target === modal) modal.close();
-      });
-
-      // Return focus to the node that opened it, so keyboard and screen-reader
-      // users land back where they were instead of at the top of the document.
-      // Re-queried by id rather than held as a reference: after a morph swap
-      // the original element is detached, but the node for that ticket is
-      // still on the page and is where the operator expects to be.
-      // Focus restoration, driven off the `open` attribute rather than the
-      // `close` event.
-      //
-      // Two platform behaviours this dashboard's browser does not provide were
-      // measured here, and both of the obvious implementations depend on them:
-      // `close()` fires no `close` event, and closing does not restore focus to
-      // whatever held it before `showModal()`. Left alone, focus stays on the
-      // dialog's own close button inside a now-hidden subtree — a keyboard user
-      // is stranded on an element they cannot see.
-      //
-      // The attribute is the one signal every close path shares: the button's
-      // form submit, Esc, a backdrop click, and a programmatic close() all
-      // remove it. Re-queried by id for the reason `openerId` is an id at all.
-      new MutationObserver(function () {
-        if (modal.hasAttribute('open')) return;
-        var el = openerEl;
-        var id = openerId;
-        openerEl = null;
-        openerId = null;
-        var back = el && el.isConnected
-          ? el
-          : (id && document.querySelector('.js-ticket[data-ticket="' + id + '"]'));
-        if (back && back.focus) back.focus();
-      }).observe(modal, { attributes: true, attributeFilter: ['open'] });
-    })();
   </script>
 </body>
 </html>

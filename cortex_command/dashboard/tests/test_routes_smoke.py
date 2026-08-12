@@ -10,7 +10,7 @@ raises ``TypeError: unhashable type: 'dict'`` -> HTTP 500. Only a route test
 that drives each handler through the real ASGI app + ``TemplateResponse`` layer
 can guard against that regression.
 
-This test drives ``GET /``, ``/sessions``, ``/epics``, ``/health``,
+This test drives ``GET /``, ``/sessions``, ``/health``,
 ``/tickets/{id}``, and each of the ``/partials/*`` routes and asserts 200, plus
 ``GET /sessions/{missing}`` -> 404 and ``GET /tickets/{missing}`` -> 404 (the
 ``status_code`` path). On the dev venv (Starlette 0.52.1) both call forms
@@ -53,7 +53,6 @@ PARTIAL_ROUTES = [
     # fixture root whose poller never ran — the snapshot is None there, which
     # is the same state a non-local backlog backend leaves behind.
     "/partials/navigator",
-    "/partials/epic-map",
     # Path-parameterised. Renders its "description unavailable" arm against the
     # fixture root, which has no cortex/backlog/ — a missing ticket is a normal
     # render, not a status code, because the fragment lands inside a row the
@@ -65,11 +64,11 @@ PARTIAL_ROUTES = [
     "/partials/ticket/1/artifact/spec",
 ]
 
-# Page + health routes that must render 200. ``/backlog`` and ``/epics`` are
+# Page + health routes that must render 200. ``/backlog`` is
 # the two navigator pages — peers of ``/``, not fragments — so they go through
 # the same TemplateResponse path this module exists to guard. ``/tickets/1`` is the
 # seeded ticket from fixture_root below.
-PAGE_ROUTES = ["/", "/backlog", "/epics", "/sessions", "/health", "/tickets/1"]
+PAGE_ROUTES = ["/", "/backlog", "/sessions", "/health", "/tickets/1"]
 
 ALL_OK_ROUTES = PAGE_ROUTES + PARTIAL_ROUTES
 

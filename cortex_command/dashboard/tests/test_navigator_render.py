@@ -46,7 +46,8 @@ from pathlib import Path
 
 from cortex_command.dashboard.app import templates
 from cortex_command.dashboard.backlog import bands as bands_mod
-from cortex_command.dashboard.backlog.view import build_epic_map, build_navigator
+from cortex_command.dashboard.backlog.graph import normalize_ref
+from cortex_command.dashboard.backlog.view import build_navigator
 from cortex_command.dashboard.data import parse_backlog_titles
 from cortex_command.dashboard.poller import DashboardState
 from cortex_command.dashboard.ticket_feed import build_backlog_snapshot
@@ -255,16 +256,15 @@ def _render(name: str, **context) -> str:
 
 
 def _render_both(state: DashboardState) -> str:
-    """Both surfaces' fragments concatenated.
+    """The whole polled fragment.
 
-    Concatenated deliberately for the id and anchor assertions: the two
-    surfaces are separate documents today, but they share a macro library and
-    a naming scheme, and a collision between them is the kind that only shows
-    up when somebody later puts both panels on one page.
+    Named "both" from when the epic map was a peer page and the two fragments
+    were concatenated so an id collision between them could not hide. They are
+    one document now — that is exactly the "somebody later puts both panels on
+    one page" case the concatenation was guarding against — so the id and
+    anchor assertions run over the real page rather than a simulated one.
     """
-    return _render("navigator.html", nav=build_navigator(state, None)) + _render(
-        "epic_map.html", epics=build_epic_map(state, None)
-    )
+    return _render("navigator.html", nav=build_navigator(state, None))
 
 
 class _Structure(HTMLParser):
@@ -352,10 +352,9 @@ class _Fixture(unittest.TestCase):
         cls.state = _state_for(cls.CORPUS, Path(cls._tmp.name))
         cls.html = _render_both(cls.state)
         cls.parsed = _parse(cls.html)
-        # Surface B alone, plus the model behind it, for the assertions that
-        # are joins between the two rather than counts over the markup.
-        cls.epics = build_epic_map(cls.state, None)
-        cls.epic_html = _render("epic_map.html", epics=cls.epics)
+        # The model behind the markup, for the assertions that are joins
+        # against it rather than counts over the tags.
+        cls.nav = build_navigator(cls.state, None)
 
     @classmethod
     def tearDownClass(cls) -> None:
@@ -421,17 +420,18 @@ class TestListsAreTables(_Fixture):
         self.assertGreater(self.parsed.th_scopes.count("col"), 0)
         self.assertNotIn("", self.parsed.th_scopes, "a <th> carries no scope")
 
-    def test_svg_text_is_only_short_labels(self):
-        # The rule the bake-off produced: SVG text is permitted only for labels
-        # of at most three words. Anything longer flows as HTML.
-        too_long = [t for t in self.parsed.svg_texts if len(t.split()) > 3]
-        self.assertEqual([], too_long, "SVG <text> longer than 3 words: %s" % too_long)
+    def test_no_svg_text_anywhere(self):
+        """An absence assertion, and it keeps a removal removed.
 
-    def test_svg_text_exists_at_all(self):
-        # The epic frames draw the enclosure label and the externals heading as
-        # SVG text; an empty list would mean the frames did not render and the
-        # assertion above passed on nothing.
-        self.assertGreater(len(self.parsed.svg_texts), 0)
+        The rule used to be "SVG text only for labels of at most three words",
+        because the epic frames drew their enclosure and externals headings
+        that way. There is no SVG on this surface any more: the frames drew two
+        arrows across eleven groups and were replaced by a list and a line of
+        text. Any ``<text>`` reappearing here is a diagram growing back, and
+        with it row positions computed from a character advance for a font that
+        is not bundled.
+        """
+        self.assertEqual([], self.parsed.svg_texts)
 
     def test_no_svg_title_element_anywhere(self):
         """An absence assertion, and the point of the change that made it true.
@@ -453,40 +453,22 @@ class TestListsAreTables(_Fixture):
         """
         self.assertEqual([], self.parsed.title_attrs)
 
-    def test_node_boxes_carry_their_ticket_title(self):
-        """Titles are IN the boxes, which is what retired the roster table.
+    def test_group_children_carry_their_ticket_title(self):
+        """Every child the model names reaches the markup.
 
-        Asserted as a join, not as prose: every title the view-model gave a
-        node has to appear in the rendered frame. The check is that the data
-        reached the markup — the words themselves are the corpus's.
+        Asserted as a join, not as prose: the words are the corpus's, and what
+        is under test is that the data got there. A group that rendered its ids
+        but dropped its titles would still look plausible on the page.
         """
         titles = [
-            node["title"]
-            for frame in self.epics["frames"]
-            for node in frame["nodes"]
+            kid["title"]
+            for group in self.nav["groups"]
+            for kid in group["children"]
         ]
-        self.assertTrue(titles, "the fixture must render at least one node")
+        self.assertTrue(titles, "the fixture must render at least one child")
         for title in titles:
             with self.subTest(title=title):
-                self.assertIn(escape(title), self.epic_html)
-
-    def test_node_titles_are_not_svg_text(self):
-        """…and they are still not measured.
-
-        A title drawn as ``<text>`` is a box sized to a guessed character
-        advance, which is the defect the whole no-text-metrics rule exists to
-        prevent. Every title flows as HTML inside a ``<foreignObject>`` the
-        server sized; the three-word cap above is what holds the line, and
-        this states the specific case it is holding.
-        """
-        titles = {
-            node["title"]
-            for frame in self.epics["frames"]
-            for node in frame["nodes"]
-            if len(node["title"].split()) > 3
-        }
-        self.assertTrue(titles, "the fixture must have a title worth clamping")
-        self.assertEqual(set(), titles & set(self.parsed.svg_texts))
+                self.assertIn(escape(title), self.html)
 
 
 class TestByteStability(_Fixture):
@@ -502,14 +484,6 @@ class TestByteStability(_Fixture):
     def test_navigator_renders_identically(self):
         first = _render("navigator.html", nav=build_navigator(self.state, None))
         second = _render("navigator.html", nav=build_navigator(self.state, None))
-        self.assertEqual(
-            hashlib.sha256(first.encode()).hexdigest(),
-            hashlib.sha256(second.encode()).hexdigest(),
-        )
-
-    def test_epic_map_renders_identically(self):
-        first = _render("epic_map.html", epics=build_epic_map(self.state, None))
-        second = _render("epic_map.html", epics=build_epic_map(self.state, None))
         self.assertEqual(
             hashlib.sha256(first.encode()).hexdigest(),
             hashlib.sha256(second.encode()).hexdigest(),
@@ -534,52 +508,120 @@ class TestBandCoverageIsRendered(_Fixture):
     worst failure available to a surface whose whole job is "what is on this".
     """
 
-    def test_every_slice_id_reaches_a_band_row(self):
+    def test_every_slice_id_reaches_a_field_row(self):
         nav = build_navigator(self.state, None)
-        rendered = {row["id"] for band in nav["bands"] for row in band["rows"]}
+        rendered = {row["id"] for seg in nav["field"] for row in seg["rows"]}
         self.assertEqual(set(self.state.backlog_snapshot["items"]), rendered)
+
+    def test_every_record_lands_in_exactly_one_run(self):
+        # The field is one table now, so a record appearing under two
+        # disposition runs would read as two different tickets rather than as
+        # the duplicate it is.
+        ids = [row["id"] for seg in build_navigator(self.state, None)["field"]
+               for row in seg["rows"]]
+        self.assertEqual(len(ids), len(set(ids)))
 
     def test_reconciliation_totals_agree(self):
         recon = build_navigator(self.state, None)["census"]["reconciliation"]
         self.assertTrue(recon["ok"])
         self.assertEqual(recon["total"], recon["slice_total"])
 
-    def test_no_band_renders_empty(self):
+    def test_no_run_renders_empty(self):
         # Zero-count bands are dropped by the view-model, never emitted as an
         # empty header. A "0 items" row is noise on a page whose whole claim is
         # that what you see is what is there.
-        for band in build_navigator(self.state, None)["bands"]:
-            self.assertGreater(band["count"], 0)
-            self.assertEqual(band["count"], len(band["rows"]))
+        for seg in build_navigator(self.state, None)["field"]:
+            self.assertGreater(seg["count"], 0)
+            self.assertEqual(seg["count"], len(seg["rows"]))
 
 
-class TestEveryGroupReachesTheMap(_Fixture):
-    """Every parent group renders as exactly one frame or exactly one tail row."""
+class TestEveryGroupReachesTheSection(_Fixture):
+    """Every parent group renders exactly once, whatever its size or status.
 
-    def test_frames_and_tail_partition_the_groups(self):
-        epics = build_epic_map(self.state, None)
-        placed = [f["id"] for f in epics["frames"]] + [t["id"] for t in epics["tail"]]
+    The frame/tail split this replaced routed small and off-board groups to a
+    second table with its own state vocabulary, which is how one off-slice
+    ticket came to read ``complete`` in a frame and ``off board`` in the tail.
+    One list, one vocabulary.
+    """
+
+    def test_groups_are_rendered_once_each(self):
+        groups = build_navigator(self.state, None)["groups"]
+        placed = [g["id"] for g in groups]
         self.assertEqual(len(placed), len(set(placed)), "a group rendered twice")
-        self.assertEqual(epics["group_total"], len(placed))
 
-    def test_the_one_child_group_is_in_the_tail(self):
-        epics = build_epic_map(self.state, None)
-        self.assertIn("10", [t["id"] for t in epics["tail"]])
+    def test_the_one_child_group_is_kept_not_dropped(self):
+        # It used to be relegated to the tail for having too few children to
+        # frame. There is no threshold now — a group of one is a fact about the
+        # board and costs one row.
+        groups = {g["id"]: g for g in build_navigator(self.state, None)["groups"]}
+        self.assertIn("10", groups)
+        self.assertEqual(1, groups["10"]["count"])
 
-    def test_the_off_board_parent_is_in_the_tail_not_dropped(self):
-        epics = build_epic_map(self.state, None)
-        off = [t for t in epics["tail"] if t["id"] == "90"]
-        self.assertEqual(1, len(off))
-        self.assertFalse(off[0]["on_board"])
+    def test_the_off_board_parent_is_kept_not_dropped(self):
+        groups = {g["id"]: g for g in build_navigator(self.state, None)["groups"]}
+        self.assertIn("90", groups)
+        self.assertFalse(groups["90"]["on_board"])
 
-    def test_frame_dimensions_are_positive(self):
-        for frame in build_epic_map(self.state, None)["frames"]:
-            self.assertGreater(frame["width"], 0)
-            self.assertGreater(frame["height"], 0)
+    def test_children_match_the_parent_field(self):
+        # The join the whole section is: a child appears under the group its
+        # own `parent` names, and under no other.
+        items = self.state.backlog_snapshot["items"]
+        for group in build_navigator(self.state, None)["groups"]:
+            for kid in group["children"]:
+                with self.subTest(kid=kid["id"]):
+                    self.assertEqual(
+                        group["id"],
+                        normalize_ref((items.get(kid["id"]) or {}).get("parent")),
+                    )
 
-    def test_marker_ids_are_namespaced_per_frame(self):
-        markers = [f["marker_id"] for f in build_epic_map(self.state, None)["frames"]]
-        self.assertEqual(len(markers), len(set(markers)))
+    def test_declared_order_only_names_siblings(self):
+        # Ordering is read from blocked_by BETWEEN SIBLINGS and nothing else.
+        # An edge reaching outside the group would be an external blocker
+        # wearing an ordering statement's clothes.
+        for group in build_navigator(self.state, None)["groups"]:
+            member = {kid["id"] for kid in group["children"]}
+            for hold in group["order"]:
+                with self.subTest(group=group["id"], blocker=hold["blocker"]):
+                    self.assertIn(hold["blocker"], member)
+                    for tid in hold["blocked"]:
+                        self.assertIn(tid, member)
+
+
+class TestOneDefinitionOfStartable(_Fixture):
+    """Every "startable" number on the page counts the same records.
+
+    This was wrong twice, in two different places, for one reason: band G′ is
+    startable — a hold whose blocker already completed — and it kept being
+    counted into some totals and out of others. § 01's header read "51
+    startable" over a census group reading 49, and band A's own rationale read
+    "2 of 49 startable" under a run heading announcing 51. Three renderings of
+    one set, and nothing on the page reconciling them.
+    """
+
+    def test_header_field_run_and_census_agree(self):
+        nav = build_navigator(self.state, None)
+        run = [seg for seg in nav["field"] if seg["key"] == "startable"]
+        group = [g for g in nav["census"]["groups"] if g["key"] == "startable"]
+        self.assertEqual(1, len(run), "the startable run must exist")
+        self.assertEqual(1, len(group), "the startable census group must exist")
+        self.assertEqual(nav["contender_count"], run[0]["count"])
+        self.assertEqual(nav["contender_count"], group[0]["count"])
+
+    def test_the_lapsed_band_is_inside_that_count(self):
+        # The guard that keeps the assertion above from passing vacuously: on a
+        # corpus with no G′ rows every definition agrees trivially.
+        nav = build_navigator(self.state, None)
+        run = [seg for seg in nav["field"] if seg["key"] == "startable"][0]
+        self.assertIn("G′", {row["band"] for row in run["rows"]})
+
+    def test_band_a_rationale_counts_the_same_denominator(self):
+        # Band A's gloss is the one rationale filled from live counts, so it is
+        # the one that can disagree with the run it sits under.
+        nav = build_navigator(self.state, None)
+        band_a = [b for b in nav["census"]["legend"] if b["key"] == "A"]
+        self.assertEqual(1, len(band_a))
+        self.assertIn("of %d startable" % nav["contender_count"],
+                      band_a[0]["rationale"])
 
 
 class TestCounterfactualIsTwoWay(_Fixture):
@@ -622,21 +664,22 @@ class TestDegenerateCorpus(unittest.TestCase):
         self.assertGreater(len(html.strip()), 0)
         self.assertEqual([], _parse(html).nested_anchors)
 
-    def test_epic_map_renders_without_raising(self):
-        html = _render("epic_map.html", epics=build_epic_map(self.state, None))
-        self.assertGreater(len(html.strip()), 0)
-
     def test_the_small_slice_still_produces_a_pick_and_an_alternate(self):
         nav = build_navigator(self.state, None)
         self.assertIsNotNone(nav["pick"])
         self.assertGreaterEqual(len(nav["alternates"]), 1)
-        self.assertGreater(len(nav["bands"]), 0)
+        self.assertGreater(len(nav["field"]), 0)
 
-    def test_zero_epics_yields_zero_frames_and_zero_tail(self):
-        epics = build_epic_map(self.state, None)
-        self.assertEqual(0, epics["group_total"])
-        self.assertEqual([], epics["frames"])
-        self.assertEqual([], epics["tail"])
+    def test_a_corpus_with_no_parents_renders_no_group_section(self):
+        # This is the case that made the epic map an empty nav tab on the repo
+        # it ships from. Folded in, the section simply does not exist and the
+        # page is whole without it.
+        nav = build_navigator(self.state, None)
+        self.assertEqual([], nav["groups"])
+        self.assertEqual(0, nav["group_children"])
+        self.assertNotIn(
+            "nav-groups", _parse(_render("navigator.html", nav=nav)).ids
+        )
 
     def test_ids_stay_unique_on_the_small_slice(self):
         parsed = _parse(_render_both(self.state))
@@ -657,15 +700,14 @@ class TestAbsentSnapshot(unittest.TestCase):
     def test_view_models_are_schema_complete_when_unpolled(self):
         state = DashboardState()
         nav = build_navigator(state, None)
-        epics = build_epic_map(state, None)
         self.assertFalse(nav["available"])
-        self.assertFalse(epics["available"])
         # Schema-complete: the keys the templates read all exist and are falsy,
         # so a template branches on `available` instead of guarding each access.
-        for key in ("pick", "alternates", "bands", "census", "slice_total"):
+        for key in (
+            "pick", "alternates", "field", "groups", "group_children",
+            "ordered_groups", "census", "slice_total",
+        ):
             self.assertIn(key, nav)
-        for key in ("frames", "tail", "group_total", "child_total"):
-            self.assertIn(key, epics)
 
     def test_unpolled_fragments_render(self):
         state = DashboardState()
@@ -692,14 +734,6 @@ class TestPageShellsRender(_Fixture):
         )
         parsed = _parse(html)
         self.assertIn("navigator-panel", parsed.ids)
-        self.assertEqual([], parsed.nested_anchors)
-
-    def test_epics_shell_renders(self):
-        html = templates.env.get_template("epics.html").render(
-            request=_fake_request("/epics"), state=self.state
-        )
-        parsed = _parse(html)
-        self.assertIn("epic-map-panel", parsed.ids)
         self.assertEqual([], parsed.nested_anchors)
 
     def test_shell_ids_do_not_collide_with_the_fragment_they_load(self):
@@ -738,16 +772,19 @@ class TestBlockerPathIsRendered(_Fixture):
     """
 
     def _bands(self) -> dict[str, list[str]]:
+        # The band is a column on the row now rather than a section around it,
+        # so the grouping these assertions want is a fold over the field.
+        out: dict[str, list[str]] = {}
+        for row in self._rows():
+            out.setdefault(row["band"], []).append(row["id"])
+        return out
+
+    def _rows(self) -> list[dict]:
         nav = build_navigator(self.state, None)
-        return {band["key"]: [row["id"] for row in band["rows"]]
-                for band in nav["bands"]}
+        return [row for seg in nav["field"] for row in seg["rows"]]
 
     def _rows_of(self, key: str) -> list[dict]:
-        nav = build_navigator(self.state, None)
-        for band in nav["bands"]:
-            if band["key"] == key:
-                return band["rows"]
-        return []
+        return [row for row in self._rows() if row["band"] == key]
 
     def test_the_fixture_declared_blockers_at_all(self):
         # The guard the mutation check earned. Every other assertion in this

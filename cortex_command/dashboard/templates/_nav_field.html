@@ -1,0 +1,77 @@
+{# § 03 THE FIELD — every record on the board, in one table.
+
+   This replaced ten band blocks. Each carried a header (letter, label, count,
+   rationale) and its own <table> with its own <thead>, so a reader scanning
+   from the pick to the last record crossed ten column rows and re-read the
+   grammar ten times. The bands survive: the letter is a column, the ordering
+   inside a run is still the partition's, and the rationale each header carried
+   is printed once in the § 06 legend, which is where a legend belongs.
+
+   The runs are the dispositions, not the bands — five hairlines rather than
+   ten headers. A run's label is the claim; the band letter inside it is the
+   finer grain for anyone who wants it.
+
+   The rows are a real <table>. Not a styling preference: the title column is
+   `table-layout` free and carries the full untruncated title, and the points
+   column is tabular-nums, so a reader can compare seventy rows down a column
+   that a flex run could never hold still. A row's position is never computed
+   from a character advance — the fonts are not bundled and Georgia is what
+   renders.
+
+   Exactly one <a> per cell that has one. The blocker links in the why cell are
+   siblings of the id link, never descendants: nested anchors are invalid HTML
+   and they shattered 41% of one prototype's board. #}
+
+{% macro field_table(segments, show_epic) %}
+<table class="nav-table nav-field">
+  <caption class="nav-table__caption nav-table__caption--vh">the board · every record, by disposition then band</caption>
+  <thead>
+    <tr>
+      <th scope="col" class="nav-table__band">band</th>
+      <th scope="col" class="nav-table__id">id</th>
+      {% if show_epic %}<th scope="col" class="nav-table__epic">epic</th>{% endif %}
+      <th scope="col" class="nav-table__title">title</th>
+      <th scope="col" class="nav-table__type">type</th>
+      <th scope="col" class="nav-table__pts">pts</th>
+      <th scope="col">why it sits here</th>
+    </tr>
+  </thead>
+  {% for seg in segments %}
+  {# One <tbody> per run. The rule and the run label ride on the tbody rather
+     than on a full-width <tr>, so the column grid is never interrupted and the
+     seventy rows stay in one alignment from top to bottom. #}
+  <tbody class="nav-field__run nav-field__run--{{ seg.border_style }}" id="{{ seg.slug }}">
+    <tr class="nav-field__rule">
+      <th scope="colgroup" colspan="{{ 7 if show_epic else 6 }}">
+        <span class="nav-field__run-label">{{ seg.label }}</span>
+        <span class="nav-field__run-count">{{ seg.count }}</span>
+      </th>
+    </tr>
+    {% for row in seg.rows %}
+    <tr>
+      {# Band and rank in one cell. Bands D and E carry no rank at all — with
+         roughly thirteen distinct scores over forty-eight startable rows a
+         per-row rank there is decoration dressed as a measurement — so a rank
+         column of its own was an em-dash on 44 of 51 startable rows, and the
+         width it claimed came off the title, which wrapped half the table to
+         two lines. "C1" says both things in the space the letter needed. #}
+      <td class="nav-table__band"><span class="band-mark band-mark--{{ seg.border_style }}">{{ row.band }}{{ row.rank if row.rank is not none else '' }}</span></td>
+      <td class="nav-table__id"><a href="{{ row.href }}">#{{ row.id }}</a></td>
+      {% if show_epic %}
+      <td class="nav-table__epic">{% if row.epic %}<a href="{{ row.epic_href }}">ε#{{ row.epic }}</a>{% else %}<span class="nav-table__none">—</span>{% endif %}</td>
+      {% endif %}
+      <td class="nav-table__title">{{ row.title }}</td>
+      <td class="nav-table__type">{{ row.type }}</td>
+      <td class="nav-table__pts">{{ row.points }}</td>
+      <td class="nav-table__why">
+        {{ row.why }}
+        {% if row.blockers %}
+        <span class="band__blockers">{% for blocker in row.blockers %}<a class="band__blocker{% if blocker.discharged %} band__blocker--lapsed{% endif %}" href="{{ blocker.href }}">#{{ blocker.id }}</a>{% endfor %}</span>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+  {% endfor %}
+</table>
+{% endmacro %}

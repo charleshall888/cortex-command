@@ -163,10 +163,10 @@ class Counterfactual:
 class ScoreContext:
     """Everything the six terms and the counterfactual read.
 
-    Held as one object rather than five parameters because ``bands.py``,
-    ``epic_layout.py`` and ``view.py`` all take the same context, and a
-    ranking that silently disagreed with the band partition about which
-    records exist would be undetectable from the rendered page.
+    Held as one object rather than five parameters because ``bands.py`` and
+    ``view.py`` both take the same context, and a ranking that silently
+    disagreed with the band partition about which records exist would be
+    undetectable from the rendered page.
 
     Args:
         items: Active-slice records, id-keyed with **string** keys. This is
