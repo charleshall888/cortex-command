@@ -130,6 +130,11 @@ _VERDICT_FENCE = re.compile(r"```json\s*(\{.*?\})\s*```", re.DOTALL)
 _REQUIREMENT_HEADING = re.compile(r"^###\s+Requirement:\s*(.+?)\s*$")
 _CARRIED_FORWARD_MARKER = "carried forward from cycle"
 
+# The hidden ``--lifecycle-dir`` default. A value differing from it means the
+# caller pinned one tree explicitly (the test affordance), which is what tells
+# ``main`` to resolve events.log in that tree instead of at the main root.
+_DEFAULT_LIFECYCLE_DIR = "cortex/lifecycle"
+
 # Disambiguators appended when the preferred archive name is already held by
 # *different* content. Bounded rather than unbounded (or timestamped) so the
 # names stay deterministic and a repeated run cannot grow the tree — the
@@ -673,7 +678,7 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--lifecycle-dir",
-        default="cortex/lifecycle",
+        default=_DEFAULT_LIFECYCLE_DIR,
         help=argparse.SUPPRESS,
     )
     return parser
@@ -692,7 +697,7 @@ def main(argv: Optional[list[str]] = None) -> int:
 
     feature = args.feature
     lifecycle_base = Path(args.lifecycle_dir)
-    pinned_tree = args.lifecycle_dir != _build_parser().get_default("lifecycle_dir")
+    pinned_tree = args.lifecycle_dir != _DEFAULT_LIFECYCLE_DIR
     if not lifecycle_base.is_absolute():
         lifecycle_base = root / lifecycle_base
     feature_dir = lifecycle_base / feature
