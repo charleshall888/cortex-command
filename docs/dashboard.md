@@ -40,7 +40,7 @@ The launch waits for the port to accept a connection before returning, so the UR
 ### Tracking several repositories
 
 ```
-cortex dashboard --root ~/Workspaces/wild-light --also-root ~/Workspaces/cortex-command
+cortex dashboard --root ~/src/my-app --also-root ~/src/my-other-app
 ```
 
 `--root` is the default repo; each `--also-root` adds another, and the flag repeats. `CORTEX_DASHBOARD_ROOTS` holds the same list as a path-separated string and composes with the flags rather than being overridden by them.
@@ -48,7 +48,7 @@ cortex dashboard --root ~/Workspaces/wild-light --also-root ~/Workspaces/cortex-
 **To make `cortex dashboard` a bare command**, export that variable from your shell profile and pass nothing:
 
 ```
-export CORTEX_DASHBOARD_ROOTS="$HOME/Workspaces/wild-light:$HOME/Workspaces/cortex-command"
+export CORTEX_DASHBOARD_ROOTS="$HOME/src/my-app:$HOME/src/my-other-app"
 ```
 
 With it set, the verb works from any directory: when the working directory is not inside a cortex project, the **first** entry becomes the default repo and the rest are tracked alongside it. That fallback is the only supported way to launch from outside a checkout — do not reach for `CORTEX_REPO_ROOT`, for the reason given under [Viewing fixture data](#viewing-fixture-data).

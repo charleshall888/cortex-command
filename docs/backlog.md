@@ -33,7 +33,7 @@ Every backlog item uses the following YAML frontmatter contract. Fields listed a
 | `research` | string | no | Path to prior research artifact (e.g. `cortex/research/topic/research.md`); set by `/cortex-core:discovery` |
 | `spec` | string | no | Path to spec artifact; set by `/cortex-core:refine` (e.g. `cortex/lifecycle/{slug}/spec.md`) |
 | `discovery_source` | string | no | Path to the `/cortex-core:discovery` research artifact that produced this ticket; triggers auto-load of the prior research on `/cortex-core:refine` start |
-| `repo` | string | no | Absolute path to target repository (e.g. `~/Workspaces/wild-light`); `null` = current repo (default) |
+| `repo` | string | no | Absolute path to target repository (e.g. `~/src/my-app`); `null` = current repo (default) |
 | `complexity` | string | no | Lifecycle complexity tier (`simple`, `moderate`, `complex`) — `simple` work is implemented directly and never enters the lifecycle |
 | `criticality` | string | no | Criticality tier (`low`, `medium`, `high`, `critical`) |
 | `areas` | array | no | Inline YAML list of area tags (`[area1, area2]`); written by `/cortex-core:refine` |
