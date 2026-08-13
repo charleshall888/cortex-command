@@ -517,22 +517,41 @@ def _dispatch_dashboard(args: argparse.Namespace) -> int:
     # them through. Appended to whatever the environment already carried, so an
     # exported CORTEX_DASHBOARD_ROOTS and repeated --also-root compose rather
     # than one silently winning.
+    from cortex_command.dashboard.repos import ROOTS_ENV
+
     also_root = getattr(args, "also_root", None)
     if also_root:
-        from cortex_command.dashboard.repos import ROOTS_ENV
-
         existing = os.environ.get(ROOTS_ENV, "")
         parts = [p for p in existing.split(os.pathsep) if p.strip()]
         parts.extend(also_root)
         os.environ[ROOTS_ENV] = os.pathsep.join(parts)
 
     url = "http://127.0.0.1:%d" % port
+    # Every root the server will actually track, not just the flag-derived
+    # ones. ``CORTEX_DASHBOARD_ROOTS`` reaches the detached child by
+    # environment inheritance either way, so omitting it here never changed
+    # what got served — it only under-reported the tracked set to a machine
+    # caller reading the JSON envelope's ``roots``.
     roots = [os.environ.get("CORTEX_REPO_ROOT", "")] + list(also_root or [])
-    roots = [r for r in roots if r]
+    roots += [
+        part
+        for part in os.environ.get(ROOTS_ENV, "").split(os.pathsep)
+        if part.strip()
+    ]
+    seen: set[str] = set()
+    roots = [r for r in roots if r and not (r in seen or seen.add(r))]
 
-    if getattr(args, "background", False):
+    as_json = args.format == "json"
+    # Detached is the default: a dashboard is a thing you glance at beside the
+    # work, so holding the terminal that launched it is the wrong trade. The
+    # blocking form stays one flag away for recipes that serve until killed.
+    if not getattr(args, "foreground", False):
         return _dispatch_dashboard_background(
-            port=port, url=url, roots=roots, as_json=args.format == "json"
+            port=port,
+            url=url,
+            roots=roots,
+            as_json=as_json,
+            open_browser=_should_open_browser(args),
         )
 
     import socket
@@ -550,7 +569,18 @@ def _dispatch_dashboard(args: argparse.Namespace) -> int:
             file=sys.stderr,
         )
         print(url)
+        # The operator asked to see the board and the running server is the
+        # board, so an already-running result still opens it.
+        _open_browser_if_wanted(args, url)
         return 0
+
+    # Fired on a timer rather than inline: uvicorn.run blocks for the life of
+    # the server, so opening before it would race the bind and hand the
+    # browser a refused connection.
+    if _should_open_browser(args):
+        import threading
+
+        threading.Timer(0.5, lambda: _open_browser(url)).start()
 
     uvicorn.run(
         "cortex_command.dashboard.app:app",
@@ -559,6 +589,45 @@ def _dispatch_dashboard(args: argparse.Namespace) -> int:
         log_level="info",
     )
     return 0
+
+
+def _should_open_browser(args: argparse.Namespace) -> bool:
+    """Whether this invocation should raise a browser.
+
+    Three suppressions, each answering a different caller. ``--no-open`` is the
+    operator's explicit opt-out. ``--format json`` marks an unambiguously
+    machine caller — it is what keeps the ``dashboard_open`` MCP tool from
+    hijacking the operator's browser when an agent asks for the board. And a
+    non-TTY stdout covers headless, CI, and piped invocations that pass
+    neither flag. Interactivity-detection precedent: ``auth/bootstrap.py``.
+    """
+    if getattr(args, "no_open", False):
+        return False
+    if getattr(args, "format", None) == "json":
+        return False
+    return sys.stdout.isatty()
+
+
+def _open_browser(url: str) -> None:
+    """Open *url* in the default browser, never failing the launch over it.
+
+    ``webbrowser`` is stdlib, so this costs no dependency. A machine with no
+    usable browser is a fine place to run a dashboard — the URL is already on
+    stdout — so a failure here is worth a note and nothing more.
+    """
+    import webbrowser
+
+    try:
+        webbrowser.open(url)
+    except Exception as exc:  # pragma: no cover - platform-specific
+        print("Could not open a browser (%s); open %s yourself." % (exc, url),
+              file=sys.stderr)
+
+
+def _open_browser_if_wanted(args: argparse.Namespace, url: str) -> None:
+    """Compose the suppression check with the open itself."""
+    if _should_open_browser(args):
+        _open_browser(url)
 
 
 def _port_is_serving(port: int, timeout: float = 0.4) -> bool:
@@ -578,15 +647,20 @@ def _port_is_serving(port: int, timeout: float = 0.4) -> bool:
 
 
 def _dispatch_dashboard_background(
-    *, port: int, url: str, roots: list[str], as_json: bool
+    *,
+    port: int,
+    url: str,
+    roots: list[str],
+    as_json: bool,
+    open_browser: bool = False,
 ) -> int:
     """Start (or report) a detached dashboard and describe it on stdout.
 
-    The reason this exists: ``cortex dashboard`` blocks, which is correct for a
-    terminal and useless to any caller that wants to open the dashboard and
-    carry on — an agent answering "show me the board", the MCP tool that wraps
-    this verb. Those callers need a process that outlives the command and a
-    machine-readable answer saying where it went.
+    This is now the default path rather than the ``--background`` opt-in it
+    started as: a dashboard outliving the command is what makes the verb a
+    whole answer to "show me the board" instead of an instruction. Both the
+    interactive operator and the MCP tool wrapping this verb want a process
+    that survives the command and a statement of where it went.
 
     Idempotent by design. A second invocation while one is already up reports
     the existing server rather than racing it for the port, because the common
@@ -611,6 +685,8 @@ def _dispatch_dashboard_background(
     # a second piece of persistent state that can go stale. Asking the port
     # the caller actually named answers the only question that has a caller.
     if _port_is_serving(port):
+        if open_browser:
+            _open_browser(url)
         return emit(
             {
                 "schema_version": _JSON_SCHEMA_VERSION,
@@ -620,8 +696,14 @@ def _dispatch_dashboard_background(
             }
         )
 
+    # ``--foreground`` on the child is load-bearing, not decoration: detached
+    # is now the default, so a child launched without it would background
+    # itself in turn and exit immediately, leaving nothing serving. ``--no-open``
+    # because the browser belongs to the parent — the child's stdout is
+    # DEVNULL and it has no idea whether a human is watching.
     argv = [
-        sys.executable, "-m", "cortex_command.cli", "dashboard", "--port", str(port),
+        sys.executable, "-m", "cortex_command.cli", "dashboard",
+        "--port", str(port), "--foreground", "--no-open",
     ]
     if roots:
         argv += ["--root", roots[0]]
@@ -654,6 +736,10 @@ def _dispatch_dashboard_background(
                 }
             )
         if _port_is_serving(port):
+            # Opened only once the port answers, so the browser never lands on
+            # a refused connection.
+            if open_browser:
+                _open_browser(url)
             return emit(
                 {
                     "schema_version": _JSON_SCHEMA_VERSION,
@@ -1389,8 +1475,9 @@ def _build_parser() -> argparse.ArgumentParser:
             "Launch the agent monitoring dashboard (FastAPI + uvicorn) "
             "on localhost. Writes its PID to "
             "$XDG_CACHE_HOME/cortex/dashboard.pid (or "
-            "~/.cache/cortex/dashboard.pid). Blocks until interrupted; "
-            "Ctrl-C cleanly terminates the server."
+            "~/.cache/cortex/dashboard.pid). Starts detached and opens your "
+            "browser by default; pass --foreground to block instead, and "
+            "--no-open to skip the browser."
         ),
     )
     dashboard.add_argument(
@@ -1428,9 +1515,26 @@ def _build_parser() -> argparse.ArgumentParser:
         "--background",
         action="store_true",
         help=(
-            "Start the dashboard detached and return immediately with its URL "
-            "instead of blocking. Idempotent: reports the existing server if "
-            "one is already running rather than racing it for the port."
+            "Accepted and ignored — detached is now the default. Kept because "
+            "the dashboard_open MCP tool passes it explicitly and its argv is "
+            "version-locked to the plugin, not to this wheel."
+        ),
+    )
+    dashboard.add_argument(
+        "--foreground",
+        action="store_true",
+        help=(
+            "Block in this terminal instead of detaching, serving until "
+            "interrupted. Ctrl-C cleanly terminates the server."
+        ),
+    )
+    dashboard.add_argument(
+        "--no-open",
+        action="store_true",
+        dest="no_open",
+        help=(
+            "Do not open a browser. Implied by --format json and by a "
+            "non-TTY stdout, so scripted and agent callers need not pass it."
         ),
     )
     dashboard.add_argument(

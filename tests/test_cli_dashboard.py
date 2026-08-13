@@ -21,6 +21,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import unittest.mock
 from pathlib import Path
 
 
@@ -233,3 +234,104 @@ class TestBackgroundLaunchSurface(unittest.TestCase):
         for flag in ("--background", "--format", "--also-root"):
             with self.subTest(flag=flag):
                 self.assertIn(flag, result.stdout)
+
+    def test_help_advertises_the_launch_flags(self):
+        """``--background`` stays listed even though it is now a no-op.
+
+        The ``dashboard_open`` MCP tool passes it explicitly and its argv is
+        version-locked to the plugin rather than to this wheel, so removing it
+        would break a caller that cannot be updated in the same change.
+        """
+        result = _invoke_dashboard_help()
+        self.assertEqual(0, result.returncode)
+        for flag in ("--foreground", "--no-open", "--background"):
+            with self.subTest(flag=flag):
+                self.assertIn(flag, result.stdout)
+
+    def test_help_no_longer_claims_the_verb_blocks(self):
+        result = _invoke_dashboard_help()
+        self.assertNotIn("Blocks until interrupted", result.stdout)
+
+
+class TestBrowserOpenSuppression(unittest.TestCase):
+    """When a launch may raise a browser, and the three cases where it must not.
+
+    Each suppression answers a different caller: ``--no-open`` is the operator's
+    opt-out, ``--format json`` marks a machine caller (this is what keeps the
+    ``dashboard_open`` MCP tool from hijacking the operator's browser when an
+    agent asks for the board), and a non-TTY stdout covers headless, CI, and
+    piped invocations that pass neither flag.
+    """
+
+    @staticmethod
+    def _args(**overrides: object):
+        import argparse as _argparse
+
+        defaults = {"no_open": False, "format": "text"}
+        defaults.update(overrides)
+        return _argparse.Namespace(**defaults)
+
+    def setUp(self):
+        self.cli = importlib.import_module("cortex_command.cli")
+
+    def test_opens_on_a_default_interactive_launch(self):
+        with unittest.mock.patch("sys.stdout.isatty", return_value=True):
+            self.assertTrue(self.cli._should_open_browser(self._args()))
+
+    def test_suppressed_by_no_open(self):
+        with unittest.mock.patch("sys.stdout.isatty", return_value=True):
+            self.assertFalse(
+                self.cli._should_open_browser(self._args(no_open=True))
+            )
+
+    def test_suppressed_by_json_format(self):
+        with unittest.mock.patch("sys.stdout.isatty", return_value=True):
+            self.assertFalse(
+                self.cli._should_open_browser(self._args(format="json"))
+            )
+
+    def test_suppressed_when_stdout_is_not_a_tty(self):
+        with unittest.mock.patch("sys.stdout.isatty", return_value=False):
+            self.assertFalse(self.cli._should_open_browser(self._args()))
+
+    def test_a_browser_failure_never_fails_the_launch(self):
+        """The URL is already on stdout, so a headless box is a fine place to serve."""
+        with unittest.mock.patch(
+            "webbrowser.open", side_effect=RuntimeError("no display")
+        ):
+            self.cli._open_browser("http://127.0.0.1:8080")
+
+
+class TestDetachedChildArgv(unittest.TestCase):
+    """The detached child must be pinned to the blocking form.
+
+    Detached is the default, so a child launched without ``--foreground``
+    would background *itself* in turn and exit immediately, leaving nothing
+    serving and the parent reporting a successful start.
+    """
+
+    def test_child_is_pinned_to_foreground_and_no_open(self):
+        cli = importlib.import_module("cortex_command.cli")
+        captured: dict = {}
+
+        class _FakeChild:
+            pid = 4242
+
+            def poll(self):
+                return None
+
+        def _fake_popen(argv, **kwargs):
+            captured["argv"] = argv
+            return _FakeChild()
+
+        serving = iter([False, True])
+        with unittest.mock.patch("subprocess.Popen", _fake_popen):
+            with unittest.mock.patch.object(
+                cli, "_port_is_serving", side_effect=lambda *a, **k: next(serving)
+            ):
+                cli._dispatch_dashboard_background(
+                    port=8099, url="http://127.0.0.1:8099", roots=[], as_json=True
+                )
+
+        self.assertIn("--foreground", captured["argv"])
+        self.assertIn("--no-open", captured["argv"])
