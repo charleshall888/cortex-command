@@ -78,11 +78,19 @@ fix ("remove the clause") is not available here and the ticket's fallback half i
 
 **Landed:** one clause in `skills/build/SKILL.md` §Step 3, which the orchestrator reads on every run before
 any phase reference — so it covers Implement and Review from one site rather than duplicating into both. It
-states that invoking the skill *is* the request for the dispatches its references prescribe, that the
+states that invoking the skill *is* the request for the dispatches a phase reference prescribes, that the
 standing rule does not reach them, and that this is not a question to put to the operator; and it forbids the
 worse failure — degrading to inline work silently — by requiring the substitution be named in the phase
-summary and the result labelled a self-review. It covers the workflow/fan-out line too, by naming
-`parallel-execution.md`.
+summary and any review labelled a self-review.
+
+It is deliberately phrased over *"the dispatches a phase reference prescribes"* rather than enumerating them.
+The enumeration (Implement's per-task builders, Review's reviewer, `parallel-execution.md`'s worktree
+fan-out) shipped first and was cut on review: the reader is already inside the reference that prescribes the
+dispatch, so naming the three sites restated what was in front of them, and this file is loaded on every
+build invocation including the two phases that dispatch nothing. The generic phrasing still reaches the
+workflow/fan-out line this ticket's second edge asks about — `parallel-execution.md` is a phase reference
+prescribing a dispatch — while costing under half the bytes. Final cost: **+362B** on an 8109B file (+4.5%),
+down from +684B (+8.4%) as first written.
 
 `skills/build/SKILL.md` was chosen over the two references because the reference byte pin
 (`skills/build/references/size-pin.txt`) sits at exactly its measured floor with zero headroom, while
