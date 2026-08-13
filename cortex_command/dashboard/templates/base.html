@@ -2696,20 +2696,28 @@
           <a href="/backlog{{ repo_query }}" class="nav-link {% if request.url.path.startswith('/backlog') %}nav-link-active{% endif %}">Backlog</a>
           <a href="/sessions{{ repo_query }}" class="nav-link {% if request.url.path.startswith('/sessions') %}nav-link-active{% endif %}">History</a>
         </nav>
-        {# The repo switcher appears only when there is a choice to make. A
-           chooser offering one option is furniture, and most repos track one
-           checkout. Rendered as links rather than a <select> so it needs no
-           script, survives the morph swap, and each repo is a real URL the
-           operator can bookmark or open in a second tab — which is the whole
-           point of serving several from one process. #}
-        {% if repo_multi %}
+        {# Repo identity always renders; only its form changes. With several
+           repos tracked these are links and the block is a switcher. With one
+           there is nothing to switch to, but the page must still say which
+           repo it is showing: suppressing it entirely left the colophon's
+           product name as the only repo-shaped text on the page, which reads
+           as the repo and got --root reported as broken while it was in fact
+           serving the right corpus (#486). Rendered as links rather than a
+           <select> so it needs no script, survives the morph swap, and each
+           repo is a real URL the operator can bookmark or open in a second
+           tab — which is the whole point of serving several from one process. #}
+        {% if repo or repo_multi %}
         <nav class="repo-switch" aria-label="Repository">
           <span class="repo-switch__label">repo</span>
+          {% if repo_multi %}
           {% for r in repos %}
           <a href="{{ request.url.path }}?repo={{ r.slug }}"
              class="repo-switch__item{% if repo and r.slug == repo.slug %} repo-switch__item--on{% endif %}"
              {% if repo and r.slug == repo.slug %}aria-current="true"{% endif %}>{{ r.label }}</a>
           {% endfor %}
+          {% else %}
+          <span class="repo-switch__item repo-switch__item--on">{{ repo.label }}</span>
+          {% endif %}
         </nav>
         {% endif %}
         <span id="live-indicator" class="live-indicator">{% if state is defined and state.overnight and state.overnight.phase == 'executing' %}<span class="live-dot"></span> Live{% else %}No session · idle{% endif %}</span>

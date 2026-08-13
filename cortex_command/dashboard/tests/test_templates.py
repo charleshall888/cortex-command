@@ -41,6 +41,7 @@ from pathlib import Path
 from cortex_command.dashboard.app import templates
 from cortex_command.dashboard.data import parse_backlog_titles
 from cortex_command.dashboard.poller import DashboardState
+from cortex_command.dashboard.repos import Repo
 from cortex_command.dashboard.tests import backlog_fixtures
 from cortex_command.dashboard.ticket_feed import build_backlog_snapshot
 
@@ -851,6 +852,58 @@ class TestStylesheetReachesTheMarkup(unittest.TestCase):
             "them, or re-scope them onto the class the markup carries:\n  "
             + "\n  ".join(orphans),
         )
+
+
+class TestMastheadRepoIdentity(unittest.TestCase):
+    """The masthead must name the repo it is rendering, in every tracking mode.
+
+    Regression cover for #486: the repo block used to be gated on ``repo_multi``,
+    so a single-repo dashboard printed no repo name anywhere. The only
+    repo-shaped text left was the colophon's product name, which an operator
+    read as the repo and reported ``--root`` as broken over — while the server
+    was in fact serving the correct corpus.
+    """
+
+    @staticmethod
+    def _header(**context: object) -> str:
+        """Render base.html and return only its ``<header>`` slice.
+
+        Scoped to the header because that is where repo identity has to land:
+        the string appearing anywhere else on the page would not answer "which
+        repo am I looking at" for someone reading the masthead.
+        """
+        html = templates.env.get_template("base.html").render(
+            state=DashboardState(), request=_fake_request(), **context
+        )
+        match = re.search(r"<header.*?</header>", html, re.DOTALL)
+        assert match is not None, "base.html rendered no <header> element"
+        return match.group(0)
+
+    def test_single_repo_names_itself_in_the_masthead(self):
+        repo = Repo(slug="wild-light", label="wild-light", root=Path("/tmp/wild-light"))
+        header = self._header(repo=repo, repos=[repo], repo_multi=False, repo_query="")
+        self.assertIn("wild-light", header)
+
+    def test_single_repo_offers_no_switch_link(self):
+        repo = Repo(slug="wild-light", label="wild-light", root=Path("/tmp/wild-light"))
+        header = self._header(repo=repo, repos=[repo], repo_multi=False, repo_query="")
+        self.assertNotIn("?repo=", header)
+
+    def test_multi_repo_still_links_every_repo(self):
+        repos = [
+            Repo(slug="wild-light", label="wild-light", root=Path("/tmp/wild-light")),
+            Repo(slug="cortex-command", label="cortex-command", root=Path("/tmp/cc")),
+        ]
+        header = self._header(
+            repo=repos[0], repos=repos, repo_multi=True, repo_query="?repo=wild-light"
+        )
+        for repo in repos:
+            self.assertIn("?repo=%s" % repo.slug, header)
+
+    def test_no_repo_renders_no_identity_block(self):
+        """An unpopulated registry must not render a bare 'repo' label with no name."""
+        header = self._header(repo=None, repos=[], repo_multi=False, repo_query="")
+        self.assertNotIn("repo-switch__label", header)
 
 
 if __name__ == "__main__":
