@@ -38,14 +38,19 @@ This is deliberately distinct from the two CWD-flavoured resolvers in
   * ``common._resolve_user_project_root`` (env-honouring, else first
     ``cortex/``-bearing ancestor) — what ``enter.py`` uses.
 
-That divergence is the live hazard. This resolver is the separate machine-verb
-path; ``log_event`` / ``log_event_at`` are intentionally left on their legacy
-CWD resolution for the typed subcommands and are **not** changed by this module.
+That divergence **was** the live hazard, and #484 measured its cost: a lifecycle
+driven from a worktree wrote half its history to the main-root log (``next`` /
+``advance``) and half to the worktree copy (``event`` / ``review-brief``), with
+no verb reporting the split. Every appending verb now anchors here.
+:func:`detect_split_log` is the reporting half — the CWD-anchored path a legacy
+caller *would* have written, surfaced when it exists and diverges, so an already
+split lifecycle is visible rather than merely prevented going forward.
 """
 
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Optional
 
 from cortex_command.interactive_lock import _resolve_main_repo_root
 
@@ -53,6 +58,7 @@ __all__ = [
     "resolve_main_repo_root",
     "resolve_events_log",
     "resolve_flock_path",
+    "detect_split_log",
 ]
 
 
@@ -114,3 +120,39 @@ def resolve_flock_path(events_log: Path) -> Path:
         The sibling ``{events_log}.lock`` path in the same directory.
     """
     return events_log.parent / f"{events_log.name}.lock"
+
+
+def detect_split_log(feature_slug: str, resolved: Path) -> Optional[Path]:
+    """Return an already-forked CWD-anchored ``events.log``, or ``None``.
+
+    Preventing new splits does not heal the ones already on disk (#484): a
+    worktree session that ran the pre-fix verbs left a second, divergent log
+    that still parses, still looks plausible, and — because the worktree copy is
+    git-tracked — merges a forked history if committed. Every appending verb
+    calls this so the fork is *named* on the run that would otherwise silently
+    ignore it.
+
+    Returns the CWD-anchored path only when it both exists and differs from
+    *resolved*; a non-worktree session, or one whose two resolutions agree,
+    yields ``None``. Never raises — an unresolvable CWD root just means there is
+    no second path to warn about.
+
+    Args:
+        feature_slug: Feature slug the caller resolved *resolved* for.
+        resolved: The main-root-anchored path from :func:`resolve_events_log`.
+
+    Returns:
+        The divergent CWD-anchored ``events.log``, or ``None``.
+    """
+    from cortex_command.common import _resolve_user_project_root_from_cwd
+
+    try:
+        cwd_root = _resolve_user_project_root_from_cwd()
+    except Exception:  # noqa: BLE001 — a report-only path never blocks the write
+        return None
+    candidate = (
+        cwd_root / "cortex" / "lifecycle" / feature_slug / "events.log"
+    )
+    if candidate.resolve() == Path(resolved).resolve():
+        return None
+    return candidate if candidate.is_file() else None

@@ -53,6 +53,8 @@ When resuming, report the served `state`/`criticality`/`tier`, offer continue-or
 
 Read **only** the row for the served `state`.
 
+**Sub-agent dispatch is authorised by this invocation.** Where a phase reference prescribes one — Implement's per-task builders, Review's independent reviewer, parallel-execution.md's worktree fan-out — running this skill *is* the request for it, so a standing "no agents unless the user asks" rule does not reach it and is not a question to put to the operator. Do not degrade to inline work silently: a review written by the context that wrote the code is the weakest possible configuration for the one phase whose entire value is independence. If dispatch is genuinely unavailable, do it inline, name the substitution in the phase summary, and label the result a self-review.
+
 **Reference-path propagation (load-bearing).** `${CLAUDE_SKILL_DIR}` resolves only in this body. Wherever a reference names a `${CLAUDE_SKILL_DIR}/…` path, substitute the absolute path resolved here — a bare `skills/…` or `../` path resolves against CWD and breaks off-repo.
 
 ## Advance-verb routing (shared)

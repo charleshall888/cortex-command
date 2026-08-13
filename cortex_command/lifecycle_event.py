@@ -11,9 +11,13 @@ carve-out. The generic form:
     cortex-lifecycle-event log --event <name> --feature <slug> \
         [--set k=v ...] [--set-json k=v ...]
 
-Path resolution uses ``_resolve_user_project_root_from_cwd()`` (ignores
-``CORTEX_REPO_ROOT``), so the log target follows the physical CWD — the
-intended behaviour when the orchestrator session has cd'd into a worktree.
+Path resolution uses the pinned machine-verb resolver
+``lifecycle.log_resolver.resolve_events_log`` — main-root-anchored and
+worktree-aware, the same one ``next`` / ``advance`` use. It previously followed
+the physical CWD, which meant a worktree session split its lifecycle across two
+logs: ``next`` / ``advance`` wrote the main-root copy while this verb wrote the
+worktree copy, and neither said so (#484). The CLI now names the file it wrote
+on stderr, and warns when a divergent CWD-anchored log is already on disk.
 
 Write discipline: append-only under an exclusive sibling-lockfile
 ``fcntl.flock`` with ``O_APPEND`` — the events.log is append-only JSONL and
@@ -48,9 +52,10 @@ from pathlib import Path
 from typing import Optional
 
 from cortex_command import override_reason
-from cortex_command.common import (
-    CortexProjectRootError,
-    _resolve_user_project_root_from_cwd,
+from cortex_command.common import CortexProjectRootError
+from cortex_command.lifecycle.log_resolver import (
+    detect_split_log,
+    resolve_events_log,
 )
 
 
@@ -65,12 +70,15 @@ def _now_iso() -> str:
 
 
 def _events_log_path(feature_slug: str) -> Path:
-    """Resolve the events.log path using the CWD-based root resolver.
+    """Resolve the events.log path using the pinned main-root resolver.
+
+    One anchor for every appending verb (#484): a worktree session must not
+    write half its lifecycle history here and half where ``next`` / ``advance``
+    read it.
 
     Raises ``CortexProjectRootError`` when the root cannot be resolved.
     """
-    root = _resolve_user_project_root_from_cwd()
-    return root / "cortex" / "lifecycle" / feature_slug / "events.log"
+    return resolve_events_log(feature_slug)
 
 
 def _append_event_atomic(log_path: Path, row: str) -> None:
@@ -144,10 +152,11 @@ def log_event(
     event: str,
     feature: str,
     fields: Optional[list[tuple[str, str, object]]] = None,
-) -> None:
+) -> Path:
     """Append one event row to ``cortex/lifecycle/{feature}/events.log``.
 
-    Path is resolved from the physical CWD (ignores ``CORTEX_REPO_ROOT``).
+    Path is resolved by the pinned main-root resolver, so this writer and the
+    served machine verbs always name the same physical log.
 
     Args:
         event: Event name string (e.g. ``"interactive_worktree_entered"``).
@@ -157,6 +166,10 @@ def log_event(
             typed by the caller; ``kind`` is retained only for symmetry with
             the flag surface. Keys are emitted in order; duplicate keys are
             last-wins.
+
+    Returns:
+        The events.log path the row was appended to, so a caller can report it
+        rather than leave the write unattributed.
 
     Raises:
         CortexProjectRootError: When the project root cannot be resolved
@@ -172,6 +185,7 @@ def log_event(
         row_dict[key] = value
     row = json.dumps(row_dict) + "\n"
     _append_event_atomic(log_path, row)
+    return log_path
 
 
 # ---------------------------------------------------------------------------
@@ -391,6 +405,25 @@ def _flag_dest(flag: str) -> str:
     return flag[2:].replace("-", "_")
 
 
+def _report_write(event_name: str, feature: str, log_path: Path) -> None:
+    """Name the file the append landed in, and any log it diverges from.
+
+    #484's two observed failures both produced **zero** output: three closing
+    events went to a worktree copy while the authoritative log still ended at
+    ``escalated``, and nothing said so. A verb that appends to a lifecycle log
+    says which file it wrote — on stderr, because stdout carries no contract
+    here and a caller piping this verb must not gain a payload.
+    """
+    sys.stderr.write(f"wrote {event_name} ({feature}) → {log_path}\n")
+    split = detect_split_log(feature, log_path)
+    if split is not None:
+        sys.stderr.write(
+            f"WARNING: a second events.log for {feature} exists at {split} "
+            "and is not the one written — this lifecycle's history is split; "
+            "reconcile before committing\n"
+        )
+
+
 def _emit_subcommand(command: str, args: argparse.Namespace) -> int:
     """Map a high-level event subcommand's parsed args to a ``log_event`` call."""
     event_name, specs = _EVENT_SUBCOMMANDS[command]
@@ -410,10 +443,13 @@ def _emit_subcommand(command: str, args: argparse.Namespace) -> int:
             continue
         fields.append((kind, emit_key, value))
     try:
-        log_event(event=event_name, feature=args.feature, fields=fields)
+        log_path = log_event(
+            event=event_name, feature=args.feature, fields=fields
+        )
     except CortexProjectRootError as exc:
         sys.stderr.write(f"cortex-lifecycle-event: {exc}\n")
         return 1
+    _report_write(event_name, args.feature, log_path)
     return 0
 
 
@@ -485,7 +521,7 @@ def _run(argv: Optional[list[str]] = None) -> int:
 
     if args.command == "log":
         try:
-            log_event(
+            log_path = log_event(
                 event=args.event,
                 feature=args.feature,
                 fields=args.set_fields,
@@ -493,6 +529,7 @@ def _run(argv: Optional[list[str]] = None) -> int:
         except CortexProjectRootError as exc:
             sys.stderr.write(f"cortex-lifecycle-event: {exc}\n")
             return 1
+        _report_write(args.event, args.feature, log_path)
         return 0
 
     # Unreachable (argparse requires subcommand), but satisfies type checker.

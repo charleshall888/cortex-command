@@ -61,6 +61,28 @@ tag `ux` is a substring of `tmux` — losing those is the decision working as sp
 losses whose tickets declare no `areas:` at all and now report `no-area`; that is this trade-off's accepted
 cost, and the loss is now *reported* rather than silent.
 
+### Amendment 2026-08-12 — the *partial* population, measured (#482)
+
+The table above breaks the corpus down by state and says nothing about the population *inside* `loaded`
+that carries an unmapped area anyway. Coverage precedence makes any present doc outrank every partial
+failure, so a lifecycle declaring `areas: [audio, 2-5d]` where only `2-5d` maps reports `loaded` with **no
+note at all** — the `unmapped` state is reached only when *zero* areas hit. #482 asked whether the noise
+argument above, which was measured on the `unmapped` state's report, actually reaches that case.
+
+Measured over the 205 active lifecycles: `loaded` 89, `unmapped` 62, `no-area` 54, `doc-missing` 0. Of the
+89 `loaded`, **23 (25.8%)** carry at least one unmapped area. Their unmapped areas are `skills` 12, `tests`
+3, `install` 2, `hooks` 2, `report` 2, `cli` 1, `docs` 1, `requirements` 1 — every one an area with no doc
+planned, `skills` most of all (#476 declined to add one). All 7 map rows resolve to files that exist, and
+**0** `loaded` lifecycles mask a `doc-missing` hit, so the masked case is entirely the expected-unmapped one.
+
+A note under `loaded` would therefore fire on one run in four and name areas that are permanently unmapped
+by construction — the map *is* the vocabulary. That is the same recurring noise this section already
+rejects, so the argument does reach the partial case and **no note is added**. The distinction #482 drew is
+real and the measurement was missing; the conclusion is unchanged. Re-open only on a corpus where the
+partial population is dominated by areas that *do* have docs, or where `doc-missing` stops being 0 — the
+masked `doc-missing` case is a genuine defect (a map row pointing at a file that is not there) rather than
+an expected state, and it is unmeasured only because it has never occurred.
+
 ## Consequences for authors
 
 - Adding a new area requires adding a row to `## Conditional Loading`. Until then the area reports

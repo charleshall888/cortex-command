@@ -41,7 +41,36 @@ _install_sdk_stub()
 # ---------------------------------------------------------------------------
 
 import json as _json  # noqa: E402 (local import to avoid polluting test namespace)
+import os as _os  # noqa: E402
 from pathlib import Path  # noqa: E402
+
+import pytest as _pytest  # noqa: E402
+
+
+@_pytest.fixture(autouse=True)
+def _contain_runner_env_exports():
+    """Undo any ``os.environ`` mutation a test's runner call leaves behind.
+
+    ``runner.py`` exports ``LIFECYCLE_SESSION_ID`` and ``CORTEX_REPO_ROOT``
+    into its **own** process environment on purpose — children need them, and a
+    runner process exits when the session does. Under pytest that process is the
+    whole suite, so the export outlives the test and every later test inherits a
+    ``CORTEX_REPO_ROOT`` pointing at a deleted ``tmp_path``.
+
+    That went unnoticed because the resolvers reached from these tests either
+    ignore the variable (``_resolve_user_project_root_from_cwd``) or pin it
+    themselves via ``monkeypatch``. It surfaced when #484 moved the lifecycle
+    verbs onto the env-honouring main-root resolver: 14 later tests in another
+    package started deriving their events.log from the leaked path. Snapshot and
+    restore rather than deleting named keys, so the next export added to the
+    runner is contained without anyone having to remember this.
+    """
+    before = dict(_os.environ)
+    try:
+        yield
+    finally:
+        _os.environ.clear()
+        _os.environ.update(before)
 
 
 def _parse_jsonl(path: Path) -> list[dict]:

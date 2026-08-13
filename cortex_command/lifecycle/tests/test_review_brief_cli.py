@@ -195,8 +195,10 @@ def test_cycle_one_dispatch_archives_nothing_and_serves_full_brief(
     code, out, err = _run(repo, slug, monkeypatch, capsys)
 
     assert code == 0
-    assert err == ""
+    assert "DEGRADED" not in err
+    # Nothing to archive: there is no review.md at all on a first dispatch.
     assert list(d.glob("review-cycle-*.md")) == []
+    assert "archived none" in err
     assert "cycle 1" in out
     _assert_full_brief(out)
 
@@ -243,6 +245,116 @@ def test_running_twice_produces_an_identical_tree(repo, monkeypatch, capsys):
 
     assert (first_code, second_code) == (0, 0)
     assert after_second == after_first
+
+
+# --- #485: a mis-derived cycle cannot destroy the prior review ---------------
+
+def test_a_review_present_at_cycle_one_is_archived_not_left_exposed(
+    repo, monkeypatch, capsys
+):
+    """The archive fires on the file's existence, never on the derived cycle.
+
+    A ``review.md`` sitting there at "cycle 1" is the contradiction #485 is
+    about: either the cycle was mis-derived (the observed case — a stale log
+    under-counted the rework rows) or a partial write is being re-dispatched.
+    Both readings agree the file must survive the reviewer that is about to
+    overwrite it, so the old ``cycle < 2`` guard had no safe branch.
+    """
+    slug = "feat"
+    original = _review_text(["the defect cycle 1 caught"], cycle=1)
+    d = _make_lifecycle(repo, slug, review=original)  # no rows → derives cycle 1
+
+    code, out, err = _run(repo, slug, monkeypatch, capsys)
+
+    assert code == 0
+    assert "cycle 1" in out  # the derivation itself is unchanged
+    # The artifact's own verdict block names the archive when the cycle cannot.
+    archive = d / "review-cycle-1.md"
+    assert archive.read_text(encoding="utf-8") == original
+    assert (d / "review.md").read_text(encoding="utf-8") == original
+    assert archive.name in err
+
+
+def test_an_unnumbered_review_at_cycle_one_still_gets_a_copy(
+    repo, monkeypatch, capsys
+):
+    """No parseable verdict block → a fixed fallback name, still archived.
+
+    The name is the only thing lost when the cycle is unknowable; the copy is
+    not, and the copy is the part whose absence is unrecoverable.
+    """
+    slug = "feat"
+    original = "# Review\n\nNo fenced verdict block here at all.\n"
+    d = _make_lifecycle(repo, slug, review=original)
+
+    code, _, _ = _run(repo, slug, monkeypatch, capsys)
+
+    assert code == 0
+    assert (d / "review-cycle-prior.md").read_text(encoding="utf-8") == original
+
+
+def test_rerunning_a_cycle_one_archive_adds_no_second_file(
+    repo, monkeypatch, capsys
+):
+    """Convergence now keys off content, because the name keys off the cycle.
+
+    An unconditional archive whose idempotency depended on the derived cycle
+    would grow the tree on every re-dispatch — trading a data-loss bug for a
+    litter bug. The byte-identity check is what makes the retry a no-op.
+    """
+    slug = "feat"
+    _make_lifecycle(repo, slug, review=_review_text(["issue"], cycle=1))
+    d = repo / "cortex" / "lifecycle" / slug
+
+    _run(repo, slug, monkeypatch, capsys)
+    after_first = _tree_digest(d)
+    _run(repo, slug, monkeypatch, capsys)
+
+    assert _tree_digest(d) == after_first
+
+
+def test_an_occupied_archive_name_never_overwrites_a_different_review(
+    repo, monkeypatch, capsys
+):
+    """Different content under the preferred name gets a suffix, not a clobber."""
+    slug = "feat"
+    earlier = _review_text(["an earlier, different review"], cycle=1)
+    current = _review_text(["the review being displaced now"], cycle=1)
+    d = _make_lifecycle(
+        repo, slug, review=current, files={"review-cycle-1.md": earlier}
+    )
+
+    code, _, _ = _run(repo, slug, monkeypatch, capsys)
+
+    assert code == 0
+    assert (d / "review-cycle-1.md").read_text(encoding="utf-8") == earlier
+    assert (d / "review-cycle-1-a.md").read_text(encoding="utf-8") == current
+
+
+def test_an_unarchivable_review_refuses_rather_than_serving_a_brief(
+    repo, monkeypatch, capsys
+):
+    """Serving the brief is what licenses the overwrite, so it must not be served.
+
+    Failing open here would hand the reviewer a writable ``review.md`` whose only
+    copy does not exist — the exact loss the archive prevents, reached through
+    the fail-open path instead of the cycle guard.
+    """
+    slug = "feat"
+    original = _review_text(["irreplaceable finding"], cycle=1)
+    d = _make_lifecycle(repo, slug, review=original)
+
+    def _boom(*_args, **_kwargs):
+        raise OSError("no space left on device")
+
+    monkeypatch.setattr(review_brief.shutil, "copy2", _boom)
+
+    code, out, err = _run(repo, slug, monkeypatch, capsys)
+
+    assert code == 1
+    assert out == ""  # no brief at all
+    assert "REFUSED" in err
+    assert (d / "review.md").read_text(encoding="utf-8") == original
 
 
 def test_preexisting_archive_checksum_is_unchanged(repo, monkeypatch, capsys):

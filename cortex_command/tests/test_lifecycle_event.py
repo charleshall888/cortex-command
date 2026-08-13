@@ -228,29 +228,29 @@ class TestCliRun:
 
 
 class TestCwdResolution:
-    """Verify that the CWD-based resolver ignores CORTEX_REPO_ROOT.
+    """Verify the writer resolves the SAME log the served machine verbs do.
 
-    Satisfies spec R3's acceptance criterion: the CLI is the "refactored writer
-    site" with a non-None worktree_root-equivalent test — the root is resolved
-    from the physical CWD, not the env var.
+    This class pinned the opposite contract until #484 — the CWD winning over
+    ``CORTEX_REPO_ROOT``, and a worktree CWD anchoring the write in the worktree.
+    That is precisely what split a worktree-driven lifecycle across two logs:
+    ``next``/``advance`` resolved the main root while this writer resolved the
+    worktree, and neither verb said so. The anchor is now the pinned
+    ``log_resolver``; a divergent CWD-anchored copy is *reported*, not written.
     """
 
-    def test_resolves_to_worktree_base_ignoring_env(
+    def test_env_pin_beats_the_worktree_cwd(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """events.log lands in the worktree when CWD is inside a worktree.
+        """``CORTEX_REPO_ROOT`` wins — the overnight pin the machine verbs honour.
 
-        CORTEX_REPO_ROOT points to a separate main-repo directory; the
-        cwd-based resolver must ignore it and resolve from the physical CWD.
+        The runner exports it precisely so every verb in the session agrees on
+        one tree. A writer that ignored it wrote somewhere no reader looked.
         """
         worktree_root = _setup_worktree(tmp_path)
-
-        # CWD is inside the worktree (a subdirectory)
         inside = worktree_root / "subdir"
         inside.mkdir()
         monkeypatch.chdir(inside)
 
-        # CORTEX_REPO_ROOT points to an unrelated main repo
         main_repo = tmp_path / "main-repo"
         main_repo.mkdir()
         (main_repo / "cortex" / "lifecycle").mkdir(parents=True, exist_ok=True)
@@ -262,19 +262,24 @@ class TestCwdResolution:
             fields=[("str", "worktree_path", str(worktree_root))],
         )
 
-        # events.log must land in the worktree, NOT in main_repo
         worktree_log = worktree_root / "cortex" / "lifecycle" / "myfeature" / "events.log"
         main_repo_log = main_repo / "cortex" / "lifecycle" / "myfeature" / "events.log"
 
-        assert worktree_log.exists(), "events.log was not written to the worktree"
-        assert not main_repo_log.exists(), (
-            "events.log was incorrectly written to CORTEX_REPO_ROOT target"
+        assert main_repo_log.exists(), "the env-pinned root is the one anchor"
+        assert not worktree_log.exists(), (
+            "a worktree-local copy is the split #484 removed"
         )
 
     def test_cwd_at_worktree_root_resolves_correctly(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """CWD at the worktree root itself (not a subdirectory) resolves correctly."""
+        """With no env pin and an unreachable main root, the CWD tree still works.
+
+        ``_setup_worktree``'s gitfile points at a path that does not exist, so
+        the main-root parse yields no ``cortex/``-bearing candidate and the
+        resolver falls back to the shared walk. A lifecycle is still writable —
+        the anchor change must not make an ordinary tree unusable.
+        """
         worktree_root = _setup_worktree(tmp_path)
         monkeypatch.chdir(worktree_root)
         monkeypatch.delenv("CORTEX_REPO_ROOT", raising=False)
@@ -284,26 +289,32 @@ class TestCwdResolution:
         expected = worktree_root / "cortex" / "lifecycle" / "rootcwd" / "events.log"
         assert expected.exists()
 
-    def test_env_set_but_cwd_determines_target(
+    def test_write_from_a_real_worktree_lands_in_the_main_root(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """CORTEX_REPO_ROOT is set but CWD determines where the event lands."""
-        worktree_root = _setup_worktree(tmp_path)
-        monkeypatch.chdir(worktree_root)
+        """The failure #484 observed: closing events written where no reader looks.
 
-        # CORTEX_REPO_ROOT points elsewhere; must be ignored by _from_cwd resolver
-        other_root = tmp_path / "other-repo"
-        other_root.mkdir()
-        (other_root / "cortex" / "lifecycle").mkdir(parents=True, exist_ok=True)
-        monkeypatch.setenv("CORTEX_REPO_ROOT", str(other_root))
+        A resolvable worktree — gitfile → admin dir → ``commondir`` → a main root
+        that actually carries ``cortex/`` — is the shape a real session has. The
+        write follows the ``commondir`` pointer rather than the CWD.
+        """
+        monkeypatch.delenv("CORTEX_REPO_ROOT", raising=False)
+        main = tmp_path / "main"
+        admin = main / ".git" / "worktrees" / "wt1"
+        admin.mkdir(parents=True)
+        (admin / "commondir").write_text("../..\n", encoding="utf-8")
+        (main / "cortex" / "lifecycle").mkdir(parents=True)
 
-        log_event(event="interactive_worktree_entered", feature="envtest")
+        wt = tmp_path / "wt"
+        wt.mkdir()
+        (wt / ".git").write_text(f"gitdir: {admin}\n", encoding="utf-8")
+        (wt / "cortex" / "lifecycle").mkdir(parents=True)
+        monkeypatch.chdir(wt)
 
-        worktree_log = worktree_root / "cortex" / "lifecycle" / "envtest" / "events.log"
-        other_log = other_root / "cortex" / "lifecycle" / "envtest" / "events.log"
+        log_event(event="feature_complete", feature="closing")
 
-        assert worktree_log.exists()
-        assert not other_log.exists()
+        assert (main / "cortex" / "lifecycle" / "closing" / "events.log").exists()
+        assert not (wt / "cortex" / "lifecycle" / "closing" / "events.log").exists()
 
     def test_raises_when_no_cortex_ancestor_in_cwd_tree(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

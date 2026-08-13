@@ -26,8 +26,11 @@ What one invocation does
 ------------------------
 
 1. Derives the dispatch cycle from ``count_rework_cycles`` (the existing
-   counter, not ``common.py``'s reduced ``cycle``): ``N = rework_cycles + 1``,
-   and mode is ``rework`` iff ``rework_cycles >= 1``.
+   counter, not ``common.py``'s reduced ``cycle``) over the **main-root**
+   events.log: ``N = rework_cycles + 1``, and mode is ``rework`` iff
+   ``rework_cycles >= 1``. The log is anchored by the pinned resolver, not by
+   the CWD — reading a worktree's stale committed copy is what labelled a cycle-2
+   dispatch "cycle 1" and disabled the archive below (#484).
 2. **Archives** the prior cycle: ``review.md`` is *copied* (never moved) to
    ``review-cycle-{N-1}.md``, a no-op when that target already exists. Copy
    semantics plus no-clobber makes a retry after a crash converge without
@@ -35,6 +38,16 @@ What one invocation does
    ``review.md`` must exist continuously — ``common.py``'s phase detection falls
    through to the plan-based step when it is missing and reports ``review``
    instead of ``implement-rework``.
+
+   The archive fires **whenever ``review.md`` exists**, at every cycle including
+   1 (#485). It used to be gated on ``N >= 2``, which coupled it to the derived
+   cycle: a cycle mis-derived as 1 skipped the archive entirely and the reviewer
+   then overwrote the prior cycle's findings with no copy anywhere — no ``.bak``,
+   no git safety net, no message. Loss of the artifact is unrecoverable; a
+   surplus archive costs a small tracked file, so the two error directions are
+   not close and the archive is unconditional. A ``review.md`` that cannot be
+   archived **refuses** the brief rather than serving one that licenses the
+   overwrite.
 3. **Records the dispatch baseline** as an additive ``review_dispatched``
    events.log row (``cycle``, ``mode``, ``baseline_sha``) via the shared
    ``lifecycle_event`` writer, idempotently: an existing row for the same cycle
@@ -83,13 +96,17 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
-from typing import Iterable, Optional
+from typing import Iterable, Optional, Tuple
 
 from cortex_command.common import (
     CortexProjectRootError,
     _resolve_user_project_root_from_cwd,
 )
 from cortex_command.lifecycle.counters import count_rework_cycles
+from cortex_command.lifecycle.log_resolver import (
+    detect_split_log,
+    resolve_events_log,
+)
 from cortex_command.lifecycle_event import log_event_at
 
 _GIT_TIMEOUT = 10
@@ -112,6 +129,12 @@ _VERDICT_FENCE = re.compile(r"```json\s*(\{.*?\})\s*```", re.DOTALL)
 
 _REQUIREMENT_HEADING = re.compile(r"^###\s+Requirement:\s*(.+?)\s*$")
 _CARRIED_FORWARD_MARKER = "carried forward from cycle"
+
+# Disambiguators appended when the preferred archive name is already held by
+# *different* content. Bounded rather than unbounded (or timestamped) so the
+# names stay deterministic and a repeated run cannot grow the tree — the
+# content check upstream is what makes a retry converge.
+_ARCHIVE_SUFFIXES = tuple("abcdefghijklmnopqrstuvwxyz")
 
 
 # ---------------------------------------------------------------------------
@@ -501,30 +524,88 @@ def _baseline_from_row(row: Optional[dict]) -> Optional[str]:
     return None
 
 
-def _archive_prior_cycle(feature_dir: Path, cycle: int) -> None:
-    """Copy ``review.md`` to ``review-cycle-{cycle-1}.md``.
+def _archive_name(cycle: int, payload: bytes) -> str:
+    """The archive basename for a ``review.md`` being displaced at *cycle*.
+
+    ``review-cycle-{cycle-1}.md`` whenever the derived cycle names a prior one —
+    the historical name, so the happy path and the rework brief's own read
+    (``review-cycle-{cycle-1}.md``) are unchanged.
+
+    At cycle < 2 there is nominally no prior cycle, yet a ``review.md`` is on
+    disk. That is the #485 shape: either the cycle was mis-derived, or a partial
+    write is being re-dispatched. The artifact's *own* fenced verdict block
+    carries the cycle its author believed it was writing, so it names the file —
+    falling back to ``review-cycle-prior.md`` when the block is unparseable,
+    which is exactly the case where no number can be trusted.
+    """
+    if cycle >= 2:
+        return f"review-cycle-{cycle - 1}.md"
+    verdict = parse_verdict_block(payload.decode("utf-8", errors="replace"))
+    declared = _as_int((verdict or {}).get("cycle"))
+    if declared is not None and declared >= 1:
+        return f"review-cycle-{declared}.md"
+    return "review-cycle-prior.md"
+
+
+def _archive_prior_cycle(
+    feature_dir: Path, cycle: int
+) -> Tuple[Optional[Path], Optional[str]]:
+    """Copy ``review.md`` aside whenever it exists. Returns ``(path, error)``.
 
     Copy, **never** move: a window in which ``review.md`` is absent makes phase
     detection fall through to the plan-based step and report ``review`` instead
-    of ``implement-rework``. A no-op when the target already exists, which is
-    what makes a retry after a crash converge — at any point, including after a
-    partial cycle-N write — without having to distinguish "archive already
-    taken" from "cycle-N write never completed".
+    of ``implement-rework``.
 
-    Silent no-op at cycle 1: there is no prior cycle to archive. Any I/O failure
-    is swallowed; the caller's own degrade path reports the resulting missing
-    archive rather than this step raising.
+    Unconditional on the cycle (#485). The old ``cycle < 2`` guard made a
+    mis-derived cycle silently disable the archive, so the one input that is
+    *known* to be untrustworthy decided whether the prior review survived. Here
+    the only precondition is that the file exists.
+
+    Convergence no longer keys off the target name alone, because the target
+    name is derived from that same cycle. It keys off **content**: an existing
+    ``review-cycle-*.md`` byte-identical to ``review.md`` *is* the archive, so a
+    retry after a crash — or a re-dispatch at the same cycle — adds nothing. Only
+    when no archive holds these bytes and the preferred name is occupied by
+    *different* content does the name gain a ``-a``/``-b``… suffix; that is the
+    branch where the old code lost data, and a surplus file is the cheap side of
+    that trade.
+
+    Returns the archive path (``None`` when there was nothing to archive) and an
+    error string when the copy could not be made — the caller refuses rather
+    than serving a brief that licenses the overwrite.
     """
-    if cycle < 2:
-        return
     source = feature_dir / "review.md"
-    target = feature_dir / f"review-cycle-{cycle - 1}.md"
-    if not source.is_file() or target.exists():
-        return
+    if not source.is_file():
+        return None, None
+    try:
+        payload = source.read_bytes()
+    except OSError as exc:
+        return None, f"{source} could not be read ({exc})"
+
+    for existing in sorted(feature_dir.glob("review-cycle-*.md")):
+        try:
+            if existing.is_file() and existing.read_bytes() == payload:
+                return existing, None  # already archived, byte for byte
+        except OSError:
+            continue
+
+    preferred = feature_dir / _archive_name(cycle, payload)
+    candidates = [preferred] + [
+        preferred.with_name(f"{preferred.stem}-{suffix}.md")
+        for suffix in _ARCHIVE_SUFFIXES
+    ]
+    target = next((c for c in candidates if not c.exists()), None)
+    if target is None:
+        return None, (
+            f"every archive name for {preferred.name} is occupied by different "
+            "content"
+        )
+
     try:
         shutil.copy2(source, target)
-    except OSError:
-        return
+    except OSError as exc:
+        return None, f"{source} could not be copied to {target} ({exc})"
+    return target, None
 
 
 def _record_baseline(
@@ -611,11 +692,23 @@ def main(argv: Optional[list[str]] = None) -> int:
 
     feature = args.feature
     lifecycle_base = Path(args.lifecycle_dir)
+    pinned_tree = args.lifecycle_dir != _build_parser().get_default("lifecycle_dir")
     if not lifecycle_base.is_absolute():
         lifecycle_base = root / lifecycle_base
     feature_dir = lifecycle_base / feature
-    events_log = feature_dir / "events.log"
     review_path = str((feature_dir / "review.md").resolve())
+
+    # Two anchors, deliberately: artifacts follow the CWD because the reviewer
+    # writes review.md where the work is and ``stage-artifacts`` stages it from
+    # there, while events.log follows the pinned main-root resolver because that
+    # is the copy ``next``/``advance`` read and append to (#484). Resolving the
+    # log from the CWD read a worktree's stale *committed* log — zero
+    # review_verdict rows where the authoritative log held cycle 1's
+    # CHANGES_REQUESTED — and served "cycle 1 · full review" for cycle 2.
+    # An explicit ``--lifecycle-dir`` pins both to one tree (the test affordance).
+    events_log = (
+        feature_dir / "events.log" if pinned_tree else resolve_events_log(feature)
+    )
 
     rework_cycles = count_rework_cycles(events_log)
     cycle = rework_cycles + 1
@@ -623,7 +716,16 @@ def main(argv: Optional[list[str]] = None) -> int:
 
     # Archive first: the copy must be on disk before anything can write cycle N
     # over review.md, and it is the scoped checklist's only interactive source.
-    _archive_prior_cycle(feature_dir, cycle)
+    archived_to, archive_error = _archive_prior_cycle(feature_dir, cycle)
+    if archive_error is not None:
+        # Refusing is the safe direction: emitting the brief is what licenses the
+        # reviewer to overwrite review.md, and the copy that would have survived
+        # it does not exist.
+        sys.stderr.write(
+            f"REFUSED: review.md exists but could not be archived — {archive_error}. "
+            "Copy it aside by hand, then re-run.\n"
+        )
+        return 1
 
     rows = _read_events(events_log)
 
@@ -649,6 +751,30 @@ def main(argv: Optional[list[str]] = None) -> int:
         """
         _record_baseline(events_log, rows, feature, cycle, served_mode, root)
 
+    def _finish(code: int) -> int:
+        """Report what the run resolved, then hand the exit code back.
+
+        The brief's own header is the only cycle signal it carries, and that
+        header is precisely the thing that was wrong in the observed failure —
+        so a caller could not detect the fault from the brief alone (#485). This
+        line states the cycle, the log it was derived from, and the archive that
+        was taken, on stderr so stdout stays the brief and nothing else. It goes
+        out **after** any ``DEGRADED:`` line, which keeps that contract's
+        leading-token shape intact.
+        """
+        taken = archived_to.name if archived_to is not None else "none"
+        sys.stderr.write(
+            f"cycle {cycle} · {mode} · log {events_log} · archived {taken}\n"
+        )
+        split = detect_split_log(feature, events_log)
+        if split is not None:
+            sys.stderr.write(
+                f"WARNING: a second events.log for {feature} exists at {split} "
+                "and is not the one read — the cycle above may be derived from a "
+                "divergent history\n"
+            )
+        return code
+
     def _degrade(reason: str) -> int:
         _record("full")
         sys.stdout.write(
@@ -660,14 +786,14 @@ def main(argv: Optional[list[str]] = None) -> int:
             )
         )
         sys.stderr.write(f"DEGRADED: {reason}\n")
-        return 3
+        return _finish(3)
 
     if mode == "full":
         _record("full")
         sys.stdout.write(
             build_full_brief(feature=feature, cycle=cycle, review_path=review_path)
         )
-        return 0
+        return _finish(0)
 
     archive_path = feature_dir / f"review-cycle-{cycle - 1}.md"
     try:
@@ -721,7 +847,7 @@ def main(argv: Optional[list[str]] = None) -> int:
             carried_forward=parse_carried_forward(archive_text),
         )
     )
-    return 0
+    return _finish(0)
 
 
 if __name__ == "__main__":

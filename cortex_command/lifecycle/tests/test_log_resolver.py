@@ -137,3 +137,54 @@ def test_worktree_resolver_picks_main_root_log_while_cwd_resolver_splits(
         log_resolver.resolve_flock_path(resolved_events)
         != log_resolver.resolve_flock_path(cwd_events)
     )
+
+
+# --- #484: the already-split log is reported, not merely prevented -----------
+
+def test_detect_split_log_names_an_existing_divergent_worktree_copy(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A worktree-local log left by the pre-fix verbs is surfaced by name.
+
+    Anchoring every verb at the main root stops *new* splits; it does not heal
+    the ones on disk, and the worktree copy is git-tracked — committing it merges
+    a forked history. The detector is what makes that visible on the next run.
+    """
+    monkeypatch.delenv("CORTEX_REPO_ROOT", raising=False)
+    main, wt = _make_worktree_fixture(tmp_path)
+    monkeypatch.chdir(wt)
+
+    stale = wt / "cortex" / "lifecycle" / _SLUG / "events.log"
+    stale.parent.mkdir(parents=True)
+    stale.write_text('{"event": "escalated"}\n', encoding="utf-8")
+
+    resolved = log_resolver.resolve_events_log(_SLUG)
+    assert log_resolver.detect_split_log(_SLUG, resolved) == stale
+
+
+def test_detect_split_log_is_silent_without_a_second_file(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """No divergent file on disk → nothing to warn about.
+
+    The two halves are separate: a worktree whose second log was never written
+    is not split, so the warning must not fire merely because the CWD and the
+    main root differ.
+    """
+    monkeypatch.delenv("CORTEX_REPO_ROOT", raising=False)
+    main, wt = _make_worktree_fixture(tmp_path)
+    monkeypatch.chdir(wt)
+
+    resolved = log_resolver.resolve_events_log(_SLUG)
+    assert log_resolver.detect_split_log(_SLUG, resolved) is None
+
+    # And from the main root the two resolutions coincide, so even an existing
+    # log is not a split.
+    (main / "cortex" / "lifecycle" / _SLUG).mkdir(parents=True)
+    (main / "cortex" / "lifecycle" / _SLUG / "events.log").write_text(
+        "{}\n", encoding="utf-8"
+    )
+    monkeypatch.chdir(main)
+    from_main = log_resolver.resolve_events_log(_SLUG)
+    assert from_main.is_file()
+    assert log_resolver.detect_split_log(_SLUG, from_main) is None

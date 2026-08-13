@@ -42,6 +42,11 @@ filled row is tagged `other`. Neither arm can fire yet, which is why this is a t
 The `^{` guard is required by `project.md:65`: it skips 4 legacy YAML-block `complexity_override` rows, which carry no
 `gate` field and predate the flag. Do not replace it with `2>/dev/null` — that failure mode is what ADR-0036 records.
 
+Re-checked 2026-08-12 (5 days in): `{"rows": 57, "filled": 1, "tags": {"other": 1}}` — **identical**, zero
+new rows in two days. So the 50-further-rows arm is not on a path to fire soon and **2026-10-06 is the
+operative trigger**; do not re-run the query before then expecting movement. Neither arm can fire yet, so
+this stays open and unbuilt rather than being decided early.
+
 Re-run at 60 days (2026-10-06) or once 50 further rows have accumulated, whichever comes first:
 
 - `filled/rows` ≥ 5% **and** `tags` dominated by `other` → build the §5.2 vocabulary. That is the positive result.

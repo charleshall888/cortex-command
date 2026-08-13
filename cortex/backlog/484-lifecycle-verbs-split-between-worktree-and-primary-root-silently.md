@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 3d7c9a41-52be-4f08-9c6d-1a8e2f0b7c53
 title: Lifecycle verbs split between the worktree and the primary root, silently
-status: backlog
+status: complete
 priority: high
 type: bug
 created: 2026-08-12
@@ -76,3 +76,57 @@ Make every lifecycle verb resolve the same anchor, and fail loudly rather than s
   points, wherever the log path is resolved
 - The `advance_contract.log_path` / `anchor: main-root` contract that `next` already emits — the other
   verbs should honour it rather than re-deriving
+
+## Resolution (2026-08-12)
+
+**One anchor.** `cortex-lifecycle-event` (both the typed subcommands and generic `log`) and
+`cortex-lifecycle-review-brief` now resolve `events.log` through
+`cortex_command/lifecycle/log_resolver.resolve_events_log` — the same main-root-anchored resolver
+`next` and `advance` already use, and the same one `advance_contract.anchor: "main-root"` names.
+`log_resolver`'s own module docstring had recorded the CWD/main-root divergence as "the live hazard"
+while deliberately leaving these two verbs on the CWD side; that carve-out is gone.
+
+**Artifacts stay on the CWD**, and this is the one place the two anchors legitimately differ:
+`review.md` is written by the reviewer where the work is and staged from there by
+`stage-artifacts` (itself CWD-anchored), so `review-brief` splits its roots — main-root for the log
+it derives the cycle from, CWD for the artifact directory and for the `git rev-parse`/`git diff`
+that supply the baseline. Anchoring the artifacts at the main root too would have stranded them
+outside the worktree being committed.
+
+**Silence closed.** Every append now names its file on stderr (`wrote {event} ({feature}) → {path}`),
+and `review-brief` closes with `cycle N · {mode} · log {path} · archived {name}` — emitted after any
+`DEGRADED:` line so that contract's leading token is unchanged.
+
+**Existing splits are reported, not just prevented.** `log_resolver.detect_split_log` returns the
+CWD-anchored path a legacy caller *would* have written when it exists and diverges; both verbs warn
+on it by name. Preventing new splits does not heal the one already on disk, and the worktree copy is
+tracked — committing it merges a forked history.
+
+### Also observed, resolved elsewhere
+
+The `cortex-lifecycle-enter` / guard-R11 half is **not** fixed here — it is #475
+(`cortex-auto-ensure0-cannot-be-honoured-inside-a-worktree`), which owns the unreachable
+`CORTEX_AUTO_ENSURE=0` opt-out and the self-contradictory diagnostic. This ticket's evidence
+(the guard pushing callers toward the primary root) is corroboration that `main-root` is the intended
+anchor, which is what it was used for.
+
+### A pre-existing test-isolation leak this exposed
+
+`overnight/runner.py:2902` sets `os.environ["CORTEX_REPO_ROOT"]` in its own process — correct for a
+runner, but under pytest that process is the whole suite, so the export outlived the test and every
+later test inherited a root pointing at a deleted `tmp_path`. It went unnoticed because the verbs
+reachable from those tests either ignored the variable (`_resolve_user_project_root_from_cwd`) or
+pinned it themselves. Moving the lifecycle verbs onto the env-honouring resolver made 14 tests in
+`test_review_brief_content.py` derive their log from the leaked path. Fixed at the source with an
+autouse snapshot/restore fixture in `cortex_command/overnight/tests/conftest.py` — snapshot-and-restore
+rather than deleting named keys, so the next export the runner adds is contained without anyone
+remembering to.
+
+### Verification
+
+`cortex_command/lifecycle/tests/test_worktree_log_anchor.py` (new, 6 tests) drives both verbs from a
+worktree CWD. Mutation-checked: reverting `resolve_events_log` to CWD resolution fails 5 of the 6.
+Plus `detect_split_log` coverage in `test_log_resolver.py`, and `TestCwdResolution` in
+`cortex_command/tests/test_lifecycle_event.py` rewritten — it pinned the *old* contract (CWD beats
+`CORTEX_REPO_ROOT`), which is precisely the behaviour that split the log. Full suite: 5060 passed,
+2 pre-existing failures unchanged (the #467-wontfix `.venv` symlink pair).
