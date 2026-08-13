@@ -2,7 +2,7 @@
 feature: make-cortex-dashboard-a-one-command
 parent_backlog_uuid: 1e14ba53-78b3-4f8a-a0cb-71a5c866e6e4
 parent_backlog_id: 486
-artifacts: [research, spec]
+artifacts: [research, spec, plan]
 tags: [dashboard, cli]
 areas: [dashboard]
 created: 2026-08-13
