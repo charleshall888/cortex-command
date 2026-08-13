@@ -36,6 +36,9 @@ The observability area covers five subsystems that give the developer visibility
   - Stall alert fires when a feature has no activity for >5 minutes
   - Missing or malformed session files are silently ignored (last-good state retained)
   - Session change (new overnight session started) resets event offset and re-reads from the beginning
+  - **Masthead repo identity**: the page states its repo identity whenever any repo is tracked — as switcher links when several are, as a static label when one is. Suppressing it in the single-repo case left the colophon's product name as the only repo-shaped text on the page, which reads as the repo and got `--root` reported as broken while the correct corpus was being served (#486)
+  - **Launch default**: `cortex dashboard` starts detached, opens the default browser, and returns the terminal. `--foreground` restores blocking, `--no-open` skips the browser, and the browser is suppressed automatically under `--format json` or a non-TTY stdout. `--background` remains accepted as a no-op for the `dashboard_open` MCP tool, whose argv is version-locked to the plugin rather than the wheel
+  - **Root resolution** for the default repo is `--root`, else the cortex project containing the working directory, else the first `CORTEX_DASHBOARD_ROOTS` entry — so the bare verb works from any directory without exporting `CORTEX_REPO_ROOT`, which would silently redirect backlog and lifecycle writes. A first entry failing the `.claude/` check fails loudly naming the path rather than advancing to the second
 - **Priority**: must-have
 
 ### Permission-prompt audit log
