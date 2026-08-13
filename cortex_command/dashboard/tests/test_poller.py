@@ -641,6 +641,12 @@ class TestLifespanStartupResolution(unittest.IsolatedAsyncioTestCase):
         under test is unchanged: resolution happens before ``yield``, closing
         the window where a request landing ahead of the first 30s poll would
         render the cortex-backlog default for a repo that does not use it.
+
+        Patches ``resolve_primary_root`` rather than ``_resolve_user_project_root``:
+        the lifespan resolves its primary through the former since #486, which
+        falls back to the first ``CORTEX_DASHBOARD_ROOTS`` entry when cwd-based
+        resolution raises. Patching the inner function silently stopped
+        intercepting and this test then resolved the real repo root.
         """
         from cortex_command.dashboard import app as app_mod
 
@@ -652,7 +658,7 @@ class TestLifespanStartupResolution(unittest.IsolatedAsyncioTestCase):
                 return None
 
             with mock.patch.object(
-                     app_mod, "_resolve_user_project_root", return_value=root
+                     app_mod, "resolve_primary_root", return_value=root
                  ), \
                  mock.patch.object(app_mod, "run_polling", _noop_run_polling), \
                  mock.patch.object(app_mod, "_pid_file", root / "dash.pid"):
