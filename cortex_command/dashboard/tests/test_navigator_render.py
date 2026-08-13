@@ -1828,7 +1828,44 @@ class TestHeadStateComesFromTheHead(unittest.TestCase):
         self.assertEqual("", epic["head_state"])
         # The children's disposition is still reported, as a count.
         self.assertEqual(2, epic["deferred"])
-        self.assertEqual("2 deferred", epic["summary"])
+        # "N of N" rather than a bare tally: the shut line never shows `count`,
+        # so "2 deferred" cannot distinguish a fully parked group from one that
+        # merely holds two deferred children among others.
+        self.assertEqual("2 of 2 deferred", epic["summary"])
+        # The group is dormant while the head claims nothing — the mismatch
+        # this class exists to protect. `group_state` describes the children,
+        # `head_state` the head's own record, and neither is derived from the
+        # other, so a live head over parked children stays visible as exactly
+        # that rather than being smoothed into one agreeing story.
+        self.assertEqual("dormant", epic["group_state"])
+
+    def test_untriaged_children_beside_a_deferred_one_are_not_dormant(self):
+        """The predicate is ``deferred == count``, and this is why.
+
+        Eleven bands exist; ``ready`` counts seven of them, ``held`` counts G
+        and ``deferred`` counts F, which leaves E′ and H reaching none of the
+        three. So "no ready and no held" does NOT mean "every child deferred" —
+        a group can satisfy it while holding untriaged tickets, which land in
+        band H. Under the loose spelling this group sinks to the bottom of the
+        section and drains, and because a child is drawn inside its epic's map
+        and nowhere else on the page, those untriaged tickets become
+        effectively unfindable. The whole point of the treatment is to quiet
+        work that was decided, not work nobody has looked at yet.
+        """
+        epics = self._epics(
+            [
+                {"id": "1", "title": "Mixed epic", "type": "epic",
+                 "status": "backlog", "priority": "medium"},
+                {**self._CHILD, "status": "deferred"},
+                {"id": "3", "title": "Never triaged", "type": "feature",
+                 "status": "new", "priority": "medium", "parent": "1"},
+            ]
+        )
+        epic = epics["1"]
+        self.assertEqual(0, epic["ready"])
+        self.assertEqual(0, epic["held"])
+        self.assertEqual(1, epic["deferred"])
+        self.assertNotEqual("dormant", epic["group_state"])
 
     def test_a_live_head_over_live_children_says_nothing(self):
         epics = self._epics(

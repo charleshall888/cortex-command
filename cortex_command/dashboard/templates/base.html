@@ -2290,13 +2290,50 @@
 
       /* ── § 02 epics ──────────────────────────────────────────────── */
       .egroup-list { display: flex; flex-direction: column; gap: 2px; margin-top: 6px; }
+      /* Two independent axes ran through one channel here, and it read
+         backwards. The rail was keyed on the HEAD's record (`on_board`), so a
+         group whose head was `deferred` drew the same solid 3px blue as a
+         group with four ready children, while two groups holding startable
+         work drew dotted-ochre "off" because their heads had closed. On
+         wild-light that inverted the strongest signal on the row: the three
+         most parked groups looked liveliest.
+
+         LIVENESS — what the group offers, derived from the children — now owns
+         the rail and the title's step on the ink ramp. The rail's STYLE is the
+         mass channel: at a constant 3px, solid/dashed/dotted lay down roughly
+         100/55/35% of the ink, which is ordinal, survives greyscale, and does
+         not reflow the way a width change would. Each state borrows the border
+         style its children already carry as tiles (band G is dashed, F and E′
+         dotted), so an epic is drawn in the same vocabulary as what is inside
+         it.
+
+         HEAD GROOMING keeps its own word and moves onto a boxed chip below.
+
+         Deliberately no `opacity` on this element: it multiplies with the
+         `.ekid--ghost` 0.62 inside the disclosure, which would put a child
+         tile's ink near 2.7:1. Dimming steps the documented ink ramp instead,
+         which is theme-aware where a bare multiplier is not. */
       .egroup {
-        border-left: 3px solid var(--color-blue);
+        border-left: 3px var(--eg-edge-style, solid) var(--eg-edge, var(--color-blue));
         background: color-mix(in srgb, var(--color-parchment-2) 60%, transparent);
       }
-      /* A head that has closed while its children are still live. Dotted, so
-         the state reads without colour. */
-      .egroup--off { border-left-style: dotted; border-left-color: var(--color-ochre); }
+      .egroup--live    { --eg-edge: var(--color-blue);      --eg-edge-style: solid;  --eg-title: var(--color-ink-1); }
+      .egroup--waiting { --eg-edge: var(--color-ink-3);     --eg-edge-style: dashed; --eg-title: var(--color-ink-2); }
+      .egroup--nested  { --eg-edge: var(--color-blue-faint); --eg-edge-style: dotted; --eg-title: var(--color-ink-2); }
+      .egroup--dark    { --eg-edge: var(--color-rule-soft); --eg-edge-style: dotted; --eg-title: var(--color-ink-3); }
+      /* Parked by decision. Dotted is band F's own style, so the rail speaks
+         its children's language; ink-4 drains the colour, so it does it
+         quietly. Title floors at ink-3 rather than ink-4 — the serif at 14px
+         has too little stroke to spend ink-4's margin over the 4.5:1 bar. */
+      .egroup--dormant { --eg-edge: var(--color-ink-4);     --eg-edge-style: dotted; --eg-title: var(--color-ink-3); }
+      /* A group under attention gets its title back whatever its liveness.
+         The RAIL stays drained: hovering a parked group does not make it
+         startable, and the rail is the element making that claim.
+         `:focus-within` is load-bearing — without it a keyboard user reaching
+         the id link gets none of the restore a mouse gets for free. */
+      .egroup:hover,
+      .egroup[open],
+      .egroup:focus-within { --eg-title: var(--color-ink-1); }
       .egroup__summary {
         display: flex;
         align-items: baseline;
@@ -2324,8 +2361,9 @@
       .egroup__title {
         font-family: var(--font-serif);
         font-size: 14px;
-        color: var(--color-ink-1);
+        color: var(--eg-title, var(--color-ink-1));
         flex: 1 1 24ch;
+        transition: color 120ms ease;
       }
       .egroup__counts {
         font-family: var(--font-mono);
@@ -2334,6 +2372,13 @@
         color: var(--color-ink-3);
         white-space: nowrap;
       }
+      /* Boxed, and never dimmed. This is a grooming finding — a head that has
+         closed or been parked while its children are still live — and it is
+         the one thing on a quiet row that must not go quiet with it: the row
+         drains at exactly the moment the page is trying to shout. Boxing it
+         also lets it stand alone now that the rail's style channel belongs to
+         liveness, and a reader has to learn nothing to read "HEAD DEFERRED"
+         where they had to learn that a dotted rail meant the same thing. */
       .egroup__head-state {
         font-family: var(--font-mono);
         font-size: 9.5px;
@@ -2341,6 +2386,9 @@
         text-transform: uppercase;
         color: var(--color-ochre);
         white-space: nowrap;
+        border: 1px dotted var(--color-ochre);
+        border-radius: 2px;
+        padding: 1px 5px;
       }
       .egroup__mark { color: var(--color-ochre); cursor: help; }
       .egroup__body { padding: 4px 14px 16px; }

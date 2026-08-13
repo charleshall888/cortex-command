@@ -201,12 +201,48 @@ moving it into a phantom epic named after the typo and off the board entirely.
 
 ### 1. Epics
 
-One collapsed `<details>` per parent group. Groups with startable children come
-first, and largest first within each half — size alone had put a group of five
-deferred children above four groups that had ready work. A group with nothing
-startable keeps its place in this list rather than moving to a section of its
-own: it is already one shut line whose summary says "5 deferred", and the fix
-for a bad ordering is the ordering.
+One collapsed `<details>` per parent group, ordered by the cheapest action its
+shut line offers — **pick › chase › descend › groom › nothing** — and largest
+first within each rank. The five ranks are `live` (something is startable),
+`waiting` (nothing startable but a blocker will clear), `nested` (the startable
+work is one level down), `dark` (untriaged or closed-in-place children needing
+grooming), and `dormant` (every child deferred by decision). Rank 0 is exactly
+the old "has a ready child" bucket, so nothing crosses the startable boundary;
+what the ranks add is an order *within* the rest, where size alone used to put
+a six-deferred group above a two-held one even though held work becomes
+startable on its own and deferred work needs a decision reversed.
+
+`dormant` sorts below `dark` deliberately. A child is drawn inside its epic's
+map and nowhere else on the page, so a group's position is the only thing
+determining whether its children can be found at all: sinking a group holding
+untriaged tickets hides them, while sinking one whose children are all deferred
+hides nothing that was not already declared out of play. For the same reason
+the dormancy test is `deferred == count` and not "no ready and no held" — of
+the eleven bands, `ready` counts seven, `held` counts G and `deferred` counts
+F, so E′ (a nested container) and H (untriaged, closed in place, off-board)
+reach none of the three. The loose spelling calls a group dormant while it
+holds work nobody has triaged.
+
+A group with nothing startable keeps its place in this list rather than moving
+to a section of its own: it is already one shut line, and the fix for a bad
+ordering is the ordering. A dormant group's line says "6 of 6 deferred" rather
+than "6 deferred", because the shut line never shows the child count and a bare
+tally cannot distinguish a fully parked group from one holding some parked
+children.
+
+**Liveness and head state are separate axes and get separate channels.** The
+left rail and the title's step on the ink ramp carry the group's liveness,
+derived from the children; the head's own status carries on a boxed chip.
+They used to share the rail, keyed on the head record, which read backwards on
+a real corpus — a group whose head was `deferred` drew the same solid blue as
+one with four ready children, while two groups holding startable work drew the
+"off" treatment because their heads had closed. Each rank borrows the border
+style its children already carry as tiles (G dashed, F and E′ dotted), so an
+epic is drawn in the vocabulary of what is inside it. The chip is never dimmed:
+a closed or parked head over live children is a grooming finding, and it must
+not go quiet at the moment the row does. Opening, hovering or tabbing into a
+dormant group restores its title but not its rail — attention does not make
+parked work startable.
 
 The head line carries the only things that could make you open it: how many
 children are ready, held or deferred, and — when it applies — the head's own

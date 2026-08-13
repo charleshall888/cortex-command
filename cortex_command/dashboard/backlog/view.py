@@ -119,6 +119,11 @@ _ROW_MARK = {
 # the band exists to report.
 _READY_KEYS = ("A", "B", "C", "D", "E", "E*", "G′")
 
+#: Epic groups in reading order, by the cheapest action their shut line offers.
+#: ``dormant`` last: it is the one state where opening the group is known to
+#: yield nothing, because every child is a decision already taken.
+_GROUP_RANK = {"live": 0, "waiting": 1, "nested": 2, "dark": 3, "dormant": 4}
+
 # The collapsed panels under the tail, in reading order: (key, label, gloss).
 # Epic containers (E′) are absent because an epic is a section head, not a row
 # anywhere.
@@ -638,18 +643,61 @@ def _epic(
     ready = sum(1 for tid in kids if band_of.get(tid) in _READY_KEYS)
     held = sum(1 for tid in kids if band_of.get(tid) == "G")
     deferred = sum(1 for tid in kids if band_of.get(tid) == "F")
+    # The two bands the three counters above do not reach. ``_READY_KEYS`` is
+    # A-E*/G′, ``held`` is G alone and ``deferred`` is F alone, which leaves E′
+    # (an active nested container) and H (untriaged, closed-in-place, or
+    # off-board) falling through all three. They are counted here because the
+    # group state below is only sound if the five counters partition the child
+    # list exactly — see the predicate's own comment.
+    nested = sum(1 for tid in kids if band_of.get(tid) == "E′")
+    inert = sum(1 for tid in kids if band_of.get(tid) == "H")
 
     # The summary an operator reads while the epic is closed, and therefore the
     # only thing that can make them open it. Zero-valued clauses are dropped
     # rather than printed: "0 held" on nine of eleven groups is noise that
     # makes the two groups which DO hold something harder to spot.
-    parts = []
+    # What the group offers a reader of the shut line, as the cheapest action
+    # available: pick > chase > descend > groom > nothing. First match wins.
+    #
+    # ``dormant`` is the operator-facing ask — a group parked by decision — and
+    # it is spelled ``deferred == len(kids)`` rather than "no ready and no
+    # held". Those are not the same predicate: E′ and H children are counted by
+    # neither, so the loose spelling calls a group dormant while it holds
+    # untriaged tickets or a live sub-epic, and then sinks and drains exactly
+    # the work somebody needs to look at. The ``kids and`` guard is not
+    # decoration: ``0 == 0`` is true, so without it an empty group becomes the
+    # most confident possible statement about a set with no members.
+    #
+    # Derived from the CHILDREN and describing the GROUP. It is not a status
+    # and never reaches ``head_state``, which continues to report the head
+    # record's own word — the two disagreeing is the grooming finding the head
+    # line exists to print, so folding either into the other would erase it.
     if ready:
-        parts.append("%d ready" % ready)
-    if held:
-        parts.append("%d held" % held)
-    if deferred:
-        parts.append("%d deferred" % deferred)
+        group_state = "live"
+    elif held:
+        group_state = "waiting"
+    elif nested:
+        group_state = "nested"
+    elif kids and deferred == len(kids):
+        group_state = "dormant"
+    else:
+        group_state = "dark"
+
+    parts = []
+    if group_state == "dormant":
+        # "6 of 6 deferred" rather than "6 deferred". The shut line never shows
+        # ``count``, so a bare tally reads as partial and a fully parked group
+        # is indistinguishable from one that merely has some deferred children.
+        # Two numbers off the same child list state the totality, cannot be
+        # false, and introduce no word to the status vocabulary.
+        parts.append("%d of %d deferred" % (deferred, len(kids)))
+    else:
+        if ready:
+            parts.append("%d ready" % ready)
+        if held:
+            parts.append("%d held" % held)
+        if deferred:
+            parts.append("%d deferred" % deferred)
     if not parts:
         parts.append("nothing startable")
 
@@ -686,12 +734,17 @@ def _epic(
         # a live one.
         #
         # DERIVED FROM THE HEAD'S OWN RECORD, never from the children. A group
-        # whose children are all deferred is reported by ``summary`` ("5
-        # deferred"), which is a count and cannot be wrong; calling the head
-        # deferred because of them would print a status the ticket does not
-        # carry, and the corpus has that exact case — a head at ``backlog``
-        # over five deferred children, where the derivation would state a
-        # falsehood and hide the grooming defect that produced it.
+        # whose children are all deferred is reported by ``summary`` ("6 of 6
+        # deferred") and by ``group_state``, both of which are counts and
+        # cannot be wrong; calling the head deferred because of them would
+        # print a status the ticket does not carry and hide the grooming defect
+        # that produced the mismatch. The instance this comment used to cite —
+        # a head at ``backlog`` over five deferred children — has since been
+        # groomed away; no group in the sibling corpora sits at that shape
+        # today, and wild-light's largest parked group (#535) is a head at
+        # ``deferred`` over six deferred children, where head and children
+        # agree. The rule stands on the mismatch it prevents, not on a
+        # currently-observable instance.
         "head_state": (
             status if (not on_board or status == "deferred") else ""
         ),
@@ -699,6 +752,11 @@ def _epic(
         "ready": ready,
         "held": held,
         "deferred": deferred,
+        "nested": nested,
+        "inert": inert,
+        # The group's disposition, derived from the children above. Drives the
+        # sort rank and the row's liveness styling; see the ladder's comment.
+        "group_state": group_state,
         "summary": " · ".join(parts),
         "children": grid,
         "frame": _frame(epic_id, ctx, items, band_of, layout_ctx, offslice),
@@ -977,7 +1035,31 @@ def _navigator_model(state: object) -> dict:
         _epic(epic_id, parents[epic_id], ctx, items, band_of, layout_ctx, active, offslice)
         for epic_id in sorted(parents, key=_id_key)
     ]
-    epics.sort(key=lambda e: (0 if e["ready"] else 1, -e["count"], -e["ready"], _id_key(e["id"])))
+    #
+    # The leading term is now a RANK rather than a boolean, ordered by the
+    # cheapest action the shut line offers: pick > chase > descend > groom >
+    # nothing. Rank 0 is exactly today's ``ready > 0`` bucket, so no group
+    # crosses the startable boundary the comment above argues for; what changes
+    # is that the old bucket 1 splits into four ordered sub-buckets. That split
+    # is the point: ``-count`` used to put a six-deferred group above a
+    # two-held one, and held work becomes startable when its blocker clears
+    # while deferred work needs a decision reversed.
+    #
+    # ``dormant`` sorts below ``dark`` deliberately. A child is drawn inside
+    # its epic's map and nowhere else on the page, so a group's position is the
+    # only thing determining whether its children can be found — sinking a
+    # group that holds untriaged tickets hides them, sinking one whose children
+    # are all deferred hides nothing that was not already declared out of play.
+    # A new state is INSERTED at the position matching what an operator would
+    # do about it, never appended.
+    epics.sort(
+        key=lambda e: (
+            _GROUP_RANK.get(e["group_state"], 3),
+            -e["count"],
+            -e["ready"],
+            _id_key(e["id"]),
+        )
+    )
 
     # The half of the board the eleven bands cannot see. Deliberately NOT
     # summed into a repo total: the snapshot counts active files and archived

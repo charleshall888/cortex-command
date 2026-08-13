@@ -30,7 +30,11 @@
 {% from "_nav_rows.html" import ticket_attrs %}
 
 {% macro epic_block(epic) %}
-<details class="egroup egroup--{{ 'on' if epic.on_board else 'off' }}" id="{{ epic.details_id }}">
+{# The modifier carries LIVENESS, derived from the children — not the head's
+   own record. It used to key on `on_board`, which drew parked groups as live
+   and startable groups as "off"; the head's state is carried by its own chip
+   below, where it reads as a word instead of a dash pattern. #}
+<details class="egroup egroup--{{ epic.group_state }}" id="{{ epic.details_id }}">
   <summary class="egroup__summary">
     {# The epic's own ticket, reachable. A real <a> inside the <summary>, which
        is safe rather than a conflict: the delegated click handler calls
