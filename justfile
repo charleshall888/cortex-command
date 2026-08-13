@@ -153,7 +153,9 @@ dashboard-demo:
     uv run cortex-dashboard-seed
     ROOT=$(uv run cortex-dashboard-seed --print-root)
     echo "Dashboard running at http://127.0.0.1:{{dashboard_port}} (fixture root: $ROOT)"
-    uv run cortex dashboard --root "$ROOT" --port {{dashboard_port}}
+    # The blocking form is explicit because the verb now detaches by default:
+    # without it this recipe returns at once and the demo ends before you see it.
+    uv run cortex dashboard --root "$ROOT" --port {{dashboard_port}} --foreground
 
 # --- Training deck ---
 
