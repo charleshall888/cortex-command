@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 9f25d6f0-e4bc-4cfd-9a35-fe81a29e014c
 title: 'complete-route reads a CWD-anchored events.log that #484 stopped writing to, so it routes on an empty log from a worktree'
-status: backlog
+status: refined
 priority: high
 type: bug
 created: 2026-08-13
@@ -11,6 +11,9 @@ tags: ['lifecycle', 'worktree', 'events-log', 'cli', 'complete-route']
 areas: ['lifecycle']
 blocked-by: []
 blocks: []
+complexity: complex
+criticality: high
+spec: cortex/lifecycle/complete-route-reads-a-cwd-anchored/spec.md
 ---
 Filed from wild-light, 2026-08-13, while routing wild-light's downstream copy of #484
 (`538-lifecycle-verbs-disagree-on-repo-root-inside-a-worktree`) back upstream. #484 fixed the writer
