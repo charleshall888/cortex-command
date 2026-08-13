@@ -42,6 +42,7 @@ from cortex_command.dashboard.repos import (
     Repo,
     RepoRegistry,
     build_registry,
+    resolve_primary_root,
     resolve_roots,
 )
 
@@ -329,7 +330,7 @@ async def lifespan(app: FastAPI):
 
     global registry, state
 
-    roots = resolve_roots(_resolve_user_project_root())
+    roots = resolve_roots(resolve_primary_root())
     registry = build_registry(roots)
 
     # The primary root keeps the strict check: a process started against a

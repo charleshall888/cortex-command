@@ -15,11 +15,13 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
+from cortex_command.common import CortexProjectRootError
 from cortex_command.dashboard.backlog.view import scope_links
 from cortex_command.dashboard.repos import (
     ROOTS_ENV,
     RepoRegistry,
     build_registry,
+    resolve_primary_root,
     resolve_roots,
     slugify_root,
 )
@@ -91,6 +93,88 @@ class TestResolveRoots(unittest.TestCase):
             with mock.patch.dict(os.environ, {ROOTS_ENV: str(c)}):
                 roots = resolve_roots(a, [str(b)])
             self.assertEqual([a.resolve(), b.resolve(), c.resolve()], roots)
+
+
+class TestPrimaryRootFallback(unittest.TestCase):
+    """The primary root a bare, from-anywhere launch resolves.
+
+    Before #486 this was `_resolve_user_project_root()` alone, which raises
+    outside a cortex checkout. That made `cortex dashboard` unusable as a bare
+    command from `~` *even with CORTEX_DASHBOARD_ROOTS exported*, because the
+    variable could only add repos alongside a primary resolved some other way.
+    """
+
+    def test_cwd_resolution_wins_when_it_succeeds(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd_root = Path(tmp) / "from-cwd"
+            env_root = Path(tmp) / "from-env"
+            for p in (cwd_root, env_root):
+                p.mkdir()
+            with mock.patch.dict(os.environ, {ROOTS_ENV: str(env_root)}):
+                with mock.patch(
+                    "cortex_command.dashboard.repos._resolve_user_project_root",
+                    return_value=cwd_root,
+                ):
+                    self.assertEqual(cwd_root, resolve_primary_root())
+
+    def test_first_env_root_stands_in_when_cwd_resolution_fails(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            a, b = (Path(tmp) / n for n in ("a", "b"))
+            for p in (a, b):
+                p.mkdir()
+            with mock.patch.dict(
+                os.environ, {ROOTS_ENV: os.pathsep.join([str(a), str(b)])}
+            ):
+                with mock.patch(
+                    "cortex_command.dashboard.repos._resolve_user_project_root",
+                    side_effect=CortexProjectRootError("no cortex/ above cwd"),
+                ):
+                    self.assertEqual(a.resolve(), resolve_primary_root())
+
+    def test_fallback_primary_leads_the_full_root_list(self):
+        """The stand-in must lead, not merely appear — the first root is the default repo."""
+        with tempfile.TemporaryDirectory() as tmp:
+            a, b = (Path(tmp) / n for n in ("a", "b"))
+            for p in (a, b):
+                p.mkdir()
+            with mock.patch.dict(
+                os.environ, {ROOTS_ENV: os.pathsep.join([str(a), str(b)])}
+            ):
+                with mock.patch(
+                    "cortex_command.dashboard.repos._resolve_user_project_root",
+                    side_effect=CortexProjectRootError("no cortex/ above cwd"),
+                ):
+                    roots = resolve_roots(resolve_primary_root())
+            self.assertEqual([a.resolve(), b.resolve()], roots)
+
+    def test_no_env_roots_still_raises(self):
+        """With nothing to fall back to, the original error is the right answer."""
+        with mock.patch.dict(os.environ, {ROOTS_ENV: ""}):
+            with mock.patch(
+                "cortex_command.dashboard.repos._resolve_user_project_root",
+                side_effect=CortexProjectRootError("no cortex/ above cwd"),
+            ):
+                with self.assertRaises(CortexProjectRootError):
+                    resolve_primary_root()
+
+    def test_a_bad_first_entry_is_returned_rather_than_skipped(self):
+        """R5: a typo must reach the lifespan's .claude/ check and fail loudly there.
+
+        Silently advancing to the second entry would hide the typo behind a
+        dashboard that looks correct and is simply missing a repo.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            good = Path(tmp) / "good"
+            good.mkdir()
+            typo = Path(tmp) / "tpyo-never-created"
+            with mock.patch.dict(
+                os.environ, {ROOTS_ENV: os.pathsep.join([str(typo), str(good)])}
+            ):
+                with mock.patch(
+                    "cortex_command.dashboard.repos._resolve_user_project_root",
+                    side_effect=CortexProjectRootError("no cortex/ above cwd"),
+                ):
+                    self.assertEqual(typo.resolve(), resolve_primary_root())
 
 
 class TestRegistryResolution(unittest.TestCase):

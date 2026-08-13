@@ -25,6 +25,7 @@ import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from cortex_command.common import CortexProjectRootError, _resolve_user_project_root
 from cortex_command.dashboard.poller import DashboardState
 
 #: Environment variable naming additional roots, separated by the platform's
@@ -107,6 +108,38 @@ class RepoRegistry:
         if repo is None:
             return DashboardState()
         return self.states.setdefault(repo.slug, DashboardState())
+
+
+def resolve_primary_root() -> Path:
+    """Resolve the root a dashboard process leads with.
+
+    Normally the cwd-derived project root. When that resolution fails — the
+    operator ran ``cortex dashboard`` from somewhere that is not a cortex
+    checkout, which is exactly what a bare from-anywhere launcher invites —
+    the first entry of ``CORTEX_DASHBOARD_ROOTS`` stands in.
+
+    This fallback is what makes that variable sufficient on its own. Without
+    it the variable can only ever *add* repos alongside a primary resolved
+    some other way, and the only other way to name a primary from outside a
+    checkout is exporting ``CORTEX_REPO_ROOT`` — which ``docs/dashboard.md``
+    forbids, because it is the unvalidated root funnel read by dozens of
+    modules and would silently redirect backlog creation, lifecycle verbs, and
+    overnight writes into whatever the dashboard happened to be pointed at.
+
+    The first entry is taken verbatim rather than searched for a valid one.
+    The lifespan's ``.claude/`` check still applies to whatever comes back, so
+    a typo in that entry fails loudly naming the path; advancing quietly to
+    the second entry would hide the typo behind a dashboard that looks correct
+    and is simply missing a repo — the same class of silent wrongness this
+    launcher work exists to close.
+    """
+    try:
+        return _resolve_user_project_root()
+    except CortexProjectRootError:
+        for part in os.environ.get(ROOTS_ENV, "").split(os.pathsep):
+            if part.strip():
+                return Path(part.strip()).expanduser().resolve()
+        raise
 
 
 def resolve_roots(primary: Path, extra: list[str] | None = None) -> list[Path]:
