@@ -411,9 +411,16 @@ async def health() -> JSONResponse:
     return JSONResponse({"status": "ok"})
 
 
-@app.get("/")
+@app.get("/overnight")
 async def index(request: Request):
-    """Render the main dashboard page."""
+    """Render the overnight session view.
+
+    Moved off ``/`` when the backlog became the landing page. The overnight
+    view answers "what ran last night", which is a question with a session in
+    it; the backlog answers "what is there to do", which is true whether or
+    not anything is running. Most of the time nothing is, so the landing page
+    now opens on the standing question rather than the episodic one.
+    """
     last_session = parse_last_session(_root_of(request) / "cortex" / "lifecycle")
     return templates.TemplateResponse(
         request,
@@ -422,9 +429,16 @@ async def index(request: Request):
     )
 
 
+@app.get("/")
 @app.get("/backlog")
 async def backlog_view(request: Request):
-    """Render the backlog navigator — surface A, as a peer page.
+    """Render the backlog navigator — the landing page, also served at ``/backlog``.
+
+    Both paths are kept rather than redirecting one to the other. ``/backlog``
+    is what every in-page link, bookmark, and open tab already points at, and a
+    redirect would have to reassemble the ``?repo=`` query to avoid dropping the
+    repo a link belonged to — machinery, on a read-only local page, to enforce a
+    canonical URL nothing consumes.
 
     Shell only. All four navigator sections arrive from
     ``/partials/navigator`` on the same 30s poll the panels used when they sat

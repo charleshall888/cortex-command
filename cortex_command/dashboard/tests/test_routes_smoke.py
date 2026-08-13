@@ -74,11 +74,15 @@ PARTIAL_ROUTES = [
     "/partials/ticket-card/1",
 ]
 
-# Page + health routes that must render 200. ``/backlog`` is
-# the two navigator pages — peers of ``/``, not fragments — so they go through
-# the same TemplateResponse path this module exists to guard. ``/tickets/1`` is the
-# seeded ticket from fixture_root below.
-PAGE_ROUTES = ["/", "/backlog", "/sessions", "/health", "/tickets/1"]
+# Page + health routes that must render 200. These are full pages — peers, not
+# fragments — so they go through the same TemplateResponse path this module
+# exists to guard. ``/`` and ``/backlog`` both serve the navigator (the backlog
+# is the landing page, and the older path is kept for existing links and
+# bookmarks), so both are listed: a regression that broke only the alias would
+# otherwise render every in-page "back to backlog" link a 404. ``/overnight``
+# is the session view that used to sit at ``/``. ``/tickets/1`` is the seeded
+# ticket from fixture_root below.
+PAGE_ROUTES = ["/", "/backlog", "/overnight", "/sessions", "/health", "/tickets/1"]
 
 ALL_OK_ROUTES = PAGE_ROUTES + PARTIAL_ROUTES
 
@@ -201,3 +205,32 @@ def test_history_row_shows_the_session_duration(fixture_root):
     body = TestClient(app).get("/sessions").text
 
     assert "6h 51m" in body
+
+
+def test_landing_page_is_the_backlog_not_the_overnight_view(fixture_root):
+    """``/`` serves the navigator; the session view moved to ``/overnight``.
+
+    Asserted on rendered markup rather than on the route table, because the
+    failure this guards is a page that still returns 200 while showing the
+    wrong view — which is exactly what a route-registration mistake looks like
+    from the outside.
+    """
+    client = TestClient(app)
+
+    landing = client.get("/").text
+    overnight = client.get("/overnight").text
+
+    # The navigator's shell carries the navigator panel; the overnight shell
+    # carries the session panel. Neither id appears in the other template.
+    assert 'id="navigator-panel"' in landing
+    assert 'id="session-panel"' in overnight
+    assert 'id="session-panel"' not in landing
+    assert 'id="navigator-panel"' not in overnight
+
+
+def test_backlog_alias_serves_the_same_page_as_the_landing_route(fixture_root):
+    """Existing links, bookmarks, and open tabs point at ``/backlog``."""
+    client = TestClient(app)
+
+    assert client.get("/backlog").status_code == 200
+    assert 'id="navigator-panel"' in client.get("/backlog").text

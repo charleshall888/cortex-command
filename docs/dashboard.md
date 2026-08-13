@@ -118,11 +118,11 @@ Both regimes matter, and neither substitutes for the other:
 
 ## What It Shows
 
-The dashboard is divided into three peer views, reachable from the masthead nav: **Overnight** (`/`), **Backlog** (`/backlog`), and **History** (`/sessions`). Section numbering (`§ 01`, `§ 02`, …) restarts in each view, because the register is per-view rather than per-app, and counts the sections a given corpus actually draws. On the two views with suppressible sections — the navigator and the ticket page — the ordinals are assigned at render, so a repo with no epics reads `§ 01 · § 02 · § 03` rather than skipping the number the epic section would have taken. A gap in a numbered register reads as a section that failed to draw.
+The dashboard is divided into three peer views, reachable from the masthead nav: **Backlog** (`/`, also served at `/backlog`), **Overnight** (`/overnight`), and **History** (`/sessions`). The backlog is the landing page because it answers "what is there to do", which holds whether or not a session is running, where the overnight view answers "what ran last night" — a question with a session in it, and most of the time there isn't one. `/backlog` is kept alongside `/` rather than redirected, because it is what existing links, bookmarks, and open tabs already point at. Section numbering (`§ 01`, `§ 02`, …) restarts in each view, because the register is per-view rather than per-app, and counts the sections a given corpus actually draws. On the two views with suppressible sections — the navigator and the ticket page — the ordinals are assigned at render, so a repo with no epics reads `§ 01 · § 02 · § 03` rather than skipping the number the epic section would have taken. A gap in a numbered register reads as a section that failed to draw.
 
 The split is what the two groups of panels are *for*. Overnight answers "what is the runner doing right now" and refreshes every 3–5 s; Backlog answers "what is queued, what is ready, and what is blocked on what" — a question that outlives any one session and that an operator asks while nothing is running at all — and refreshes every 30 s. The backlog panels previously sat at the bottom of the overnight page as § 10 and § 11 of eleven, which read as an overnight subsection.
 
-## Overnight view (`/`)
+## Overnight view (`/overnight`)
 
 Nine panels plus an Alerts Banner.
 
@@ -170,7 +170,7 @@ Monitors active interactive pipeline execution (separate from overnight). Visibl
 
 ---
 
-## Backlog view (`/backlog`)
+## Backlog view (`/`, also `/backlog`)
 
 One page, four sections, all served from the same 30 s slow-poll snapshot so the
 reconciliation can never close over a partition a different swap produced.

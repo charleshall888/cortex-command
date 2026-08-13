@@ -2692,8 +2692,13 @@
              the repo and switching repo keeps the view. `repo_query` is empty
              whenever one repo is tracked, which leaves these URLs exactly as
              they were before the registry existed. #}
-          <a href="/{{ repo_query }}" class="nav-link {% if request.url.path == '/' %}nav-link-active{% endif %}">Overnight</a>
-          <a href="/backlog{{ repo_query }}" class="nav-link {% if request.url.path.startswith('/backlog') %}nav-link-active{% endif %}">Backlog</a>
+          {# Backlog leads because it is the landing page: it answers "what is
+             there to do", which holds whether or not a session is running,
+             where Overnight answers "what ran last night". It is active on
+             both "/" and "/backlog" — the navigator is served at both, so
+             highlighting only one would leave the nav blank on the other. #}
+          <a href="/{{ repo_query }}" class="nav-link {% if request.url.path == '/' or request.url.path.startswith('/backlog') %}nav-link-active{% endif %}">Backlog</a>
+          <a href="/overnight{{ repo_query }}" class="nav-link {% if request.url.path.startswith('/overnight') %}nav-link-active{% endif %}">Overnight</a>
           <a href="/sessions{{ repo_query }}" class="nav-link {% if request.url.path.startswith('/sessions') %}nav-link-active{% endif %}">History</a>
         </nav>
         {# Repo identity always renders; only its form changes. With several
