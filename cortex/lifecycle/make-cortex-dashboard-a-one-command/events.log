@@ -4,3 +4,7 @@
 {"ts": "2026-08-13T21:15:48Z", "event": "spec_approved", "feature": "make-cortex-dashboard-a-one-command", "decision": "approved"}
 {"ts": "2026-08-13T21:27:25Z", "event": "plan_approved", "feature": "make-cortex-dashboard-a-one-command", "dispatch_choice": "trunk"}
 {"ts": "2026-08-13T21:27:25Z", "event": "phase_transition", "feature": "make-cortex-dashboard-a-one-command", "from": "plan", "to": "implement"}
+{"ts": "2026-08-13T21:28:01Z", "event": "batch_dispatch", "feature": "make-cortex-dashboard-a-one-command", "batch": 0, "tasks": [1, 2, 3]}
+{"ts": "2026-08-13T21:33:47Z", "event": "batch_dispatch", "feature": "make-cortex-dashboard-a-one-command", "batch": 1, "tasks": [4, 5]}
+{"ts": "2026-08-13T21:57:52Z", "event": "phase_transition", "feature": "make-cortex-dashboard-a-one-command", "from": "implement", "to": "complete", "tier": "moderate"}
+{"ts": "2026-08-13T21:58:41Z", "event": "feature_complete", "feature": "make-cortex-dashboard-a-one-command", "tasks_total": 5, "rework_cycles": 0, "merge_anchor": "merge"}

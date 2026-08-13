@@ -23,7 +23,7 @@ Two independent seams carry the whole feature: the masthead gains unconditional 
 - **Complexity**: simple
 - **Context**: The switcher block is `base.html:2699-2716`, wrapped in `{% if repo_multi %}`. Template context already carries `repos`, `repo`, `repo_multi`, and `repo_query` via `_ctx` (`app.py:101`) — no new context keys. `repo.label` is the bare directory name (`repos.py:167`). Existing CSS classes `repo-switch`, `repo-switch__label`, `repo-switch__item`, `repo-switch__item--on` are defined at `base.html:449`; reuse rather than adding a class. Do **not** touch `base.html:2787` or `backlog.html:98`.
 - **Verification**: `uv run pytest cortex_command/dashboard/tests/test_templates.py -q` passes, and the added test asserts that rendering the backlog view with a one-repo registry produces HTML containing that repo's label inside the `<header>` element while a two-repo registry still emits one `?repo=<slug>` anchor per repo.
-- **Status**: [ ] pending
+- **Status**: [x] done (c5a7bd45 2026-08-13T17:29:30-04:00)
 
 ### Task 2: Fall back to the first CORTEX_DASHBOARD_ROOTS entry as primary root
 - **Files**: `cortex_command/dashboard/repos.py`, `cortex_command/dashboard/tests/test_repos.py`
@@ -32,7 +32,7 @@ Two independent seams carry the whole feature: the masthead gains unconditional 
 - **Complexity**: simple
 - **Context**: `_resolve_user_project_root()` (`common.py:87`) raises `CortexProjectRootError` when `CORTEX_REPO_ROOT` is unset and no ancestor carries `cortex/`. `resolve_roots(primary, extra)` is at `repos.py:112-145` and keeps `primary` with `require_dir=False` while dropping bad extras. The strict `.claude/` check lives in the lifespan (`app.py:339-345`) and must keep raising — spec R5 requires a first-entry typo to fail loudly naming the path, never to advance silently to the second entry. `ROOTS_ENV` is `repos.py:34`. The caller is `app.py:332`.
 - **Verification**: `uv run pytest cortex_command/dashboard/tests/test_repos.py -q` passes, and the added tests assert (a) with cwd resolution failing and `CORTEX_DASHBOARD_ROOTS="A:B"`, the resolved list is `[A, B]` with A primary; (b) with the env var unset and cwd resolution failing, `CortexProjectRootError` still propagates.
-- **Status**: [ ] pending
+- **Status**: [x] done (e89548bf 2026-08-13T17:30:48-04:00)
 
 ### Task 3: Reshape the dashboard verb's launch surface
 - **Files**: `cortex_command/cli.py`, `tests/test_cli_dashboard.py`
@@ -43,7 +43,7 @@ Two independent seams carry the whole feature: the masthead gains unconditional 
 
   **Callers of this command, enumerated (searched 2026-08-13, all four):** `justfile:156` — breaks on the flip, repaired by Task 4. `plugins/cortex-overnight/server.py:2592` — passes `--background` explicitly, needs no edit, and is the reason that flag must stay accepted. `justfile:123-140` (`just dashboard`) — calls `uv run uvicorn` directly and never reaches this verb. `cortex/lifecycle.config.md:14` demo-command — resolves to `just dashboard`, so likewise unaffected. Only `justfile:156` requires a change, which is why it is the sole caller carried as a dependent task rather than listed in this task's Files.
 - **Verification**: `uv run pytest tests/test_cli_dashboard.py -q` passes, and the added tests assert `webbrowser.open` is called once on a default launch and not called under each of `--no-open`, `--format json`, and a non-TTY stdout; that `--background --format json` still exits 0 with a `status` of `started` or `already_running`; and that `grep -c 'Blocks until interrupted' cortex_command/cli.py` returns 0.
-- **Status**: [ ] pending
+- **Status**: [x] done (a50e2f11 2026-08-13T17:33:29-04:00)
 
 ### Task 4: Keep just dashboard-demo blocking
 - **Files**: `justfile`
@@ -52,7 +52,7 @@ Two independent seams carry the whole feature: the masthead gains unconditional 
 - **Complexity**: simple
 - **Context**: The invocation is `justfile:156` (`uv run cortex dashboard --root "$ROOT" --port {{dashboard_port}}`), the final and deliberately blocking line of the recipe. The `dashboard` recipe at `justfile:123-140` calls `uv run uvicorn` directly and must **not** be touched — it never reaches this verb.
 - **Verification**: `grep -c -- '--foreground' justfile` returns `1`, and `grep -c 'uv run uvicorn' justfile` still returns `1` (proving the untouched recipe stayed untouched).
-- **Status**: [ ] pending
+- **Status**: [x] done (c15f595d 2026-08-13T17:34:08-04:00)
 
 ### Task 5: Update the owning docs
 - **Files**: `docs/dashboard.md`, `cortex/requirements/observability.md`
@@ -61,7 +61,7 @@ Two independent seams carry the whole feature: the masthead gains unconditional 
 - **Complexity**: simple
 - **Context**: `docs/dashboard.md` owns dashboard behavior and `cortex/requirements/observability.md` owns the area's acceptance criteria — `docs/policies.md` requires the owning doc to be updated in the same phase as the change. The stale sentence is `docs/dashboard.md:27` ("instead of blocking the terminal"), which describes `--background` as the non-blocking option. The Dashboard requirement block is `observability.md:27-39`; its loopback constraint at `observability.md:107` is unchanged by this feature and must stay.
 - **Verification**: `grep -c -- '--foreground' docs/dashboard.md` ≥ 1, `grep -c -- '--no-open' docs/dashboard.md` ≥ 1, `grep -c 'instead of blocking the terminal' docs/dashboard.md` = 0, and `grep -c 'repo identity' cortex/requirements/observability.md` ≥ 1.
-- **Status**: [ ] pending
+- **Status**: [x] done (396af139 2026-08-13T17:35:07-04:00)
 
 ## Risks
 

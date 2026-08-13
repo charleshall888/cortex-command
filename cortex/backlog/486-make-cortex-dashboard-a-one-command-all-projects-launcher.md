@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 1e14ba53-78b3-4f8a-a0cb-71a5c866e6e4
 title: Make cortex dashboard a one-command all-projects launcher
-status: refined
+status: complete
 priority: medium
 type: feature
 created: 2026-08-13
@@ -14,6 +14,7 @@ complexity: moderate
 criticality: medium
 spec: cortex/lifecycle/make-cortex-dashboard-a-one-command/spec.md
 areas: ['dashboard']
+lifecycle_phase: complete
 ---
 ## Why
 
