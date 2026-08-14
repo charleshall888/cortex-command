@@ -16,13 +16,16 @@ rev-parse`` exits 128 against a synthetic worktree (#271).
 
 from __future__ import annotations
 
+import io
 import json
 from pathlib import Path
 
 import pytest
 
 from cortex_command import lifecycle_event
-from cortex_command.lifecycle import log_resolver, review_brief
+from cortex_command.hooks import scan_lifecycle
+from cortex_command.lifecycle import complete_route, log_resolver, review_brief
+from cortex_command.lifecycle import record_pr_opened as rpo
 
 _SLUG = "wet-sand-darkening-on-the-terrain"
 
@@ -212,3 +215,112 @@ def test_review_brief_reports_the_log_it_read(worktree, capsys) -> None:
     err = capsys.readouterr().err
     assert str(main / "cortex" / "lifecycle" / _SLUG / "events.log") in err
     assert "cycle 1" in err
+
+
+# --- writer → reader, across verbs (#487) ------------------------------------
+#
+# The two cases below are the ones no single-module test can express: each
+# drives a *writer* from the worktree CWD and then asks a *different* verb,
+# reading the same lifecycle, what it sees. #484 anchored the writers; a reader
+# left on the CWD walk turns an anchored write into a silently empty read.
+
+
+def test_finalize_event_from_a_worktree_is_visible_to_the_complete_route(
+    worktree,
+) -> None:
+    """The row ``finalize`` writes is the row ``complete-route`` classifies on.
+
+    ``finalize.py:198`` emits ``feature_complete`` through
+    ``lifecycle_event.log_event``, which lands at the main root. While
+    ``complete_route`` resolved its own artifacts from the CWD walk, a
+    worktree finalization left the route reading an empty log — and "no
+    events.log, no pr.json" is indistinguishable from a fresh lifecycle, which
+    is how a feature with an open PR reached ``on_main``/step9 and was
+    silently completed unmerged.
+    """
+    main, wt = worktree
+
+    # Verbatim finalize.py:198-207, including the merge_anchor field.
+    lifecycle_event.log_event(
+        event="feature_complete",
+        feature=_SLUG,
+        fields=[
+            ("json", "tasks_total", 3),
+            ("json", "rework_cycles", 0),
+            ("str", "merge_anchor", "merge"),
+        ],
+    )
+    main_log = main / "cortex" / "lifecycle" / _SLUG / "events.log"
+    assert [r["event"] for r in _rows(main_log)] == ["feature_complete"]
+
+    # *root* is what ``complete_route.main`` resolves from this CWD — the
+    # worktree. The artifacts must still resolve to the main root.
+    verdict = complete_route.classify(_SLUG, wt)
+
+    assert verdict["route"] == "already_complete"
+    assert verdict["continue_to"] == "step12"
+
+
+def test_pr_opened_from_a_worktree_promotes_the_main_root_session_scan(
+    worktree, monkeypatch, capsys
+) -> None:
+    """The relocated ``pr_opened`` row reaches its downstream consumer.
+
+    ``record_pr_opened`` now writes both artifacts at the main root, which
+    moves the ``pr_opened`` row out of the worktree copy. ``scan_lifecycle``
+    is strictly CWD-anchored (``lifecycle_dir = cwd / "cortex" / "lifecycle"``)
+    and gates the ``complete`` → ``complete:awaiting-merge`` promotion on that
+    row, so a main-root session now sees the awaiting-merge state it used to
+    miss — the feature was previously filtered out entirely as complete-no-PR.
+
+    This pins the shift, it does not fix ``scan_lifecycle``: a *worktree*
+    session still reads the worktree's ``cortex/lifecycle`` (#494).
+    """
+    main, wt = worktree
+    main_dir = main / "cortex" / "lifecycle" / _SLUG
+
+    # A lifecycle that reached Complete: the machine row events-first phase
+    # resolution reads, with no terminal event yet.
+    (main_dir / "events.log").write_text(
+        json.dumps(
+            {
+                "ts": "2026-08-13T12:00:00Z",
+                "event": "phase_transition",
+                "feature": _SLUG,
+                "from": "review",
+                "to": "complete",
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(rpo, "_gh_repo", lambda: "owner/repo")
+    monkeypatch.setattr(
+        rpo,
+        "_gh_pr_view",
+        lambda number, repo: {
+            "url": "https://github.com/owner/repo/pull/42",
+            "head_branch": f"interactive/{_SLUG}",
+        },
+    )
+    assert rpo.record_pr_opened(_SLUG, 42, project_root=None)["state"] == "ok"
+    assert "pr_opened" in [r["event"] for r in _rows(main_dir / "events.log")]
+
+    # A SessionStart scan for a session sitting at the main root.
+    monkeypatch.delenv("LIFECYCLE_SESSION_ID", raising=False)
+    monkeypatch.setenv("CLAUDE_ENV_FILE", str(main / ".claude-env"))
+    monkeypatch.setenv("CORTEX_SCAN_LIFECYCLE_STALE_DAYS", "0")
+    monkeypatch.setattr(
+        "sys.stdin",
+        io.StringIO(json.dumps({"session_id": "sess-487", "cwd": str(main)})),
+    )
+
+    assert scan_lifecycle.main() == 0
+
+    out = capsys.readouterr().out
+    assert out, "the feature was filtered out of the scan entirely (complete-no-PR)"
+    hook_output = json.loads(out)["hookSpecificOutput"]
+    assert hook_output["sessionTitle"] == _SLUG
+    # ``complete:awaiting-merge``, rendered — not filtered out as complete-no-PR.
+    assert "Complete (awaiting merge)" in hook_output["additionalContext"]
