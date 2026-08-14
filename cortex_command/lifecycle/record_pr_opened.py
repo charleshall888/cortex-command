@@ -62,11 +62,9 @@ from pathlib import Path
 from typing import List, Optional
 
 from cortex_command.backlog import _telemetry
-from cortex_command.common import (
-    CortexProjectRootError,
-    _resolve_user_project_root_from_cwd,
-)
+from cortex_command.common import CortexProjectRootError
 from cortex_command.lifecycle.complete_route import _atomic_write_json, _gh_repo, _run
+from cortex_command.lifecycle.log_resolver import resolve_verdict_root
 from cortex_command.lifecycle_event import _append_event_atomic, _now_iso
 
 KNOWN_STATES = (
@@ -140,7 +138,16 @@ def record_pr_opened(
             }
 
     try:
-        root = project_root or _resolve_user_project_root_from_cwd()
+        # Both artifacts hang off ONE root: an explicit caller override when
+        # given, else the validated main-root resolution (#487). The pre-#487
+        # CWD walk landed pr.json and the pr_opened row in a worktree copy the
+        # readers — complete_route and the dashboard — never look in, while
+        # every log_event-routed row for the same lifecycle went to the main
+        # root. Resolving once here keeps the verb's two artifacts in the same
+        # tree as each other and as the rest of the history.
+        root = (
+            project_root if project_root is not None else resolve_verdict_root(feature)
+        )
     except CortexProjectRootError as exc:
         return {
             "state": "project-root-error",

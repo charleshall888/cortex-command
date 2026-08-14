@@ -12,6 +12,7 @@ ADR-0020), the exit-0 contract on every failure mode, and the --url/
 from __future__ import annotations
 
 import json
+from pathlib import Path
 from typing import Tuple
 
 import pytest
@@ -127,7 +128,7 @@ def test_every_state_is_known(monkeypatch, tmp_path) -> None:
 
 def test_cli_emits_json(monkeypatch, tmp_path, capsys) -> None:
     _patch_happy_path(monkeypatch)
-    monkeypatch.setattr(rpo, "_resolve_user_project_root_from_cwd", lambda: tmp_path)
+    monkeypatch.setattr(rpo, "resolve_verdict_root", lambda feature: tmp_path)
     rc = rpo.main(["--feature", "feat", "--number", "9"])
     assert rc == 0
     obj = json.loads(capsys.readouterr().out)
@@ -225,10 +226,10 @@ def test_project_root_error_returns_state_not_traceback(monkeypatch) -> None:
         rpo, "_gh_pr_view", lambda number, repo: {"url": "u", "head_branch": "h"}
     )
 
-    def _raise():
+    def _raise(feature):
         raise CortexProjectRootError("no cortex/ found")
 
-    monkeypatch.setattr(rpo, "_resolve_user_project_root_from_cwd", _raise)
+    monkeypatch.setattr(rpo, "resolve_verdict_root", _raise)
 
     r = rpo.record_pr_opened("feat", 1, project_root=None)
     assert r["state"] == "project-root-error"
@@ -295,7 +296,7 @@ def test_cli_never_raises_and_always_exits_zero(monkeypatch, tmp_path, capsys) -
 
 def test_cli_accepts_url_and_head_branch_flags(monkeypatch, tmp_path, capsys) -> None:
     _patch_happy_path(monkeypatch)
-    monkeypatch.setattr(rpo, "_resolve_user_project_root_from_cwd", lambda: tmp_path)
+    monkeypatch.setattr(rpo, "resolve_verdict_root", lambda feature: tmp_path)
     calls: list = []
     monkeypatch.setattr(
         rpo, "_gh_pr_view", lambda number, repo: calls.append(1) or None
@@ -314,3 +315,92 @@ def test_cli_accepts_url_and_head_branch_flags(monkeypatch, tmp_path, capsys) ->
     assert obj["url"] == "https://github.com/owner/repo/pull/9"
     assert obj["head_branch"] == "interactive/feat"
     assert calls == [], "gh pr view must be skipped when both flags are passed via the CLI"
+
+
+# ---------------------------------------------------------------------------
+# #487: both artifacts land in ONE tree — the main root — from a worktree CWD.
+# ---------------------------------------------------------------------------
+
+
+_WT_SLUG = "wet-sand-darkening-on-the-terrain"
+
+
+def _worktree_fixture(root: Path) -> Tuple[Path, Path]:
+    """Main repo + linked worktree, each with a co-located ``cortex/`` tree.
+
+    Hand-built (rather than via ``git worktree add``) for the same reason
+    ``test_worktree_log_anchor`` builds one — ``git rev-parse`` exits 128
+    against a synthetic worktree (#271).
+    """
+    root = root.resolve()
+    main, wt = root / "main", root / "wt"
+
+    admin = main / ".git" / "worktrees" / "wt1"
+    admin.mkdir(parents=True)
+    (admin / "commondir").write_text("../..\n", encoding="utf-8")
+    (main / "cortex" / "lifecycle" / _WT_SLUG).mkdir(parents=True)
+
+    wt.mkdir(parents=True)
+    (wt / ".git").write_text(f"gitdir: {admin}\n", encoding="utf-8")
+    (wt / "cortex" / "lifecycle" / _WT_SLUG).mkdir(parents=True)
+    return main, wt
+
+
+def test_worktree_cwd_writes_both_artifacts_to_the_main_root(
+    monkeypatch, tmp_path
+) -> None:
+    """Run from a worktree CWD: pr.json AND the pr_opened row land at main.
+
+    The real ``_atomic_write_json`` / ``_append_event_atomic`` primitives run
+    here (only ``gh`` and the clock are patched), so this asserts the bytes on
+    disk, not a recorded path argument.
+    """
+    monkeypatch.delenv("CORTEX_REPO_ROOT", raising=False)
+    main, wt = _worktree_fixture(tmp_path)
+    monkeypatch.chdir(wt)
+
+    monkeypatch.setattr(rpo, "_gh_repo", lambda: "owner/repo")
+    monkeypatch.setattr(
+        rpo,
+        "_gh_pr_view",
+        lambda number, repo: {
+            "url": "https://github.com/owner/repo/pull/42",
+            "head_branch": "interactive/feat",
+        },
+    )
+    monkeypatch.setattr(rpo, "_now_iso", lambda: "2026-07-06T00:00:00Z")
+
+    r = rpo.record_pr_opened(_WT_SLUG, 42, project_root=None)
+    assert r["state"] == "ok"
+
+    main_dir = main / "cortex" / "lifecycle" / _WT_SLUG
+    wt_dir = wt / "cortex" / "lifecycle" / _WT_SLUG
+
+    assert json.loads((main_dir / "pr.json").read_text(encoding="utf-8"))["number"] == 42
+    rows = [
+        json.loads(line)
+        for line in (main_dir / "events.log").read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    assert [row["event"] for row in rows] == ["pr_opened"]
+    assert rows[0]["feature"] == _WT_SLUG
+
+    assert not (wt_dir / "pr.json").exists(), "pr.json must not land in the worktree"
+    assert not (wt_dir / "events.log").exists(), "pr_opened must not land in the worktree"
+
+
+def test_explicit_project_root_still_wins_over_resolution(monkeypatch, tmp_path) -> None:
+    """The caller override beats the worktree/main resolution when passed."""
+    monkeypatch.delenv("CORTEX_REPO_ROOT", raising=False)
+    main, wt = _worktree_fixture(tmp_path)
+    monkeypatch.chdir(wt)
+    written_json, appended = _patch_happy_path(monkeypatch)
+
+    override = tmp_path / "elsewhere"
+    r = rpo.record_pr_opened(_WT_SLUG, 42, project_root=override)
+
+    assert r["state"] == "ok"
+    expected = override / "cortex" / "lifecycle" / _WT_SLUG
+    assert written_json[0][0] == expected / "pr.json"
+    assert appended[0][0] == expected / "events.log"
+    assert main != override and wt != override
