@@ -45,7 +45,7 @@ lifecycle; a bogus `CORTEX_REPO_ROOT` no longer produces `on_main`.
 - **Verification**: `uv run pytest cortex_command/lifecycle/tests/test_log_resolver.py -q` passes with new
   cases asserting (i) a bogus `CORTEX_REPO_ROOT` is rejected in favour of the CWD tree holding the slug, and
   (ii) a valid env root that *does* hold the slug is still honoured. Both fail before this task.
-- **Status**: [ ] pending
+- **Status**: [x] done (eb62bbab 2026-08-13T20:10:39-04:00) — public name is `resolve_verdict_root`
 
 ### Task 2: Split `complete_route`'s single root into two deliberate anchors
 - **Files**: `cortex_command/lifecycle/complete_route.py`, `tests/test_complete_route.py`
@@ -74,7 +74,9 @@ lifecycle; a bogus `CORTEX_REPO_ROOT` no longer produces `on_main`.
   asserting the two anchors *differ* within one `classify` call from a worktree CWD — capture `_git_out`
   arguments and compare the `cwd` handed to `_head_has_feature_complete` against the resolved artifact
   parent. That case fails on unmodified source, where both are the same path.
-- **Status**: [ ] pending
+- **Status**: [x] done (a9cba2d4 2026-08-13T20:15:56-04:00) — a second test also pinned the superseded
+  behaviour (`test_branch2_stale_git_file_no_traceback`) and was minimally re-fixtured; `_setup_worktree`
+  was kept, not replaced, because the stale-marker degradation case needs it
 
 ### Task 3: Anchor `record_pr_opened`'s two artifacts to one tree
 - **Files**: `cortex_command/lifecycle/record_pr_opened.py`,
@@ -101,7 +103,7 @@ lifecycle; a bogus `CORTEX_REPO_ROOT` no longer produces `on_main`.
 - **Verification**: `uv run pytest cortex_command/lifecycle/tests/test_record_pr_opened.py tests/test_events_log_writer_census.py -q`
   passes with a new case asserting both `pr.json` and the `pr_opened` row land under the main root when the
   verb runs from a worktree CWD, with the worktree copies absent. Fails before this task.
-- **Status**: [ ] pending
+- **Status**: [x] done (b747a53b 2026-08-13T20:13:58-04:00)
 
 ### Task 4: Extract a worktree-existence predicate and gate the `on_main` short-circuit on it
 - **Files**: `cortex_command/lifecycle/complete_route.py`, `tests/test_complete_route.py`
@@ -133,7 +135,10 @@ lifecycle; a bogus `CORTEX_REPO_ROOT` no longer produces `on_main`.
   `_current_branch` stubbed to `main`, and a worktree present, the route is not `on_main`; (c) with no
   worktree present, `on_main` / `step9` still fires; plus the two accepted edges above. Each fails before
   this task.
-- **Status**: [ ] pending
+- **Status**: [x] done (d257db63 2026-08-13T20:20:24-04:00) — predicate is `_find_slug_worktree`. Correction
+  to this task's own Verification: "each fails before" is false for case (c), a negative control, and for
+  accepted edge (ii), a characterization pin of existing behaviour the spec asks to pin rather than change.
+  Mutation check on the rest: 5 failed / 39 passed at HEAD.
 
 ### Task 5: Pin the cross-verb worktree behaviour in the #484 suite
 - **Files**: `cortex_command/lifecycle/tests/test_worktree_log_anchor.py`
@@ -153,7 +158,8 @@ lifecycle; a bogus `CORTEX_REPO_ROOT` no longer produces `on_main`.
   shift, it does not fix it.
 - **Verification**: `uv run pytest cortex_command/lifecycle/tests/test_worktree_log_anchor.py -q` passes;
   case (a) fails when Task 2 is reverted and case (b) when Task 3 is reverted.
-- **Status**: [ ] pending
+- **Status**: [x] done (41daa6b4 2026-08-13T20:21:51-04:00) — both reverts confirmed in a throwaway
+  worktree; a self-sealing precondition in case (b) was found and closed with an explicit assertion
 
 ## Risks
 
