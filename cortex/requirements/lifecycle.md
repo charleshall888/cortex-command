@@ -45,6 +45,8 @@ Owned by `cortex_command/lifecycle/transition_table.py`.
 - The invocation grammar is owned by a structural parser, not by prose spread across drifting surfaces. → ADR-0018 (**proposed**, so not binding).
 - `register-artifact` refuses to record an artifact whose `{artifact}.md` is absent or zero-byte, returning the existing `error` state and writing nothing, so `index.md`'s `artifacts:` array can never claim an artifact that was never produced. The checked file is resolved beside the index that was resolved, not from the feature slug.
 - That refusal sits behind the missing-index check: a feature with no `index.md` still returns `no-index`, keeping a missing index distinguishable from a missing artifact.
+- A verb that reads shared lifecycle artifacts to reach a *verdict* resolves them through a slug-validated wrapper of the pinned resolver: the resolved root is trusted only when it holds `cortex/lifecycle/{slug}`, else the CWD walk wins, else the resolved root stands. This keeps a stale `CORTEX_REPO_ROOT` from making a live lifecycle read as fresh; the cost is that under an invalid root the wrapper's log path — and therefore its flock domain — can diverge from `resolve_events_log`'s.
+- `complete-route` anchors twice on purpose: shared artifacts (`events.log`, `pr.json`) at the validated root, tree questions (`git show HEAD:`, `git status`, commit-artifacts config) at the invoking checkout. Its `on_main` finalize arm additionally requires that no `interactive/{slug}` worktree exists, so the pre-PR window falls through to the orphan probe rather than completing unmerged work.
 
 ### Event emission and events-as-phase authority
 
