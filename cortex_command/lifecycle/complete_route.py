@@ -22,10 +22,20 @@ Two kinds of side effect occur:
 Structure is modelled on ``_cli_detect_phase`` / ``detect_lifecycle_phase``
 (``cortex_command/common.py``): a classifier function plus a thin
 ``main(argv) -> int`` that serializes the verdict with
-``json.dumps(..., separators=(",", ":")) + "\\n"``. Path resolution uses
-``_resolve_user_project_root_from_cwd()`` (ignores ``CORTEX_REPO_ROOT`` and
-handles the ``.git``-file worktree marker), so an invocation from inside an
-``interactive/{slug}`` worktree reads that worktree's artifacts.
+``json.dumps(..., separators=(",", ":")) + "\\n"``.
+
+Path resolution uses **two deliberate anchors**. ``main()`` resolves the
+invoking checkout with ``_resolve_user_project_root_from_cwd()`` and hands it
+to ``classify(slug, root)``; *root* answers only tree questions — ``git show
+HEAD:``, ``git status``, the commit-artifacts config — which are about *this*
+working tree. The shared artifacts (``events.log`` / ``pr.json``) are anchored
+inside ``classify`` at ``log_resolver.resolve_verdict_root(slug)``: the
+main-root resolver every appending verb uses (#484), validated to actually
+hold ``cortex/lifecycle/{slug}`` before it is trusted, else falling back to the
+CWD walk. Reading the artifacts from a root that does not hold this lifecycle
+makes "no artifacts" indistinguishable from "fresh lifecycle" — which routed a
+still-open-PR feature to ``on_main``/step9 and silently completed unmerged
+work.
 
 Exit codes: non-zero **only** on a usage error (missing slug) or an
 unresolvable project root. Every ``gh`` failure routes to Branch 4a
@@ -65,6 +75,7 @@ from cortex_command.common import (
     CortexProjectRootError,
     _resolve_user_project_root_from_cwd,
 )
+from cortex_command.lifecycle.log_resolver import resolve_verdict_root
 from cortex_command.lifecycle_config import read_commit_artifacts
 
 _GIT_TIMEOUT = 10
@@ -525,7 +536,16 @@ def classify(slug: str, root: Path) -> dict:
     (feature_complete) → on-main short-circuit / Branch 3 (pr.json absent
     orphan probe) → Branch 4 (gh pr view).
     """
-    lifecycle_dir = root / "cortex" / "lifecycle" / slug
+    # Two anchors, deliberately: the shared artifacts (events.log, pr.json)
+    # follow ``resolve_verdict_root`` because they are the lifecycle's single
+    # copy — the one ``next``/``advance`` append to (#484) — and a verdict read
+    # from a root that does not hold this lifecycle cannot tell "no artifacts"
+    # from "fresh lifecycle", which routed an open-PR feature to on_main/step9.
+    # *root* stays the invoking checkout and keeps answering tree questions
+    # (``git show HEAD:``, ``git status``, commit-artifacts config), which are
+    # about *this* working tree and are wrong if re-anchored elsewhere.
+    artifact_root = resolve_verdict_root(slug)
+    lifecycle_dir = artifact_root / "cortex" / "lifecycle" / slug
     pr_json = lifecycle_dir / "pr.json"
     events_log = lifecycle_dir / "events.log"
 

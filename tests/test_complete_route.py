@@ -18,7 +18,9 @@ Coverage (Reqs 1, 1b, 2, 4, 5, 6, 7, 7a):
   and ``orphan_ambiguous`` multi-match (no write, non-empty ``candidates``);
 * the feature-branch (no interactive worktree) 4d path resolving ``<path>`` to
   the checkout root and still routing ``merged_dirty`` on a dirty tree;
-* worktree-CWD resolution ignoring ``CORTEX_REPO_ROOT`` (Req 7);
+* artifact anchoring: an env root that does not hold this slug's lifecycle is
+  ignored (Req 7's surviving intent), and the artifact anchor differs from the
+  tree-question anchor within one ``classify`` call;
 * the Req-7a speculative-caller grep guard.
 
 Fixture idiom mirrors ``cortex_command/tests/test_lifecycle_event.py``
@@ -37,6 +39,7 @@ from typing import Callable, Optional
 
 import pytest
 
+from cortex_command.lifecycle import complete_route, log_resolver
 from cortex_command.lifecycle.complete_route import classify, main
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -738,24 +741,66 @@ def test_auth_failure_routes_unknown(
 
 
 # ---------------------------------------------------------------------------
-# Worktree-CWD resolution ignoring CORTEX_REPO_ROOT (Req 7).
+# Artifact anchoring: an env root that does not hold this lifecycle is ignored
+# (Req 7's surviving intent), and the two anchors are distinct.
 # ---------------------------------------------------------------------------
 
 
 def _setup_worktree(base: Path) -> Path:
-    """Worktree-shaped marker: a ``.git`` FILE + its own cortex/ tree."""
+    """Worktree-shaped marker: a STALE ``.git`` FILE + its own cortex/ tree.
+
+    The gitdir pointer names a path that does not exist, so every git call from
+    this tree fails — the degradation fixture. For a resolvable worktree (one
+    whose ``commondir`` reaches a real main root) use :func:`_worktree_fixture`.
+    """
     worktree_root = base / "worktree"
     (worktree_root / "cortex" / "lifecycle" / SLUG).mkdir(parents=True, exist_ok=True)
     (worktree_root / ".git").write_text("gitdir: /some/main/repo/.git/worktrees/wt\n")
     return worktree_root
 
 
-def test_worktree_cwd_resolution_ignores_env(
+def _worktree_fixture(base: Path) -> tuple[Path, Path]:
+    """Main repo + linked worktree, each with a co-located ``cortex/`` tree.
+
+    Mirrors ``cortex_command/lifecycle/tests/test_worktree_log_anchor.py``'s
+    fixture: the gitfile points at a real admin dir whose ``commondir`` reaches
+    the main root, so ``resolve_main_repo_root`` resolves it. Hand-built for the
+    same reason that module builds one — ``git rev-parse`` exits 128 against a
+    synthetic worktree (#271).
+    """
+    base = base.resolve()
+    main_root, wt = base / "main", base / "wt"
+
+    admin = main_root / ".git" / "worktrees" / "wt1"
+    admin.mkdir(parents=True)
+    (admin / "commondir").write_text("../..\n", encoding="utf-8")
+    (main_root / "cortex" / "lifecycle" / SLUG).mkdir(parents=True)
+
+    wt.mkdir(parents=True)
+    (wt / ".git").write_text(f"gitdir: {admin}\n", encoding="utf-8")
+    (wt / "cortex" / "lifecycle" / SLUG).mkdir(parents=True)
+    return main_root, wt
+
+
+def test_env_root_without_this_lifecycle_is_ignored(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture
 ) -> None:
-    worktree_root = _setup_worktree(tmp_path)
+    """A ``CORTEX_REPO_ROOT`` that does not hold this slug never anchors artifacts.
+
+    Supersedes ``test_worktree_cwd_resolution_ignores_env``. Req 7 of
+    ``cortex/lifecycle/offload-completemd-pr-state-routing-and/spec.md:35``
+    justified resolving artifacts from the CWD because that matched "the
+    ``_resolve_user_project_root_from_cwd`` contract ``lifecycle_event`` uses";
+    #484 moved that contract to the main-root resolver, so plain CWD anchoring
+    is no longer the shared one and the old assertion pinned a superseded
+    choice. Req 7's *env-ignoring* intent survives via
+    ``log_resolver.resolve_verdict_root``'s validation: the env value is trusted
+    only when ``{root}/cortex/lifecycle/{slug}`` exists there, so an env root
+    naming a different project is still ignored — asserted here.
+    """
+    main_repo, worktree_root = _worktree_fixture(tmp_path)
     # The worktree's events.log routes to wontfix (a route that returns before
-    # any git/gh, so the .git-file marker need not back a real repo).
+    # any git/gh, so the fixture need not back a real repo).
     wt_log = worktree_root / "cortex" / "lifecycle" / SLUG / "events.log"
     wt_log.write_text(
         json.dumps(
@@ -764,36 +809,96 @@ def test_worktree_cwd_resolution_ignores_env(
         + "\n",
         encoding="utf-8",
     )
-    # A divergent main repo (pointed to by CORTEX_REPO_ROOT) whose events.log
-    # would instead route to already_complete -> a clean discriminator.
-    main_repo = tmp_path / "main-repo"
-    (main_repo / "cortex" / "lifecycle" / SLUG).mkdir(parents=True, exist_ok=True)
-    main_log = main_repo / "cortex" / "lifecycle" / SLUG / "events.log"
-    main_log.write_text(
-        json.dumps(
-            {"ts": "2026-01-02T03:04:05Z", "event": "feature_complete", "feature": SLUG}
-        )
-        + "\n",
-        encoding="utf-8",
-    )
-    main_before = main_log.read_text(encoding="utf-8")
+    # An unrelated cortex project (pointed to by CORTEX_REPO_ROOT) that does NOT
+    # carry this slug's lifecycle: validation rejects it, so resolution falls
+    # back to the CWD walk and lands in the worktree.
+    stranger = tmp_path / "stranger"
+    (stranger / "cortex" / "lifecycle" / "other-feature").mkdir(parents=True)
 
     inside = worktree_root / "subdir"
     inside.mkdir()
     monkeypatch.chdir(inside)
-    monkeypatch.setenv("CORTEX_REPO_ROOT", str(main_repo))
+    monkeypatch.setenv("CORTEX_REPO_ROOT", str(stranger))
 
     rc = main([SLUG])
     assert rc == 0
 
     payload = json.loads(capsys.readouterr().out.strip().splitlines()[-1])
-    # Read the worktree's events.log (wontfix), NOT the CORTEX_REPO_ROOT main
-    # repo's (which would have routed already_complete).
+    # Read the worktree's events.log (wontfix); the env root held no lifecycle
+    # for this slug, so it never became the artifact anchor.
     assert payload["route"] == "wontfix"
     assert "2026-01-02T03:04:05Z" in payload["message"]
-    # The main-repo artifacts were never touched.
-    assert main_log.read_text(encoding="utf-8") == main_before
+    # Neither the env root nor the main repo was written to.
+    assert not (stranger / "cortex" / "lifecycle" / SLUG).exists()
     assert not (main_repo / "cortex" / "lifecycle" / SLUG / "pr.json").exists()
+
+
+def test_classify_uses_two_distinct_anchors_from_worktree_cwd(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """One classify() call reads artifacts at the main root, asks git at the CWD.
+
+    Discriminating: the main root's events.log carries a feature_complete row
+    (-> already_complete) while the worktree's carries feature_wontfix
+    (-> wontfix, a route that returns before any git call). A single-anchor
+    classify() reads the worktree copy, routes wontfix, and records no
+    ``git show HEAD:`` at all. With the split anchors the artifact read lands on
+    the main root while ``_head_has_feature_complete`` still runs against the
+    invoking checkout — a cwd that differs from the artifact parent.
+    """
+    monkeypatch.delenv("CORTEX_REPO_ROOT", raising=False)
+    main_repo, worktree_root = _worktree_fixture(tmp_path)
+    (main_repo / "cortex" / "lifecycle" / SLUG / "events.log").write_text(
+        json.dumps(
+            {
+                "ts": "2026-06-30T12:00:00Z",
+                "event": "feature_complete",
+                "feature": SLUG,
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    (worktree_root / "cortex" / "lifecycle" / SLUG / "events.log").write_text(
+        json.dumps(
+            {"ts": "2026-01-02T03:04:05Z", "event": "feature_wontfix", "feature": SLUG}
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    # Record every git invocation; the synthetic worktree backs no real repo, so
+    # a stubbed "" show-prefix is what lets the `git show HEAD:` call happen.
+    calls: list[tuple[list[str], Optional[str]]] = []
+
+    def _recording_git_out(args: list[str], cwd: Optional[str] = None) -> Optional[str]:
+        calls.append((list(args), cwd))
+        if args[:2] == ["rev-parse", "--show-prefix"]:
+            return ""
+        return None
+
+    monkeypatch.setattr(complete_route, "_git_out", _recording_git_out)
+    monkeypatch.chdir(worktree_root)
+
+    result = classify(SLUG, worktree_root)
+
+    # Artifact anchor: the main root's log was the one read.
+    assert result["route"] == "already_complete", (
+        f"artifacts resolved from the CWD, not the validated root: {result['route']!r}"
+    )
+    artifact_root = log_resolver.resolve_verdict_root(SLUG)
+    assert artifact_root.resolve() == main_repo.resolve()
+
+    # Tree anchor: `git show HEAD:` ran against the invoking checkout.
+    show_cwds = {
+        cwd for args, cwd in calls if args and args[0] == "show" and "HEAD:" in args[1]
+    }
+    assert show_cwds == {str(worktree_root)}, (
+        f"_head_has_feature_complete was re-anchored: {show_cwds!r}"
+    )
+
+    # The two anchors differ within this single classify() call.
+    assert Path(next(iter(show_cwds))).resolve() != artifact_root.resolve()
 
 
 # ---------------------------------------------------------------------------
@@ -1120,8 +1225,9 @@ def test_branch2_stale_git_file_no_traceback(
     All git helpers (H, committable, current_branch) fail and return the
     safe-direction default (False / "").  W=True (working-tree row present)
     makes Branch 2 trigger; H=False and committable=False make it not retryable
-    → already_complete.  CORTEX_REPO_ROOT pointing at a divergent directory is
-    not consulted — classify() receives root as a direct parameter.
+    → already_complete.  A CORTEX_REPO_ROOT naming a divergent project that
+    does not hold this slug's lifecycle is rejected by resolve_verdict_root's
+    validation, so it never anchors the artifact read either.
     """
     monkeypatch.delenv("CORTEX_REPO_ROOT", raising=False)
 
@@ -1129,9 +1235,9 @@ def test_branch2_stale_git_file_no_traceback(
     worktree_root = _setup_worktree(tmp_path)
     _write_fc_event(worktree_root, merge_anchor="merge")
 
-    # Divergent CORTEX_REPO_ROOT to confirm no leakage into classify().
+    # Divergent CORTEX_REPO_ROOT holding a different project's lifecycles only.
     divergent = tmp_path / "divergent"
-    (divergent / "cortex" / "lifecycle" / SLUG).mkdir(parents=True, exist_ok=True)
+    (divergent / "cortex" / "lifecycle" / "other-feature").mkdir(parents=True)
     monkeypatch.setenv("CORTEX_REPO_ROOT", str(divergent))
 
     monkeypatch.chdir(worktree_root)
