@@ -71,15 +71,17 @@ _BASELINES: dict[str, int] = {
     "critical-review": 193,
     "dev": 162,
     "discovery": 154,
+    "hmm": 69,
     "interview": 118,
     "build": 151,
     "morning-review": 320,
     "overnight": 314,
+    "pick": 67,
     "pr": 66,
     "refine": 149,
     "requirements": 203,
     "research": 157,
-    "total": 2190,
+    "total": 2326,
 }
 
 
