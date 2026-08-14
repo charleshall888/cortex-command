@@ -32,9 +32,12 @@ This is deliberately distinct from the two CWD-flavoured resolvers in
 ``common``:
 
   * ``common._resolve_user_project_root_from_cwd`` (CWD-only, ignores
-    ``CORTEX_REPO_ROOT``) — what ``log_event`` uses for the *typed* subcommands.
-    From a worktree CWD carrying a co-located ``cortex/`` it returns the
-    **worktree-local** root, so a typed append lands in the worktree copy.
+    ``CORTEX_REPO_ROOT``) — no longer what any appending verb uses: #484 routed
+    every *typed* ``log_event`` subcommand through :func:`resolve_events_log`.
+    It survives here as the CWD flavour :func:`detect_split_log` reports
+    against and :func:`resolve_verdict_root` falls back to. From a worktree CWD
+    carrying a co-located ``cortex/`` it returns the **worktree-local** root —
+    the copy a pre-#484 typed append landed in.
   * ``common._resolve_user_project_root`` (env-honouring, else first
     ``cortex/``-bearing ancestor) — what ``enter.py`` uses.
 
@@ -56,6 +59,7 @@ from cortex_command.interactive_lock import _resolve_main_repo_root
 
 __all__ = [
     "resolve_main_repo_root",
+    "resolve_verdict_root",
     "resolve_events_log",
     "resolve_flock_path",
     "detect_split_log",
@@ -77,6 +81,52 @@ def resolve_main_repo_root() -> Path:
         Resolved absolute path to the main cortex project root.
     """
     return _resolve_main_repo_root()
+
+
+def resolve_verdict_root(feature_slug: str) -> Path:
+    """Return the root a verdict about *feature_slug* may trust.
+
+    :func:`resolve_main_repo_root` honours ``CORTEX_REPO_ROOT`` verbatim and
+    unchecked (``interactive_lock.py:177-179``), and ``docs/setup.md`` tells
+    operators to export it precisely so the ``cortex-*`` shims run from outside
+    a project. A stale or wrong value therefore reaches the artifact reads as a
+    real root, where "no ``pr.json``, no ``events.log``" is indistinguishable
+    from a genuinely fresh lifecycle — which is what drove ``complete_route``'s
+    ``on_main`` finalize arm. This wrapper validates before it trusts:
+
+      1. Take :func:`resolve_main_repo_root`; if ``{root}/cortex/lifecycle/
+         {feature_slug}`` is a directory, it holds this lifecycle — return it.
+      2. Otherwise fall back to the CWD walk
+         (``common._resolve_user_project_root_from_cwd``) and return that root
+         when *it* holds the slug directory.
+      3. Otherwise the env/walk result from step 1 stands.
+
+    The check is **slug-scoped**, not a bare ``cortex/`` existence test, so a
+    populated but *different* cortex project is rejected too. Step 3 keeps the
+    never-crash contract and preserves today's behaviour for a lifecycle whose
+    directory does not exist yet: a wholly bogus root still reaches the read,
+    which simply finds nothing.
+
+    Args:
+        feature_slug: Feature slug the caller is about to read artifacts for.
+
+    Returns:
+        Resolved absolute path to the project root the caller may anchor
+        ``events.log`` / ``pr.json`` beneath.
+    """
+    from cortex_command.common import _resolve_user_project_root_from_cwd
+
+    root = resolve_main_repo_root()
+    if (root / "cortex" / "lifecycle" / feature_slug).is_dir():
+        return root
+
+    try:
+        cwd_root = _resolve_user_project_root_from_cwd()
+    except Exception:  # noqa: BLE001 — never-crash: the env result stands
+        return root
+    if (cwd_root / "cortex" / "lifecycle" / feature_slug).is_dir():
+        return cwd_root
+    return root
 
 
 def resolve_events_log(feature_slug: str) -> Path:

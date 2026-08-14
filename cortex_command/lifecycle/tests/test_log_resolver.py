@@ -139,6 +139,81 @@ def test_worktree_resolver_picks_main_root_log_while_cwd_resolver_splits(
     )
 
 
+# --- Req 2a: the resolved root is slug-validated before it is trusted --------
+
+def test_verdict_root_rejects_a_bogus_env_root_for_the_cwd_tree(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A ``CORTEX_REPO_ROOT`` that does not hold the slug loses to the CWD walk.
+
+    ``resolve_main_repo_root`` returns the env value verbatim and unchecked, so
+    without validation a stale export makes a real lifecycle look absent — the
+    "no artifacts" reading that drives the finalize arm. The slug directory
+    lives in the CWD tree here, so that tree wins.
+    """
+    main, wt = _make_worktree_fixture(tmp_path)
+    (wt / "cortex" / "lifecycle" / _SLUG).mkdir(parents=True)
+    monkeypatch.setenv("CORTEX_REPO_ROOT", str(tmp_path / "nonexistent" / "bogus"))
+    monkeypatch.chdir(wt)
+
+    # Sanity: the unvalidated resolver does hand back the bogus root.
+    assert log_resolver.resolve_main_repo_root() == (
+        tmp_path / "nonexistent" / "bogus"
+    ).resolve()
+
+    # The validated one walks from the CWD to the tree that holds the slug.
+    assert log_resolver.resolve_verdict_root(_SLUG) == wt
+
+
+def test_verdict_root_rejects_a_different_project_lacking_the_slug(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The check is slug-scoped, so a populated *other* cortex project loses too."""
+    main, wt = _make_worktree_fixture(tmp_path)
+    (wt / "cortex" / "lifecycle" / _SLUG).mkdir(parents=True)
+
+    other = (tmp_path / "other-project").resolve()
+    (other / "cortex" / "lifecycle" / "some-other-feature").mkdir(parents=True)
+    monkeypatch.setenv("CORTEX_REPO_ROOT", str(other))
+    monkeypatch.chdir(wt)
+
+    assert log_resolver.resolve_verdict_root(_SLUG) == wt
+
+
+def test_verdict_root_honours_an_env_root_that_holds_the_slug(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A valid env root is still honoured — validation only rejects, never steers.
+
+    The overnight env-pin must keep winning from a worktree CWD that carries its
+    own copy of the slug directory; otherwise the wrapper would silently invert
+    the pin it is meant to leave alone.
+    """
+    main, wt = _make_worktree_fixture(tmp_path)
+    (main / "cortex" / "lifecycle" / _SLUG).mkdir(parents=True)
+    (wt / "cortex" / "lifecycle" / _SLUG).mkdir(parents=True)
+    monkeypatch.setenv("CORTEX_REPO_ROOT", str(main))
+    monkeypatch.chdir(wt)
+
+    assert log_resolver.resolve_verdict_root(_SLUG) == main
+
+
+def test_verdict_root_keeps_the_env_result_when_neither_tree_holds_the_slug(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Never-crash: with no slug directory anywhere, the env result stands.
+
+    A genuinely new lifecycle has no directory yet, and the CWD walk can raise
+    ``CortexProjectRootError`` outright. Neither may become an exception or a
+    behaviour change — the read simply finds nothing, exactly as before.
+    """
+    bogus = (tmp_path / "nonexistent" / "bogus").resolve()
+    monkeypatch.setenv("CORTEX_REPO_ROOT", str(bogus))
+    monkeypatch.chdir(tmp_path)
+
+    assert log_resolver.resolve_verdict_root(_SLUG) == bogus
+
+
 # --- #484: the already-split log is reported, not merely prevented -----------
 
 def test_detect_split_log_names_an_existing_divergent_worktree_copy(
