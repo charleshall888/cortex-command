@@ -47,6 +47,8 @@ Owned by `cortex_command/lifecycle/transition_table.py`.
 - That refusal sits behind the missing-index check: a feature with no `index.md` still returns `no-index`, keeping a missing index distinguishable from a missing artifact.
 - A verb that reads shared lifecycle artifacts to reach a *verdict* resolves them through a slug-validated wrapper of the pinned resolver: the resolved root is trusted only when it holds `cortex/lifecycle/{slug}`, else the CWD walk wins, else the resolved root stands. This keeps a stale `CORTEX_REPO_ROOT` from making a live lifecycle read as fresh; the cost is that under an invalid root the wrapper's log path — and therefore its flock domain — can diverge from `resolve_events_log`'s.
 - `complete-route` anchors twice on purpose: shared artifacts (`events.log`, `pr.json`) at the validated root, tree questions (`git show HEAD:`, `git status`, commit-artifacts config) at the invoking checkout. Its `on_main` finalize arm additionally requires that no `interactive/{slug}` worktree exists, so the pre-PR window falls through to the orphan probe rather than completing unmerged work.
+- A verdict verb guards its own call to the slug-validated wrapper: a `CortexProjectRootError` escaping the wrapper's step-1 resolution degrades to the invoking checkout rather than a traceback, so the never-crash contract never rests on the caller's own root walk having already succeeded.
+- That `on_main` worktree gate is unconditional, so it also diverts Branch 2's retryable-finalization fall-through: a failed finalization commit on `main` with the slug's worktree still present restarts at `first_run` rather than retrying at step 9. Accepted cost — removing the worktree restores the retry.
 
 ### Event emission and events-as-phase authority
 
