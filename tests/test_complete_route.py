@@ -1367,3 +1367,235 @@ def test_classify_recovery_commit_failed_then_retry(
     assert fc_count == 1, (
         f"expected exactly 1 feature_complete row in HEAD's events.log, got {fc_count}"
     )
+
+
+# ---------------------------------------------------------------------------
+# Reqs 6/7 — worktree-existence predicate and the on_main worktree gate.
+#
+# Between EnterWorktree and `gh pr create` no pr.json exists anywhere, so from
+# the primary on main the short-circuit routed on_main -> step9 (the finalize
+# leg) for a feature that has no PR at all. The gate makes that arm require
+# worktree *absence*.
+# ---------------------------------------------------------------------------
+
+
+_PORCELAIN_NO_MATCH = (
+    "worktree /repos/main\n"
+    "HEAD 0000000000000000000000000000000000000000\n"
+    "branch refs/heads/main\n"
+    "\n"
+    "worktree /repos/wt-other\n"
+    "HEAD 1111111111111111111111111111111111111111\n"
+    "branch refs/heads/interactive/other-slug\n"
+    "\n"
+)
+
+_PORCELAIN_MATCH = (
+    "worktree /repos/main\n"
+    "HEAD 0000000000000000000000000000000000000000\n"
+    "branch refs/heads/main\n"
+    "\n"
+    f"worktree /repos/wt-{SLUG}\n"
+    "HEAD 2222222222222222222222222222222222222222\n"
+    f"branch refs/heads/interactive/{SLUG}\n"
+    "\n"
+)
+
+
+def _stub_git_out(monkeypatch: pytest.MonkeyPatch, porcelain: Optional[str]) -> None:
+    """Answer only ``worktree list`` / ``--show-toplevel``; None elsewhere."""
+
+    def _fake(args: list[str], cwd: Optional[str] = None) -> Optional[str]:
+        if args[:3] == ["worktree", "list", "--porcelain"]:
+            return porcelain
+        if args[:2] == ["rev-parse", "--show-toplevel"]:
+            return "/repos/main\n"
+        return None
+
+    monkeypatch.setattr(complete_route, "_git_out", _fake)
+
+
+def test_worktree_predicate_is_distinct_from_path_resolution(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Req 6: the predicate answers None where path resolution still answers.
+
+    Same ``git worktree list --porcelain`` input, two different jobs: the
+    ``on_main`` gate needs "is there a worktree for this slug" (None), while
+    the 4d/4f guards need a real path to run ``git status`` / ``merge-base``
+    against, which the ``--show-toplevel`` fallback keeps supplying.
+    """
+    _stub_git_out(monkeypatch, _PORCELAIN_NO_MATCH)
+
+    assert complete_route._find_slug_worktree(SLUG) is None
+    resolved = complete_route._resolve_worktree_path(SLUG, Path("/fallback-root"))
+    assert resolved == "/repos/main"
+    assert resolved, "_resolve_worktree_path must never return empty"
+
+
+def test_worktree_predicate_returns_the_matched_path(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A matching block yields the path, and path resolution agrees with it."""
+    _stub_git_out(monkeypatch, _PORCELAIN_MATCH)
+
+    assert complete_route._find_slug_worktree(SLUG) == f"/repos/wt-{SLUG}"
+    assert (
+        complete_route._resolve_worktree_path(SLUG, Path("/fallback-root"))
+        == f"/repos/wt-{SLUG}"
+    )
+
+
+def test_worktree_predicate_fails_open_when_git_fails(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """``git worktree list`` failing yields None (== "no worktree"), not a raise.
+
+    Failing open keeps the never-crash contract and keeps ``on_main`` firing
+    exactly as it did before the gate; ``_resolve_worktree_path`` still lands
+    on a non-empty fallback.
+    """
+    _stub_git_out(monkeypatch, None)
+
+    assert complete_route._find_slug_worktree(SLUG) is None
+    assert complete_route._resolve_worktree_path(SLUG, Path("/fallback-root")) == (
+        "/repos/main"
+    )
+
+
+def _build_main_checkout_no_pr_json(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> Path:
+    """Real repo on ``main``, events.log benign, no pr.json."""
+    root = _make_root(tmp_path)
+    _init_repo(root)
+    (root / "README").write_text("x\n")
+    _git("add", "README", cwd=root)
+    _git("commit", "-m", "c0", cwd=root)
+    _write_events(root, _BENIGN_EVENT)
+    return root
+
+
+def _add_interactive_worktree(root: Path, wt_path: Path) -> None:
+    """Create a real ``interactive/{slug}`` worktree linked to *root*."""
+    _git("worktree", "add", "-b", f"interactive/{SLUG}", str(wt_path), cwd=root)
+
+
+def test_on_main_does_not_fire_while_a_worktree_exists(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Req 7: on main, no pr.json, worktree present -> not the finalize leg.
+
+    The pre-PR window. With gh reachable the fall-through lands on the
+    Branch-3 orphan probe's zero-match arm (``first_run`` -> step1),
+    converging on "go create the PR" instead of finalizing unmerged work.
+    """
+    monkeypatch.delenv("CORTEX_REPO_ROOT", raising=False)
+    root = _build_main_checkout_no_pr_json(tmp_path, monkeypatch)
+    _add_interactive_worktree(root, tmp_path / "wt")
+    _install_gh_stub(monkeypatch, tmp_path)
+    monkeypatch.setenv("GH_STUB_PR_LIST_COUNT", "0")
+    monkeypatch.chdir(root)
+
+    assert complete_route._current_branch() == "main"
+    result = classify(SLUG, root)
+
+    assert result["route"] != "on_main", (
+        "on_main fired with a worktree present — the finalize leg would "
+        "complete a feature that has no PR"
+    )
+    assert result["route"] == "first_run"
+    assert result["continue_to"] == "step1"
+
+
+def test_on_main_still_fires_with_no_worktree(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The gate is worktree-absence only: direct-to-main work is untouched.
+
+    Same fixture as above minus the worktree, and with a stub that WOULD
+    report 5 orphan PRs — so ``on_main`` here also proves the orphan probe was
+    still bypassed (no network call added to this path).
+    """
+    monkeypatch.delenv("CORTEX_REPO_ROOT", raising=False)
+    root = _build_main_checkout_no_pr_json(tmp_path, monkeypatch)
+    _install_gh_stub(monkeypatch, tmp_path)
+    monkeypatch.setenv("GH_STUB_PR_LIST_COUNT", "5")
+    monkeypatch.chdir(root)
+
+    result = classify(SLUG, root)
+
+    assert result["route"] == "on_main"
+    assert result["continue_to"] == "step9"
+
+
+def test_accepted_edge_worktree_present_gh_absent_is_terminal_pr_unknown(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Accepted edge (i): the pre-PR window with gh unavailable.
+
+    Worktree present, no pr.json, ``shutil.which("gh")`` -> None (git stays
+    resolvable, so ``_current_branch`` really is ``main`` and the gate is what
+    moves the route). ``_orphan_probe`` sets ``error`` and classify returns
+    Branch 4a — terminal ``pr_unknown``, "retry later". This is the cost of
+    the guard, not a defect: a retryable refusal beats silently finalizing
+    unmerged work, and it fires only when a worktree for the slug exists.
+    """
+    monkeypatch.delenv("CORTEX_REPO_ROOT", raising=False)
+    root = _build_main_checkout_no_pr_json(tmp_path, monkeypatch)
+    _add_interactive_worktree(root, tmp_path / "wt")
+    monkeypatch.chdir(root)
+
+    real_which = shutil.which
+    monkeypatch.setattr(
+        complete_route.shutil,
+        "which",
+        lambda name, *a, **kw: None if name == "gh" else real_which(name, *a, **kw),
+    )
+
+    assert complete_route._current_branch() == "main"
+    result = classify(SLUG, root)
+
+    assert result["route"] == "pr_unknown"
+    assert result["terminal"] is True
+    assert result["continue_to"] is None
+    assert result["pr_state"] == "unknown"
+    assert "retry later" in result["message"]
+
+
+def test_accepted_edge_foreign_head_branch_cannot_reach_step8(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Accepted edge (ii): a head_branch absent from the local tree stops at 4f.
+
+    The destructive arm's authorization and its target resolve in different
+    trees — ``pr.json`` supplies ``head_branch`` from the artifact root while
+    Step 8 deletes ``f"interactive/{slug}"``, a name derived from the slug and
+    never from the verified ``head_branch`` (``complete.md:27``). The local
+    ``merge-base --is-ancestor`` probe is the only thing keeping those two
+    consistent: an unknown ref exits non-zero, so the route is the safe
+    terminal ``merged_not_ancestor`` and ``step8`` is unreachable. Pinned so
+    the property is designed rather than accidental.
+    """
+    monkeypatch.delenv("CORTEX_REPO_ROOT", raising=False)
+    root = _make_root(tmp_path)
+    _init_repo(root)
+    (root / "README").write_text("x\n")
+    _git("add", "README", cwd=root)
+    _git("commit", "-m", "c0", cwd=root)
+    _write_events(root, _BENIGN_EVENT)
+    # A head_branch that exists on the remote/PR but not in this local tree.
+    _write_pr_json(root, number=13, head_branch="interactive/absent-from-this-tree")
+    _git("add", "-A", cwd=root)
+    _git("commit", "-m", "c1 fixtures", cwd=root)  # clean tree -> past the 4d guard
+    _git("update-ref", "refs/remotes/origin/main", "main", cwd=root)
+    _install_gh_stub(monkeypatch, tmp_path)
+    monkeypatch.setenv("GH_STUB_SCENARIO", "merged-anchored")
+    monkeypatch.chdir(root)
+
+    result = classify(SLUG, root)
+
+    assert result["pr_state"] == "MERGED"
+    assert result["route"] == "merged_not_ancestor"
+    assert result["continue_to"] is None, "a foreign head_branch reached step8"
+    assert result["terminal"] is True

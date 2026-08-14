@@ -130,39 +130,60 @@ def _current_branch() -> str:
     return out.strip() if out else ""
 
 
+def _find_slug_worktree(slug: str) -> Optional[str]:
+    """Existence predicate: the ``interactive/{slug}`` worktree path, or None.
+
+    Matches on branch ``refs/heads/interactive/{slug}`` first, then on a path
+    containing ``interactive-{slug}`` / ``interactive/{slug}``. Returning
+    ``Optional[str]`` is the point: ``_resolve_worktree_path`` needs *a path*
+    and layers fallbacks on top, while the ``on_main`` short-circuit needs to
+    tell "no worktree for this slug" from "some path", which a
+    fallback-flattened result can no longer express.
+
+    Fails open — a missing/failing ``git worktree list`` (``_git_out`` returns
+    ``None``) yields ``None``, the same answer as "no worktree", so the
+    never-crash contract holds and ``on_main`` keeps firing as it did before
+    the guard.
+    """
+    out = _git_out(["worktree", "list", "--porcelain"])
+    if not out:
+        return None
+    blocks: list[tuple[str, Optional[str]]] = []
+    path: Optional[str] = None
+    branch: Optional[str] = None
+    for line in out.splitlines() + [""]:
+        if line.startswith("worktree "):
+            path = line[len("worktree "):].strip()
+            branch = None
+        elif line.startswith("branch "):
+            branch = line[len("branch "):].strip()
+        elif not line.strip():
+            if path:
+                blocks.append((path, branch))
+            path, branch = None, None
+    target = f"refs/heads/interactive/{slug}"
+    for p, b in blocks:
+        if b == target:
+            return p
+    for p, b in blocks:
+        if f"interactive-{slug}" in p or f"interactive/{slug}" in p:
+            return p
+    return None
+
+
 def _resolve_worktree_path(slug: str, root: Path) -> str:
     """Resolve the worktree path for *slug* across all completion paths.
 
-    Prefers the ``interactive/{slug}`` worktree (branch ``refs/heads/
-    interactive/{slug}`` or a path containing ``interactive-{slug}``). If no
-    such worktree exists (the feature-branch / on-main path — the same case
+    Prefers the ``interactive/{slug}`` worktree (``_find_slug_worktree``). If
+    no such worktree exists (the feature-branch / on-main path — the same case
     Step 8's prefix-check skips), falls back to the current checkout root
     (``git rev-parse --show-toplevel``), then finally to *root*. The result is
     always non-empty so the 4d/4f dirty/ancestor guards run against a real
     path rather than silently defaulting to clean.
     """
-    out = _git_out(["worktree", "list", "--porcelain"])
-    if out:
-        blocks: list[tuple[str, Optional[str]]] = []
-        path: Optional[str] = None
-        branch: Optional[str] = None
-        for line in out.splitlines() + [""]:
-            if line.startswith("worktree "):
-                path = line[len("worktree "):].strip()
-                branch = None
-            elif line.startswith("branch "):
-                branch = line[len("branch "):].strip()
-            elif not line.strip():
-                if path:
-                    blocks.append((path, branch))
-                path, branch = None, None
-        target = f"refs/heads/interactive/{slug}"
-        for p, b in blocks:
-            if b == target:
-                return p
-        for p, b in blocks:
-            if f"interactive-{slug}" in p or f"interactive/{slug}" in p:
-                return p
+    match = _find_slug_worktree(slug)
+    if match:
+        return match
     top = _git_out(["rev-parse", "--show-toplevel"])
     if top and top.strip():
         return top.strip()
@@ -640,9 +661,18 @@ def classify(slug: str, root: Path) -> dict:
 
     # Branch 3 / on-main short-circuit (pr.json absent).
     if not pr_json.is_file():
-        if current_branch in ("main", "master"):
+        if current_branch in ("main", "master") and _find_slug_worktree(slug) is None:
             # complete.md:21 — direct-to-main work has no PR; skip the orphan
             # probe and jump to Steps 9-12.
+            #
+            # Gated on worktree *absence*: between EnterWorktree and `gh pr
+            # create` there is no pr.json anywhere, so from the primary on main
+            # this arm finalized a feature that has no PR at all. When a
+            # worktree for the slug exists the route falls through to the
+            # Branch-3 orphan probe, which converges on "go create the PR"
+            # (first_run) or refuses retryably (pr_unknown when gh is absent) —
+            # both strictly better than silently completing unmerged work. No
+            # new route value: the fall-through lands on existing arms.
             result["route"] = "on_main"
             result["terminal"] = False
             result["continue_to"] = "step9"
