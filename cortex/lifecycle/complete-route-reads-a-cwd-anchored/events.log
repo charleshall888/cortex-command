@@ -5,3 +5,15 @@
 {"ts": "2026-08-13T22:48:31Z", "event": "spec_approved", "feature": "complete-route-reads-a-cwd-anchored", "decision": "approved"}
 {"ts": "2026-08-14T00:07:44Z", "event": "plan_approved", "feature": "complete-route-reads-a-cwd-anchored", "dispatch_choice": "trunk"}
 {"ts": "2026-08-14T00:07:44Z", "event": "phase_transition", "feature": "complete-route-reads-a-cwd-anchored", "from": "plan", "to": "implement"}
+{"ts": "2026-08-14T00:08:04Z", "event": "batch_dispatch", "feature": "complete-route-reads-a-cwd-anchored", "batch": 0, "tasks": ["1"]}
+{"ts": "2026-08-14T00:11:13Z", "event": "batch_dispatch", "feature": "complete-route-reads-a-cwd-anchored", "batch": 1, "tasks": ["2", "3"]}
+{"ts": "2026-08-14T00:16:38Z", "event": "batch_dispatch", "feature": "complete-route-reads-a-cwd-anchored", "batch": 2, "tasks": ["4", "5"]}
+{"ts": "2026-08-14T00:29:23Z", "event": "phase_transition", "feature": "complete-route-reads-a-cwd-anchored", "from": "implement", "to": "review", "tier": "complex"}
+{"ts": "2026-08-14T00:29:53Z", "event": "review_dispatched", "feature": "complete-route-reads-a-cwd-anchored", "cycle": 1, "mode": "full", "baseline_sha": "4a78b8b9e87ebd046371253539afeec9ec71c7d1"}
+{"ts": "2026-08-14T00:47:31Z", "event": "review_verdict", "feature": "complete-route-reads-a-cwd-anchored", "verdict": "CHANGES_REQUESTED", "cycle": 1, "requirements_drift": "detected"}
+{"ts": "2026-08-14T00:47:31Z", "event": "phase_transition", "feature": "complete-route-reads-a-cwd-anchored", "from": "review", "to": "implement-rework"}
+{"ts": "2026-08-14T00:54:04Z", "event": "phase_transition", "feature": "complete-route-reads-a-cwd-anchored", "from": "implement-rework", "to": "review", "tier": "complex"}
+{"ts": "2026-08-14T00:54:11Z", "event": "review_dispatched", "feature": "complete-route-reads-a-cwd-anchored", "cycle": 2, "mode": "rework", "baseline_sha": "8f5bae0614973f154786e9cf979fdc9349baa131"}
+{"ts": "2026-08-14T01:07:25Z", "event": "review_verdict", "feature": "complete-route-reads-a-cwd-anchored", "verdict": "APPROVED", "cycle": 2, "requirements_drift": "detected"}
+{"ts": "2026-08-14T01:07:25Z", "event": "phase_transition", "feature": "complete-route-reads-a-cwd-anchored", "from": "review", "to": "complete"}
+{"ts": "2026-08-14T01:07:55Z", "event": "feature_complete", "feature": "complete-route-reads-a-cwd-anchored", "tasks_total": 5, "rework_cycles": 1, "merge_anchor": "merge"}
