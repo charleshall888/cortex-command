@@ -565,7 +565,14 @@ def classify(slug: str, root: Path) -> dict:
     # *root* stays the invoking checkout and keeps answering tree questions
     # (``git show HEAD:``, ``git status``, commit-artifacts config), which are
     # about *this* working tree and are wrong if re-anchored elsewhere.
-    artifact_root = resolve_verdict_root(slug)
+    # Guarded like ``record_pr_opened``'s call to the same resolver: its step-1
+    # ``resolve_main_repo_root()`` can raise, and the never-crash contract holds
+    # here only by the accident that ``main()``'s own root walk must already
+    # have succeeded. Falling back to the invoking checkout keeps that explicit.
+    try:
+        artifact_root = resolve_verdict_root(slug)
+    except CortexProjectRootError:
+        artifact_root = root
     lifecycle_dir = artifact_root / "cortex" / "lifecycle" / slug
     pr_json = lifecycle_dir / "pr.json"
     events_log = lifecycle_dir / "events.log"

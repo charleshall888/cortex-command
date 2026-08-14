@@ -797,6 +797,16 @@ def test_env_root_without_this_lifecycle_is_ignored(
     ``log_resolver.resolve_verdict_root``'s validation: the env value is trusted
     only when ``{root}/cortex/lifecycle/{slug}`` exists there, so an env root
     naming a different project is still ignored — asserted here.
+
+    What this discriminates against: replacing ``resolve_verdict_root`` with the
+    raw, unvalidated ``resolve_main_repo_root`` (the design fork the critical
+    review raised), under which the stranger root anchors the read and the
+    wontfix row is invisible. It deliberately does **not** fail against
+    pre-change ``complete_route.py`` — that code never consulted the
+    environment at all, so no env-based assertion can discriminate against it.
+    The spec's original "fails against unmodified code" clause rested on a
+    measurement of the *proposed* anchor mis-attributed to HEAD; corrected in
+    ``cortex/lifecycle/complete-route-reads-a-cwd-anchored/spec.md`` Reqs 2a/5.
     """
     main_repo, worktree_root = _worktree_fixture(tmp_path)
     # The worktree's events.log routes to wontfix (a route that returns before
@@ -831,6 +841,78 @@ def test_env_root_without_this_lifecycle_is_ignored(
     # Neither the env root nor the main repo was written to.
     assert not (stranger / "cortex" / "lifecycle" / SLUG).exists()
     assert not (main_repo / "cortex" / "lifecycle" / SLUG / "pr.json").exists()
+
+
+def test_classify_never_raises_when_the_verdict_root_cannot_resolve(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A resolver failure degrades to the invoking checkout, never a traceback.
+
+    ``resolve_verdict_root`` guards only its CWD-walk branch; its step-1
+    ``resolve_main_repo_root()`` can raise ``CortexProjectRootError``.
+    ``record_pr_opened`` catches that; ``classify`` must too, so the never-crash
+    contract does not rest on ``main()``'s root walk having already succeeded.
+    """
+    monkeypatch.delenv("CORTEX_REPO_ROOT", raising=False)
+    root = _make_root(tmp_path)
+    _write_events(
+        root,
+        _BENIGN_EVENT,
+        json.dumps(
+            {"ts": "2026-06-02T01:02:03Z", "event": "feature_wontfix", "feature": SLUG}
+        ),
+    )
+
+    def _raise(slug: str) -> Path:
+        raise complete_route.CortexProjectRootError("no project root above cwd")
+
+    monkeypatch.setattr(complete_route, "resolve_verdict_root", _raise)
+    monkeypatch.chdir(root)
+
+    result = classify(SLUG, root)
+
+    assert result["route"] == "wontfix", (
+        f"the fallback anchor was not the invoking checkout: {result['route']!r}"
+    )
+
+
+def test_main_root_pr_json_is_found_from_the_worktree_cwd(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Req 2, read leg: a main-root ``pr.json`` reaches Branch 4 from a worktree.
+
+    This is the direction that discriminates. From the *primary* the invoking
+    root and the validated root are the same path, so "classify from the
+    primary finds it" cannot fail whatever the anchor is; only the reverse —
+    the worktree CWD reading a ``pr.json`` that sits outside its own tree —
+    exercises the resolution. A CWD-anchored read finds no ``pr.json`` here,
+    falls into the Branch-3 orphan probe and, with the stub reporting zero
+    matches, restarts the lifecycle at ``first_run``/step1.
+    """
+    monkeypatch.delenv("CORTEX_REPO_ROOT", raising=False)
+    main_repo, worktree_root = _worktree_fixture(tmp_path)
+    _write_pr_json(main_repo, number=7, url="https://github.com/owner/repo/pull/7")
+    assert not (worktree_root / "cortex" / "lifecycle" / SLUG / "pr.json").exists(), (
+        "fixture invalid: the worktree must hold no pr.json of its own"
+    )
+
+    _install_gh_stub(monkeypatch, tmp_path)
+    monkeypatch.setenv("GH_STUB_SCENARIO", "open-anchored")  # Branch 4c
+    # Zero orphan matches, so a CWD-anchored read cannot re-enter Branch 4 by
+    # way of the single-match reconstruction: it lands on first_run instead.
+    monkeypatch.setenv("GH_STUB_PR_LIST_COUNT", "0")
+    monkeypatch.chdir(worktree_root)
+
+    result = classify(SLUG, worktree_root)
+
+    assert result["route"] == "pr_open", (
+        f"pr.json resolved from the CWD, not the validated root: {result['route']!r}"
+    )
+    assert result["pr_state"] == "OPEN"
+    assert result["pr_url"] == "https://github.com/owner/repo/pull/7"
+    assert result["terminal"] is True
+    # The reconstruction arm must not have run: pr.json stays where it was.
+    assert not (worktree_root / "cortex" / "lifecycle" / SLUG / "pr.json").exists()
 
 
 def test_classify_uses_two_distinct_anchors_from_worktree_cwd(
@@ -1527,6 +1609,55 @@ def test_on_main_still_fires_with_no_worktree(
 
     assert result["route"] == "on_main"
     assert result["continue_to"] == "step9"
+
+
+def test_retryable_finalization_on_main_with_a_worktree_restarts_at_first_run(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Req 7's gate crossed with Branch 2's retryable fall-through.
+
+    Branch 2 deliberately does not return for a retryable interactive
+    finalization (¬H, a ``merge_anchor: "merge"`` working-tree row,
+    commit-artifacts true, a committable set, on ``main``), expecting to land on
+    ``on_main``/step9 and retry the finalization commit — the shape
+    ``_b2_committable_on_main`` pins. Add a live ``interactive/{slug}``
+    worktree and the Req-7 gate now sends that same state to the orphan probe,
+    which on zero matches yields ``first_run``/step1, restarting the lifecycle —
+    the outcome Branch 2's own comment calls strictly worse than
+    ``already_complete``. Pre-#487 it was ``on_main``/step9.
+
+    Characterization, not endorsement: the gate is unconditional by Req 7 and
+    the crossing is narrow (it needs a *failed* finalization commit with the
+    worktree still un-cleaned), but it is a behavior change that reading either
+    branch alone does not reveal. Pinned so a future change to either side has
+    to face it. Discriminates against dropping the gate (route becomes
+    ``on_main``).
+    """
+    monkeypatch.delenv("CORTEX_REPO_ROOT", raising=False)
+    root = _make_root(tmp_path)
+    _init_repo(root)
+    (root / "README").write_text("x\n")
+    _git("add", "README", cwd=root)
+    _git("commit", "-m", "c0", cwd=root)
+    # Retryable: row in the working tree only, merge-anchored, untracked (so
+    # the finalization set is committable), no lifecycle.config.md (commit-
+    # artifacts defaults True), no pr.json.
+    _write_fc_event(root, merge_anchor="merge")
+    _add_interactive_worktree(root, tmp_path / "wt")
+    _install_gh_stub(monkeypatch, tmp_path)
+    monkeypatch.setenv("GH_STUB_PR_LIST_COUNT", "0")
+    monkeypatch.chdir(root)
+
+    assert complete_route._current_branch() == "main"
+    assert complete_route._find_slug_worktree(SLUG) is not None
+
+    result = classify(SLUG, root)
+
+    assert result["route"] == "first_run", (
+        "the retryable-finalization crossing changed shape: expected the "
+        f"documented first_run restart, got {result['route']!r}"
+    )
+    assert result["continue_to"] == "step1"
 
 
 def test_accepted_edge_worktree_present_gh_absent_is_terminal_pr_unknown(

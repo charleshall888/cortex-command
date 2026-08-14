@@ -45,8 +45,14 @@ path whose whole job is deciding "is this actually done".
    close. The check is slug-scoped, not a bare `cortex/` test, so a *different* cortex project is caught
    too. Acceptance: with `CORTEX_REPO_ROOT=/nonexistent/bogus` and a real lifecycle under the CWD tree,
    `classify` returns the CWD tree's verdict, not `on_main`; a second test points the env at a populated
-   *other* project lacking this slug and asserts the same. Both fail on unmodified code — measured today:
-   `resolve_main_repo_root()` returns `/nonexistent/bogus` and the route is `on_main`/`step9`.
+   *other* project lacking this slug and asserts the same. What was actually measured:
+   `resolve_main_repo_root()` returns `/nonexistent/bogus` verbatim (`interactive_lock.py:177-179` applies no
+   existence check), and the `on_main`/`step9` route that follows is the behaviour of the **proposed**
+   env-honouring anchor, not of pre-change code. **Orchestrator error, corrected in rework**: that route came
+   from a post-fix emulation during research and this line originally asserted it of HEAD ("Both fail on
+   unmodified code — measured today"). Unmodified `classify` never read the environment at all, so no
+   env-based test can fail against it; the mutation that discriminates is replacing `resolve_verdict_root`
+   with the raw, unvalidated `resolve_main_repo_root`, under which both tests fail.
    **Phase**: Anchor reconciliation
 
 3. **`record_pr_opened`'s `pr_opened` append lands in the pinned log.** The raw `_append_event_atomic` call
@@ -71,8 +77,12 @@ path whose whole job is deciding "is this actually done".
    new anchoring, and its docstring names the supersession — Req 7 of
    `cortex/lifecycle/offload-completemd-pr-state-routing-and/spec.md:35` justified CWD resolution as matching
    "the `_resolve_user_project_root_from_cwd` contract `lifecycle_event` uses", and #484 moved that contract.
-   Acceptance: `uv run pytest tests/test_complete_route.py -q` is green and the rewritten test fails against
-   unmodified `complete_route.py`. **Phase**: Anchor reconciliation
+   Acceptance: `uv run pytest tests/test_complete_route.py -q` is green and the rewritten test fails when
+   `resolve_verdict_root` is replaced by the raw, unvalidated `resolve_main_repo_root` — the mutation that
+   genuinely discriminates, and the design fork the critical review raised. It deliberately does **not** fail
+   against pre-change `complete_route.py`: that code never consulted the environment, so the original clause
+   ("the rewritten test fails against unmodified `complete_route.py`") inherited Req 2a's erroneous
+   measurement and was unfalsifiable by construction. **Phase**: Anchor reconciliation
 
 6. **A worktree-existence predicate exists, distinct from path resolution.** The `interactive/{slug}`
    block-matching logic inside `_resolve_worktree_path` (`:133-153`) is extracted into a helper returning
@@ -158,6 +168,16 @@ path whose whole job is deciding "is this actually done".
   through, and Branch 4 routes it on real PR state. `pr.json`'s move does not narrow this — the
   valid-retry-target disjunct already held from both trees. Accepted: closing it means Option B, which Req 4
   rejects for silently reclassifying the worktree population.
+
+- **Req 7's gate crossed with Branch 2's retryable fall-through**: a retryable finalization (¬H, a
+  `merge_anchor: "merge"` working-tree row, `commit-artifacts: true`, a committable set) on `main` with no
+  `pr.json` **and** a surviving `interactive/{slug}` worktree no longer lands on `on_main`/step9 — the gate
+  sends it to the orphan probe, which on zero matches returns `first_run`/step1, restarting the lifecycle.
+  That is the outcome Branch 2's own comment calls "strictly worse than `already_complete`", so it is a real
+  cost, not a neutral re-route. Accepted: the gate is unconditional by Req 7, and the crossing needs a
+  *failed* finalization commit with the worktree still un-cleaned. Pinned as characterization by
+  `test_retryable_finalization_on_main_with_a_worktree_restarts_at_first_run` rather than left implicit,
+  because neither branch reveals it when read alone.
 
 - **The destructive arm's authorization and its target resolve in different trees**: `pr.json` supplies
   `head_branch` from the main root, while `_resolve_worktree_path`, `status --porcelain`, and `merge-base
