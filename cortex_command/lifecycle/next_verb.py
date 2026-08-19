@@ -84,6 +84,7 @@ from typing import List, Optional
 from cortex_command.backlog import _telemetry
 from cortex_command.common import (
     LifecycleStateReduction,
+    _resolve_user_project_root_from_cwd,
     reduce_lifecycle_state,
     requires_review,
 )
@@ -287,6 +288,27 @@ def _nominal_forward_path(state: str) -> List[str]:
     return path
 
 
+def _artifact_dir_for(feature: str) -> Optional[Path]:
+    """The directory this phase's artifacts belong in — the CWD anchor.
+
+    ``register-artifact`` and ``stage-artifacts`` both resolve through
+    ``_resolve_user_project_root_from_cwd``, so this reports what those verbs
+    will actually do rather than a second opinion about where artifacts should
+    go. Reporting only, per #497: no verb starts writing anywhere new, because a
+    fix that silently redirected artifact writes would re-open #484 from the
+    other side.
+
+    ``None`` when the CWD root cannot be resolved. The envelope then carries a
+    null artifact path rather than a guess — the whole defect was an anchor the
+    caller could not see, and a fabricated one is worse than an absent one.
+    """
+    try:
+        root = _resolve_user_project_root_from_cwd()
+    except Exception:  # noqa: BLE001 — the served envelope must not fail on this
+        return None
+    return root / "cortex" / "lifecycle" / feature
+
+
 def build_served_envelope(
     *,
     state: str,
@@ -298,6 +320,7 @@ def build_served_envelope(
     at_resume: bool = True,
     explain: bool = False,
     phase: Optional[str] = None,
+    artifact_dir: Optional[Path] = None,
 ) -> dict:
     """Build the served ``next`` envelope for a concrete transition-table *state*.
 
@@ -370,6 +393,25 @@ def build_served_envelope(
         {"step": "cycle", "value": cycle, "checked": checked, "total": total},
         {"step": "log_resolution", "log_path": str(events_log), "anchor": "main-root"},
     ]
+    if artifact_dir is not None:
+        # The envelope reported exactly one of the two anchors, and it was the one
+        # the agent must NOT write artifacts into. Plan for wild-light #523 read
+        # ``advance_contract.log_path`` as "where this lifecycle lives", wrote
+        # plan.md, staged and committed — all from the main repo root, in a
+        # session whose CWD was a worktree. plan.md landed on ``main`` where the
+        # branch doing the work could not see it, and nothing errored.
+        #
+        # Both anchors are emitted together so neither can be inferred from the
+        # other, and both are absolute: relative is what left the CWD unstated.
+        # In a primary checkout they coincide, which is the point — the field is
+        # consistent rather than a second source of truth.
+        evidence_trace.append(
+            {
+                "step": "artifact_resolution",
+                "path": str(artifact_dir),
+                "anchor": "cwd",
+            }
+        )
     if explain:
         evidence_trace.append(
             {
@@ -382,6 +424,13 @@ def build_served_envelope(
 
     envelope = {
         "state": state,
+        "roots": {
+            "artifacts": {
+                "path": str(artifact_dir) if artifact_dir is not None else None,
+                "anchor": "cwd",
+            },
+            "events_log": {"path": str(events_log), "anchor": "main-root"},
+        },
         "legacy_display_phase": st.legacy_display_phase,
         "fragment_ref": fragment_ref,
         "pause_spec": pause_spec,
@@ -519,6 +568,7 @@ def next_state(
             at_resume=True,
             explain=explain,
             phase=resolved.get("phase"),
+            artifact_dir=_artifact_dir_for(feature),
         )
         envelope["feature"] = feature
         envelope["paused"] = bool(resolved.get("paused"))

@@ -525,3 +525,69 @@ def test_worktree_next_resolves_main_root_log_and_detector_reports_divergence(
     assert main_phase == "plan"
     assert wt_phase == "review"
     assert main_phase != wt_phase  # the two-log divergence a mismatch detector surfaces
+
+
+def test_worktree_next_reports_both_anchors_not_just_the_log(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """#497: the envelope named one anchor, and it was the wrong one to write into.
+
+    ``advance_contract.log_path`` and the ``log_resolution`` evidence row both
+    carry the main-root log, and nothing carried an artifact root at all. The
+    only absolute path the agent was handed therefore pointed at the main repo
+    in a session whose CWD was a worktree: Plan wrote plan.md, registered it,
+    advanced, staged and committed from the wrong tree, and nothing errored.
+
+    Reporting only — no verb writes anywhere new. The assertion that matters is
+    that the two paths are *different and both present*, so neither can be
+    inferred from the other.
+    """
+    monkeypatch.delenv("CORTEX_REPO_ROOT", raising=False)
+    monkeypatch.setenv("CORTEX_BACKLOG_DIR", str(tmp_path / "no-backlog"))
+    monkeypatch.delenv("CORTEX_LIFECYCLE_PROTOCOL_MIN", raising=False)
+    monkeypatch.delenv("CORTEX_LIFECYCLE_PROTOCOL_MAX", raising=False)
+    main_r, wt = _make_worktree_fixture(tmp_path)
+    _seed_feature(
+        main_r, _SLUG, {"spec.md": "# spec\n", "events.log": '{"event": "spec_approved"}\n'}
+    )
+    _seed_feature(wt, _SLUG, {"spec.md": "# spec\n"})
+
+    monkeypatch.chdir(wt)
+    r = next_state(_SLUG)
+
+    roots = r["roots"]
+    assert roots["artifacts"]["path"] == str(wt / "cortex" / "lifecycle" / _SLUG)
+    assert roots["artifacts"]["anchor"] == "cwd"
+    assert roots["events_log"]["path"] == str(
+        main_r / "cortex" / "lifecycle" / _SLUG / "events.log"
+    )
+    assert roots["events_log"]["anchor"] == "main-root"
+    assert roots["artifacts"]["path"] != roots["events_log"]["path"]
+
+    # Absolute, both of them: relative is what left the CWD unstated.
+    assert Path(roots["artifacts"]["path"]).is_absolute()
+    assert Path(roots["events_log"]["path"]).is_absolute()
+
+    # The evidence trace carries the same pair, in its existing {step, ...} idiom.
+    steps = {row["step"]: row for row in r["evidence_trace"]}
+    assert steps["artifact_resolution"]["anchor"] == "cwd"
+    assert steps["log_resolution"]["anchor"] == "main-root"
+
+
+def test_primary_checkout_reports_two_anchors_that_agree(
+    repo_root: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A non-worktree session must be unaffected: the roots coincide.
+
+    The field is redundant there by design, and redundant-and-consistent is the
+    requirement — a second source of truth that could disagree with itself would
+    be worse than the single path it replaces.
+    """
+    _seed_feature(repo_root, _SLUG, {"spec.md": "# spec\n", "events.log": _SPEC_APPROVED})
+    monkeypatch.chdir(repo_root)
+    r = next_state(_SLUG)
+
+    roots = r["roots"]
+    assert (
+        Path(roots["events_log"]["path"]).parent == Path(roots["artifacts"]["path"])
+    ), "the two anchors disagree in a primary checkout"

@@ -20,7 +20,7 @@ Invocation forms: `/cortex-core:build <feature>`, `<feature> <phase>`, reserved 
 
 **Not yet refined.** A served `state` of `research`, `specify`, or `new` means there is no spec to build from: say so and hand off to `/cortex-core:refine {feature}`. Never start a plan without both `research.md` and `spec.md` — `spec.md` alone is an inconsistent pair (overnight needs both), so warn and route to refine.
 
-A **`resume`** state is served phase-keyed: `state` is the current phase, `advance_contract` threads into `cortex-lifecycle-advance` at each boundary, and `pause_spec` drives the kept pauses.
+A **`resume`** state is served phase-keyed: `state` is the current phase, `advance_contract` threads into `cortex-lifecycle-advance` at each boundary, and `pause_spec` drives the kept pauses. Artifacts go under `roots.artifacts.path` — never under the log path, which is main-root pinned and is a different tree from a worktree.
 
 <!-- pause: empty-lifecycle-offer question -->
 <!-- pause: ambiguous-backlog-pick question -->

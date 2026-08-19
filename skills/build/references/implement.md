@@ -4,7 +4,7 @@ Dispatch a fresh sub-task per task — a clean context prevents stale assumption
 
 ### 1. Pre-Flight Check
 
-Read `cortex/lifecycle/{feature}/plan.md`; identify pending tasks (`[ ]`).
+Read `{roots.artifacts.path}/plan.md`; identify pending tasks (`[ ]`).
 
 **Short road (no plan.md)** — the feature arrived via `spec.approved-direct`, so Plan was skipped by the state machine rather than the artifact going missing. Derive tasks from spec.md's acceptance criteria and implement in-session: no batching, no sub-task dispatch, no batch emissions. Run the branch decision, do the work, exit via §4.
 
@@ -62,7 +62,7 @@ Each builder gets the task's full block from plan.md, 2–3 sentences of archite
 - Treat the task's file paths as authoritative; flag a wrong-looking one rather than silently deviating.
 - Verify per the Verification field and only that, never a broader suite it doesn't name.
 - Commit via the Skill tool (`skill: "commit"`), never raw `git commit` or `git -C`.
-- Read `cortex/lifecycle/{feature}/spec.md` only if the task references it.
+- Read `{roots.artifacts.path}/spec.md` only if the task references it.
 - Flag any self-sealing check in the exit report rather than self-certifying.
 
 Its final message reports task name, status (completed/partial/failed), files modified, verification outcome, commit hash, and deviations.

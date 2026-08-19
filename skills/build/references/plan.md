@@ -4,7 +4,7 @@ Numbered tasks with file paths and verification steps. Prose with structural con
 
 ## 1. Load context
 
-Read `cortex/lifecycle/{feature}/research.md` and `spec.md`, plus `cortex/lifecycle.config.md` if present.
+Read `{roots.artifacts.path}/research.md` and `spec.md`, plus `cortex/lifecycle.config.md` if present.
 
 ### 1a. Check criticality
 
@@ -107,7 +107,7 @@ Off `main`/`master` the sub-choices collapse, so the surface offers only `[Appro
 | **"Other"**, cancel-intent | `cancelled` | (omit) |
 | **"Other"**, any other text | `revise` | (omit) |
 
-**Trunk cost**: no isolation, so same-file tasks serialize — the plan must carry write-serialization edges. When this plan already has some (`grep -c 'write-serialization' cortex/lifecycle/{feature}/plan.md`), cite the count.
+**Trunk cost**: no isolation, so same-file tasks serialize — the plan must carry write-serialization edges. When this plan already has some (`grep -c 'write-serialization' {roots.artifacts.path}/plan.md`), cite the count.
 
 ```bash
 cortex-lifecycle-advance plan-decision --feature <name> --decision <decision> [--dispatch-choice <mode>]
