@@ -52,7 +52,7 @@ from pathlib import Path
 from typing import Optional
 
 from cortex_command import override_reason
-from cortex_command.common import CortexProjectRootError
+from cortex_command.common import CortexProjectRootError, stage_path
 from cortex_command.lifecycle.log_resolver import (
     detect_split_log,
     resolve_events_log,
@@ -126,6 +126,25 @@ def _append_event_atomic(log_path: Path, row: str) -> None:
             os.close(lock_fd)
         except OSError:
             pass
+
+    # Step 5: stage the row. The flock serialises this verb against itself; it
+    # does nothing about ``pre-commit``, which stashes unstaged tracked changes
+    # before running hooks and restores them afterwards. An append made while a
+    # sibling session commits goes into that session's stash and does not come
+    # back — tree clean, matching HEAD, empty ``git stash list``, nothing to
+    # notice. events.log is the sole reduction source for phase, criticality,
+    # tier and pause state, so a dropped append silently rewinds the state
+    # machine while the verb that wrote it has already reported success.
+    #
+    # Outside the flock deliberately: staging is a separate git process and does
+    # not need the append lock, and holding it across a subprocess would widen
+    # the window every other appender waits on.
+    problem = stage_path(log_path)
+    if problem is not None:
+        # Loud, because the original loss was undetectable precisely because the
+        # write reported success. A row that could not be staged is still on
+        # disk and still at risk; say so rather than imply it is safe.
+        sys.stderr.write(f"cortex-lifecycle-event: {problem}\n")
 
 
 # ---------------------------------------------------------------------------

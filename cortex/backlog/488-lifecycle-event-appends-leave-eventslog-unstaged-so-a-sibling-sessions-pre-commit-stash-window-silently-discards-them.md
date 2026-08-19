@@ -2,11 +2,11 @@
 schema_version: "1"
 uuid: 8e6028c5-170a-4561-b83b-2fef31a5d0d7
 title: Lifecycle event appends leave events.log unstaged, so a sibling session's pre-commit stash window silently discards them
-status: backlog
+status: complete
 priority: high
 type: bug
 created: 2026-08-13
-updated: 2026-08-13
+updated: 2026-08-19
 tags: ['lifecycle', 'events-log', 'concurrency', 'pre-commit']
 areas: ['lifecycle']
 blocked-by: []
@@ -94,3 +94,70 @@ introducing a lock.
 - `cortex_command/lifecycle/advance.py` — the emitting verb that reports `advanced: true`
 - `cortex/backlog/135-shared-git-index-race-between-parallel-claude-sessions-causes-wrong-files-to-land-in-commits.md`
   — the wontfix this must be read against
+
+---
+
+## Amendment 2026-08-19 — `cortex/backlog/*.md` belongs in this ticket's scope, not the consumer's
+
+Routed here from wild-light on a re-read of the 2026-08-13 split. That split left "the
+`cortex/backlog/*.md` reversion class" downstream on the reasoning that staging `events.log` upstream
+would not help backlog status flips. True as far as it goes — but it does not follow that the fix is
+downstream. **Those files are written by this codebase**, by `cortex_command/backlog/update_item.py`,
+and no production write path in `cortex_command/backlog/` or `cortex_command/lifecycle/` calls
+`git add` (grepped 2026-08-19; the only hits are in `tests/`). A consumer repo has nothing to change.
+It is the same defect as `events.log`, on a different file family, with the same remedy.
+
+**It is the worse of the two, and that inverts the usual priority argument.** An `events.log` loss
+self-announces: the next `advance` contradicts reality and refuses. A lost `status:` flip announces
+nothing. The ticket stays `backlog`, keeps surfacing in `cortex-backlog-ready`, and reads as
+never-triaged. The only detector is re-reading frontmatter after the window closes, and nothing prompts
+that. Original evidence: nine backlog items reverted wholesale in one session, `git status` clean,
+mtimes identical (wild-light #488, Amendment 2026-08-12).
+
+**Scope note, not a demand to widen this ticket.** If staging is the chosen mechanism it should be one
+mechanism applied at each write site, rather than a special case in `_append_event_atomic`. The Edges
+above carry over unchanged — staging has side effects, the resolved path may be the main root, and a
+failed stage must be loud. `generate_index.py` writes `cortex/backlog/index.{md,json}` in the same
+breath as a mutation, so a backlog stage that covers the item but not the index leaves the pair
+inconsistent in the index rather than in the working tree.
+
+Splitting this off into its own ticket is a reasonable call. What is not reasonable is leaving it
+downstream, where the code does not live.
+
+---
+
+## Resolution, 2026-08-19 — one `stage_path` helper, applied at both write families
+
+`common.stage_path(path)` runs `git add` with `cwd` set to the file's own directory, so the index it
+stages into is the one that actually owns the file — the Edge's point, and it matters post-#484 because
+the resolved `events.log` is the *main root's* even when the session's CWD is a worktree. Staging into
+the worktree's index would protect nothing. Pinned by a real `git worktree add` test, not reasoned about.
+
+Applied at `_append_event_atomic` (this ticket) and at both backlog item writers, `create_item` and
+`update_item` (the amendment). One mechanism, as the amendment asked, not a special case in the append.
+
+Edges, answered:
+
+- **Failure is loud.** A stage that fails writes to stderr rather than reporting the same success. Two
+  cases are silently fine because neither can be stashed: the file is outside a git repository, and the
+  file is ignored — `pre-commit` stashes *tracked* changes, so an untracked file was never at risk.
+- **Staging has side effects,** and the assumption was confirmed rather than relied on: this repo's
+  commit skill uses `git commit --only -- <pathspec>`, so content staged but not named is not swept.
+- **Staging runs outside the flock.** It is a separate git process and does not need the append lock;
+  holding the lock across a subprocess would widen the window every other appender waits on.
+
+**Cost, and one thing it broke.** The first implementation classified before staging — is this a repo, is
+the file ignored — at three git invocations per append. That is real overhead on a frequent operation, and
+it broke `test_merge_sha_capture` outright: `patch.object(review_dispatch.subprocess, "run", …)` patches
+the attribute on the shared `subprocess` module, so a command-blind stub handed its queued HEAD SHAs to
+the new `git add` calls and collapsed the before/after pair the rework circuit-breaker compares. The
+classification now runs only when there is a failure to explain, so the happy path is **one subprocess,
+~10ms**, and the stub was made command-aware — it should never have been answering calls it was not
+written for.
+
+**`generate_index.py` deliberately not wired.** `index.{md,json}` are gitignored here, so staging them is
+a no-op, and where a consumer tracks them a stale index is self-healing: the next mutation regenerates it.
+Three more git calls per regeneration is not worth a transient the tool already repairs.
+
+**Not covered.** `plan.md` task checkpoints were lost in the same window (#476) and are still unstaged.
+Whether artifact writes deserve the same treatment is a separate call, exactly as the Edges say.

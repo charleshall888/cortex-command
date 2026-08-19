@@ -274,10 +274,19 @@ class TestReviewResultMergeSha(unittest.IsolatedAsyncioTestCase):
             sha_values = iter(["before_sha", "after_sha"])
 
             def _subproc_side_effect(cmd, **kwargs):
+                # ``patch.object(review_dispatch.subprocess, "run", ...)`` patches
+                # the attribute on the shared subprocess module, so this stub sees
+                # every git call the code under test makes — including the
+                # ``git add`` that staging an events.log append now performs.
+                # Keyed on the command so unrelated calls cannot consume a SHA and
+                # collapse the before/after pair the circuit-breaker compares.
                 proc = MagicMock()
                 proc.returncode = 0
-                proc.stdout = next(sha_values, "after_sha") + "\n"
                 proc.stderr = ""
+                if "rev-parse" in cmd:
+                    proc.stdout = next(sha_values, "after_sha") + "\n"
+                else:
+                    proc.stdout = ""
                 return proc
 
             with patch.object(review_dispatch, "parse_verdict", side_effect=_parse_side_effect), \

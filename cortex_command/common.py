@@ -58,6 +58,75 @@ class CortexProjectRootError(RuntimeError):
     """
 
 
+def stage_path(path: Path) -> str | None:
+    """``git add`` *path* so a sibling session's pre-commit stash cannot eat it.
+
+    ``pre-commit`` stashes unstaged **tracked** changes before running hooks and
+    restores them afterwards. A file this codebase has just written is unstaged
+    and tracked, so when a sibling session commits in the same window the write
+    goes into that session's stash and does not come back. The tree returns
+    clean and matching HEAD with an empty ``git stash list`` — no conflict, no
+    error, nothing to notice. Staged content is outside the stash entirely.
+
+    Detect-and-repair does not substitute for this. The restore leg can
+    *duplicate* rather than discard: after re-applying clobbered edits, one
+    observed restore re-applied a pre-clobber copy on top, committing two
+    byte-identical copies. "Verify on disk, don't trust the success line" passes
+    against that — the row is present and the frontmatter is well-formed. Only
+    counting occurrences catches it, and staging avoids both legs.
+
+    Returns ``None`` on success or when there was nothing at risk, else a short
+    diagnostic the caller should surface. Two cases are silently fine, because
+    neither can be stashed: *path* is not inside a git repository at all, and
+    *path* is ignored (untracked files are not stashed by pre-commit). Anything
+    else is reported rather than swallowed — silence is what made the original
+    loss undetectable, and a verb that reports success while its write is
+    eligible to vanish is the whole defect.
+
+    Runs with ``cwd`` set to the file's own directory, so the index it stages
+    into is the one that actually owns the file. That matters post-#484: the
+    resolved ``events.log`` is the *main root's* even when the session's CWD is
+    a worktree, and staging it into the worktree's index would protect nothing.
+    """
+    import subprocess
+
+    def _git(args: list[str], cwd: str):
+        return subprocess.run(
+            ["git", *args], cwd=cwd, capture_output=True, text=True,
+            timeout=10, check=False,
+        )
+
+    try:
+        if not path.exists():
+            return None
+        # Absolute throughout: git resolves a relative pathspec against ``cwd``,
+        # and ``cwd`` here is the file's own directory, so a relative *path*
+        # would be looked up one level down from itself.
+        path = path.resolve()
+        cwd = str(path.parent)
+
+        # One subprocess on the happy path. Classifying first — is this a repo,
+        # is the file ignored — cost three git invocations on every append, and
+        # appends are frequent enough in the pipeline for that to matter. The
+        # classification still happens, just only when there is a failure to
+        # explain, which is rare.
+        added = _git(["add", "--", str(path)], cwd)
+        if added.returncode == 0:
+            return None
+
+        inside = _git(["rev-parse", "--is-inside-work-tree"], cwd)
+        if inside.returncode != 0 or inside.stdout.strip() != "true":
+            return None  # not a repo: nothing stashes it, nothing to protect
+        if _git(["check-ignore", "-q", "--", str(path)], cwd).returncode == 0:
+            return None  # untracked by policy; pre-commit never stashes it
+
+        detail = (added.stderr or "").strip().splitlines()
+        return f"git add failed for {path}: {detail[0] if detail else 'unknown error'}"
+    except Exception as exc:  # noqa: BLE001 — reported, never raised at the caller
+        return f"could not stage {path}: {exc}"
+    return None
+
+
 def is_valid_repo_root(candidate: Path | str | None) -> bool:
     """Return ``True`` when *candidate* is, in place, a real repo root.
 

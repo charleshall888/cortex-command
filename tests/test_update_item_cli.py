@@ -10,6 +10,7 @@ Covers Task 4 of the make-cortex-update-item-accept-flag lifecycle:
 
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -308,3 +309,49 @@ def test_both_dependency_directions_are_settable() -> None:
     assert _DEST_TO_FRONTMATTER_KEY["blocked_by"] == "blocked-by"
     assert _DEST_TO_FRONTMATTER_KEY["blocks"] == "blocks"
     assert {"blocked_by", "blocks"} <= _SCALAR_DESTS
+
+
+# ---------------------------------------------------------------------------
+# #488 amendment — a backlog write is staged for the same reason
+# ---------------------------------------------------------------------------
+
+
+def test_a_status_flip_is_staged(tmp_path, monkeypatch):
+    """The worse half of the same defect, and the one with no detector.
+
+    An events.log loss self-announces: the next advance contradicts reality and
+    refuses. A lost ``status:`` flip announces nothing — the ticket stays in the
+    ready list and reads as never-triaged. Nine items were reverted wholesale in
+    one observed session with ``git status`` clean and mtimes identical. The
+    files are written by this codebase, so the remedy belongs here.
+    """
+    import subprocess
+    from cortex_command.backlog import update_item as ui
+
+    root = tmp_path / "proj"
+    backlog = root / "cortex" / "backlog"
+    backlog.mkdir(parents=True)
+    item = backlog / "001-thing.md"
+    item.write_text(
+        "---\ntitle: Thing\nstatus: backlog\ntype: bug\n---\nBody.\n", encoding="utf-8"
+    )
+    for args in (
+        ["init", "-q", "-b", "main"],
+        ["config", "user.email", "t@example.com"],
+        ["config", "user.name", "Test"],
+        ["config", "commit.gpgsign", "false"],
+        ["config", "core.hooksPath", os.devnull],
+        ["add", "-A"],
+        ["commit", "-q", "-m", "seed"],
+    ):
+        subprocess.run(["git", *args], cwd=str(root), check=True, capture_output=True)
+
+    monkeypatch.delenv("CORTEX_REPO_ROOT", raising=False)
+    monkeypatch.chdir(root)
+    ui.update_item(item, {"status": "complete"}, backlog)
+
+    staged = subprocess.run(
+        ["git", "diff", "--cached", "--name-only"],
+        cwd=str(root), capture_output=True, text=True, check=True,
+    ).stdout
+    assert "cortex/backlog/001-thing.md" in staged

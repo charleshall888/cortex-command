@@ -35,6 +35,7 @@ from cortex_command.common import (
     atomic_write,
     normalize_status,
     slugify,
+    stage_path,
 )
 
 
@@ -347,6 +348,15 @@ def create_item(
     # body alone also covers `--body ""`, where appending to the body would
     # leave a blank line after the frontmatter and abort for the same reason.
     atomic_write(item_path, "".join(lines).rstrip("\n") + "\n")
+    # Same stash window as events.log, and worse: an events.log loss
+    # self-announces because the next advance contradicts reality and
+    # refuses, while a lost `status:` flip announces nothing — the ticket
+    # stays in the ready list and reads as never-triaged. Nine items were
+    # reverted wholesale in one observed session, git status clean, mtimes
+    # identical. Staging the newly filed item keeps it out of the stash.
+    problem = stage_path(item_path)
+    if problem is not None:
+        print(f"Warning: {problem}", file=sys.stderr)
 
     _append_event(
         item_path,

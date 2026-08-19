@@ -39,6 +39,7 @@ from cortex_command.common import (
     _resolve_user_project_root,
     atomic_write,
     normalize_status,
+    stage_path,
 )
 
 
@@ -583,6 +584,15 @@ def update_item(
 
     # Write atomically
     atomic_write(item_path, text)
+    # Same stash window as events.log, and worse: an events.log loss
+    # self-announces because the next advance contradicts reality and
+    # refuses, while a lost `status:` flip announces nothing — the ticket
+    # stays in the ready list and reads as never-triaged. Nine items were
+    # reverted wholesale in one observed session, git status clean, mtimes
+    # identical. Staging the mutated item keeps it out of the stash.
+    problem = stage_path(item_path)
+    if problem is not None:
+        print(f"Warning: {problem}", file=sys.stderr)
     written: list[Path] = [item_path]
 
     # Determine new values for event logging

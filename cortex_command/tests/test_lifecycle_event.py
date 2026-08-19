@@ -14,7 +14,9 @@ This test file also satisfies spec R3's acceptance criterion (the CLI is the
 from __future__ import annotations
 
 import json
+import os
 import re
+import subprocess
 import threading
 from pathlib import Path
 
@@ -1077,3 +1079,99 @@ class TestOverrideReasonClause:
         assert "cortex-lifecycle-event" in err, err
         assert "zzz" in err, err
         assert "cortex-refine" not in err, err
+
+
+# ---------------------------------------------------------------------------
+# #488 — the append survives a sibling session's pre-commit stash window
+# ---------------------------------------------------------------------------
+
+
+class TestAppendIsStaged:
+    """``pre-commit`` stashes unstaged *tracked* changes and restores them after.
+
+    An append made while a sibling session commits goes into that session's
+    stash and does not come back: tree clean, matching HEAD, empty stash list,
+    nothing to notice. events.log is the sole reduction source for phase,
+    criticality, tier and pause state, so the loss silently rewinds the state
+    machine after the verb has already reported success. Staged content is
+    outside the stash entirely, which is the argument for staging over any
+    detect-and-repair approach — the restore leg can *duplicate* rather than
+    discard, and a duplicated append passes every "verify it is on disk" check.
+    """
+
+    def _repo(self, tmp_path: Path) -> Path:
+        root = tmp_path / "proj"
+        (root / "cortex" / "lifecycle").mkdir(parents=True)
+        for args in (
+            ["init", "-q", "-b", "main"],
+            ["config", "user.email", "t@example.com"],
+            ["config", "user.name", "Test"],
+            ["config", "commit.gpgsign", "false"],
+            ["config", "core.hooksPath", os.devnull],
+        ):
+            subprocess.run(["git", *args], cwd=str(root), check=True, capture_output=True)
+        return root
+
+    def test_the_appended_row_is_staged(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        root = self._repo(tmp_path)
+        monkeypatch.delenv("CORTEX_REPO_ROOT", raising=False)
+        monkeypatch.chdir(root)
+
+        log_event(event="phase_transition", feature="feat")
+
+        staged = subprocess.run(
+            ["git", "diff", "--cached", "--name-only"],
+            cwd=str(root), capture_output=True, text=True, check=True,
+        ).stdout
+        assert "cortex/lifecycle/feat/events.log" in staged
+
+    def test_a_worktree_append_stages_into_the_main_root_index(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The resolved log is the main root's, so its index is the one to stage.
+
+        Staging into the worktree's index would protect nothing: the file the
+        stash would eat lives in the other tree.
+        """
+        root = self._repo(tmp_path)
+        (root / "README").write_text("x\n")
+        subprocess.run(["git", "add", "-A"], cwd=str(root), check=True, capture_output=True)
+        subprocess.run(
+            ["git", "commit", "-q", "-m", "c0"], cwd=str(root), check=True, capture_output=True
+        )
+        wt = tmp_path / "wt"
+        subprocess.run(
+            ["git", "worktree", "add", "-q", "-b", "side", str(wt)],
+            cwd=str(root), check=True, capture_output=True,
+        )
+        (wt / "cortex" / "lifecycle").mkdir(parents=True, exist_ok=True)
+
+        monkeypatch.delenv("CORTEX_REPO_ROOT", raising=False)
+        monkeypatch.chdir(wt)
+        log_event(event="phase_transition", feature="feat")
+
+        main_staged = subprocess.run(
+            ["git", "diff", "--cached", "--name-only"],
+            cwd=str(root), capture_output=True, text=True, check=True,
+        ).stdout
+        wt_staged = subprocess.run(
+            ["git", "diff", "--cached", "--name-only"],
+            cwd=str(wt), capture_output=True, text=True, check=True,
+        ).stdout
+        assert "cortex/lifecycle/feat/events.log" in main_staged
+        assert "cortex/lifecycle/feat/events.log" not in wt_staged
+
+    def test_no_repo_is_silent_rather_than_a_failure(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys
+    ) -> None:
+        """Nothing stashes a file outside a repo, so there is nothing to warn about."""
+        (tmp_path / "cortex" / "lifecycle").mkdir(parents=True)
+        monkeypatch.delenv("CORTEX_REPO_ROOT", raising=False)
+        monkeypatch.chdir(tmp_path)
+
+        log_event(event="phase_transition", feature="feat")
+
+        assert "git add failed" not in capsys.readouterr().err
+        assert (tmp_path / "cortex" / "lifecycle" / "feat" / "events.log").is_file()
