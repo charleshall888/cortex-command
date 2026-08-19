@@ -1,7 +1,6 @@
 ---
 name: pick
-description: No preference here — make the call yourself, or re-ask me better.
-disable-model-invocation: true
+description: No preference here — make the call yourself, or re-ask me better. Use on "pick", "you choose", "either is fine", or any fork already delegated to you.
 ---
 
 # Pick
@@ -13,4 +12,4 @@ Work out why the choice is open:
 - **Small either-way call** — just make it. No research, no ceremony.
 - **Missing information** — research until it resolves, then decide.
 - **Open-ended or creative** — fan out subagents on distinct angles, synthesize, commit.
-- **Genuinely mine** — taste, priorities, risk I own, or context you can't see. Use `/hmm` to re-ask.
+- **Genuinely mine** — taste, priorities, risk I own, or context you can't see. Ask me again, plainly.

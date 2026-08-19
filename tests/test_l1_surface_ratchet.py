@@ -76,12 +76,20 @@ _BASELINES: dict[str, int] = {
     "build": 151,
     "morning-review": 320,
     "overnight": 314,
-    "pick": 67,
+    # Re-capped 67 -> 152 when ``pick`` dropped ``disable-model-invocation: true``
+    # to become agent-discoverable. That flag also blocks the Skill tool
+    # (scripts/validate-callgraph.py), so the skill was previously reachable only
+    # by a human typing the slash command — and a slash-only skill needs no
+    # routing text, which is why 67 bytes were enough. A model-routable skill is
+    # chosen from its description alone, so the trigger phrases are the surface
+    # doing the work, not decoration. lifecycle-id=pick-agent-discoverable,
+    # date=2026-08-19
+    "pick": 152,
     "pr": 66,
     "refine": 149,
     "requirements": 203,
     "research": 157,
-    "total": 2326,
+    "total": 2411,
 }
 
 
