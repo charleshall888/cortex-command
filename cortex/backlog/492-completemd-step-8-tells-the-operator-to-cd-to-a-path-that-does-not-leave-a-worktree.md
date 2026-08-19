@@ -2,11 +2,11 @@
 schema_version: "1"
 uuid: 58da7cd0-9021-481f-914d-42732abd4b2c
 title: complete.md Step 8 tells the operator to cd to a path that does not leave a worktree
-status: backlog
+status: complete
 priority: medium
 type: bug
 created: 2026-08-13
-updated: 2026-08-13
+updated: 2026-08-19
 tags: ['lifecycle', 'worktree', 'complete', 'skills']
 areas: ['lifecycle']
 ---

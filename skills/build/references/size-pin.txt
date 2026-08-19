@@ -1,5 +1,6 @@
-57267
+57323
 # raised: implement.md SS3 must route its Review return through SS4 and SS4 must list the rework-review state, because the prescribed rework loop was previously unrepresentable in the state machine, lifecycle-id=433, date=2026-08-03
 # raised: review.md must state which tier each stage runs at, because its opening line claimed complex-tier-only while the SKILL.md gate table forced the phase at high criticality — the two disagreed and nothing resolved them, lifecycle-id=449, date=2026-08-04
 # raised: review.md SS3 must define the response to a review.md that was never written and SS2 must admit resuming the original reviewer, because the phase had no coherent instruction for an idle reviewer that produced no artifact, lifecycle-id=457, date=2026-08-07
 # raised: review.md SS3 must state the terminal for a resumed reviewer that still writes nothing, because the closing escalate clause attaches to the missing-drift re-dispatch and left resume-and-await with no written exit, lifecycle-id=457, date=2026-08-07
+# raised: complete.md Step 8's non-ExitWorktree escape must name --git-common-dir and say why, because --show-toplevel returns the worktree and left the hard guard re-firing forever, lifecycle-id=492, date=2026-08-19

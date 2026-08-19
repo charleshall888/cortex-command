@@ -1,0 +1,1 @@
+{"tool_name": "mcp__Claude_Browser__navigate", "tool_input": {"url": "https://example.com"}, "tool_response": [{"type": "text", "text": "navigated"}], "session_id": "__SESSION_ID__"}

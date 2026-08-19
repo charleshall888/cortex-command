@@ -17,9 +17,13 @@ INPUT=$(cat)
 #     "tool_input": { "command": "..." },
 #     "tool_response": { "exit_code": N, "stdout": "...", "stderr": "..." },
 #     "session_id": "..." }
+# ``.tool_response`` is not always an object: MCP tools return an array (and
+# some return a bare string), and jq cannot index either with a string. Guard on
+# the type rather than indexing blind — under ``set -e`` the jq error aborted the
+# hook with exit 5 before the Bash filter below, on every such call.
 TOOL_NAME=$(echo "$INPUT" | jq -r '.tool_name // empty')
-EXIT_CODE=$(echo "$INPUT" | jq -r '.tool_response.exit_code // 0')
-STDERR_TEXT=$(echo "$INPUT" | jq -r '.tool_response.stderr // empty')
+EXIT_CODE=$(echo "$INPUT" | jq -r 'if (.tool_response | type) == "object" then (.tool_response.exit_code // 0) else 0 end')
+STDERR_TEXT=$(echo "$INPUT" | jq -r 'if (.tool_response | type) == "object" then (.tool_response.stderr // empty) else empty end')
 COMMAND_TEXT=$(echo "$INPUT" | jq -r '.tool_input.command // empty')
 SESSION_ID=$(echo "$INPUT" | jq -r '.session_id // empty')
 

@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: f2b1265f-9207-4290-9f48-51b506cd42e7
 title: cortex-tool-failure-tracker.sh dies on every array-shaped tool_response (1,240 observed failures)
-status: backlog
+status: complete
 priority: medium
 type: bug
 created: 2026-08-19
@@ -67,3 +67,20 @@ Suggested shape:
 EXIT_CODE=$(echo "$INPUT" | jq -r 'if (.tool_response|type)=="object" then (.tool_response.exit_code // 0) else 0 end')
 STDERR_TEXT=$(echo "$INPUT" | jq -r 'if (.tool_response|type)=="object" then (.tool_response.stderr // empty) else empty end')
 ```
+
+---
+
+## Correction on close, 2026-08-19
+
+"It has never once succeeded" is a measurement artifact, not a finding. Claude Code writes an
+`attachment` record only for a **failing** hook spawn, so the audit's denominator can only ever contain
+failures — an exit-0 spawn leaves no row to count. Re-measured in this repo: all 478 recorded failures
+are MCP tools (`mcp__Claude_Browser__*`, `mcp__claude-in-chrome__*`, `mcp__ccd_session__*`), whose
+`tool_response` is array-shaped. Zero are `Bash`. Piping `tests/fixtures/hooks/tool-failure-tracker/bash-failure.json`
+through the unfixed hook tracked the failure correctly, so the Bash path — the only path the hook acts on —
+was never broken. The defect is real and the fix is unchanged; the blast radius is not.
+
+Also fixed here, found while adding coverage: `tests/test_tool_failure_tracker.sh` hardcoded
+`/tmp/claude-tool-failures-*` while the hook writes under `${TMPDIR:-/tmp}`, so 4 of its 9 assertions
+failed on any platform that sets `TMPDIR` (macOS does). Canonical file is `claude/hooks/`, not the
+`plugins/cortex-core/hooks/` path this ticket's Touch-points named; the mirror is `plugins/cortex-overnight/`.

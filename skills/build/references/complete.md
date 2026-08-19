@@ -20,7 +20,7 @@ The verb reads `events.log` and `pr.json` (querying `gh` only when a PR is in pl
 
 ### Step 8 — Worktree Cleanup
 
-**Hard guard**: if `realpath "$PWD"` is inside the target worktree, exit with `cd out of the worktree before running cleanup; current PWD is the worktree being removed.` — do not auto-cd. The user exits (`ExitWorktree action="keep"` when EnterWorktree state is live, else `cd $(git rev-parse --show-toplevel)`) and re-invokes.
+**Hard guard**: if `realpath "$PWD"` is inside the target worktree, exit with `cd out of the worktree before running cleanup; current PWD is the worktree being removed.` — do not auto-cd. The user exits (`ExitWorktree action="keep"` when EnterWorktree state is live, else `cd "$(git rev-parse --git-common-dir)/.."` — `--show-toplevel` returns the worktree itself) and re-invokes.
 
 Cleanup runs only for `interactive/`-prefixed worktrees — check `git worktree list --porcelain` for `.claude/worktrees/interactive-{slug}`; no match → skip silently.
 

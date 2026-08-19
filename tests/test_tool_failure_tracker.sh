@@ -10,6 +10,7 @@
 #   - No alert emitted on 4th and subsequent failures
 #   - Missing session_id falls back to a date-based tracking key
 #   - Non-numeric count file is reset to 0 before incrementing
+#   - A non-object tool_response (array or string) exits 0 and tracks nothing
 #
 # Exit 0 if all tests pass, 1 if any fail.
 
@@ -18,6 +19,12 @@ set -uo pipefail
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 HOOK="$REPO_ROOT/claude/hooks/cortex-tool-failure-tracker.sh"
 FIXTURE_DIR="$REPO_ROOT/tests/fixtures/hooks/tool-failure-tracker"
+
+# The hook writes its fallback tracking dir under ${TMPDIR:-/tmp}. Hardcoding
+# /tmp here made every fallback-branch assertion fail on any platform that sets
+# TMPDIR (macOS sets a per-user one), while the hook itself was working.
+TMP_BASE="${TMPDIR:-/tmp}"
+TMP_BASE="${TMP_BASE%/}"
 
 PASS_COUNT=0
 FAIL_COUNT=0
@@ -47,7 +54,7 @@ run_with_session() {
 }
 
 cleanup_session_dir() {
-  rm -rf "/tmp/claude-tool-failures-${1}"
+  rm -rf "${TMP_BASE}/claude-tool-failures-${1}"
 }
 
 # ---------------------------------------------------------------------------
@@ -61,11 +68,11 @@ exit_code=0
 run_with_session "$FIXTURE_DIR/non-bash-tool.json" "$SESSION_NONBASH" >/dev/null 2>&1 \
   || exit_code=$?
 
-if [[ $exit_code -eq 0 && ! -d "/tmp/claude-tool-failures-${SESSION_NONBASH}" ]]; then
+if [[ $exit_code -eq 0 && ! -d "${TMP_BASE}/claude-tool-failures-${SESSION_NONBASH}" ]]; then
   pass "tool-failure-tracker/non-bash-tool-no-files"
 else
   fail "tool-failure-tracker/non-bash-tool-no-files" \
-    "expected exit 0 with no tracking dir; got exit $exit_code, dir_exists=$(test -d "/tmp/claude-tool-failures-${SESSION_NONBASH}" && echo yes || echo no)"
+    "expected exit 0 with no tracking dir; got exit $exit_code, dir_exists=$(test -d "${TMP_BASE}/claude-tool-failures-${SESSION_NONBASH}" && echo yes || echo no)"
 fi
 
 # ---------------------------------------------------------------------------
@@ -79,11 +86,11 @@ exit_code=0
 run_with_session "$FIXTURE_DIR/bash-success.json" "$SESSION_SUCCESS" >/dev/null 2>&1 \
   || exit_code=$?
 
-if [[ $exit_code -eq 0 && ! -d "/tmp/claude-tool-failures-${SESSION_SUCCESS}" ]]; then
+if [[ $exit_code -eq 0 && ! -d "${TMP_BASE}/claude-tool-failures-${SESSION_SUCCESS}" ]]; then
   pass "tool-failure-tracker/bash-success-no-files"
 else
   fail "tool-failure-tracker/bash-success-no-files" \
-    "expected exit 0 with no tracking dir; got exit $exit_code, dir_exists=$(test -d "/tmp/claude-tool-failures-${SESSION_SUCCESS}" && echo yes || echo no)"
+    "expected exit 0 with no tracking dir; got exit $exit_code, dir_exists=$(test -d "${TMP_BASE}/claude-tool-failures-${SESSION_SUCCESS}" && echo yes || echo no)"
 fi
 
 # ---------------------------------------------------------------------------
@@ -93,7 +100,7 @@ fi
 SESSION_FAILURE="${TEST_SESSION_BASE}-failure"
 cleanup_session_dir "$SESSION_FAILURE"
 
-TRACK_DIR="/tmp/claude-tool-failures-${SESSION_FAILURE}"
+TRACK_DIR="${TMP_BASE}/claude-tool-failures-${SESSION_FAILURE}"
 
 exit_code=0
 run_with_session "$FIXTURE_DIR/bash-failure.json" "$SESSION_FAILURE" >/dev/null 2>&1 \
@@ -121,7 +128,7 @@ cleanup_session_dir "$SESSION_LOG"
 
 run_with_session "$FIXTURE_DIR/bash-failure.json" "$SESSION_LOG" >/dev/null 2>&1
 
-log_content=$(cat "/tmp/claude-tool-failures-${SESSION_LOG}/bash.log" 2>/dev/null || echo "")
+log_content=$(cat "${TMP_BASE}/claude-tool-failures-${SESSION_LOG}/bash.log" 2>/dev/null || echo "")
 
 if [[ "$log_content" == *"exit_code: 1"* \
    && "$log_content" == *"tool: Bash"* \
@@ -180,7 +187,7 @@ cleanup_session_dir "$SESSION_THRESH"
 # ---------------------------------------------------------------------------
 
 DATE_KEY="date-$(date -u +%Y%m%d)"
-DATE_TRACK_DIR="/tmp/claude-tool-failures-${DATE_KEY}"
+DATE_TRACK_DIR="${TMP_BASE}/claude-tool-failures-${DATE_KEY}"
 DATE_COUNT_FILE="$DATE_TRACK_DIR/bash.count"
 
 # Record the count before the test (in case the date dir already exists).
@@ -213,7 +220,7 @@ fi
 SESSION_CORRUPT="${TEST_SESSION_BASE}-corrupt"
 cleanup_session_dir "$SESSION_CORRUPT"
 
-CORRUPT_TRACK_DIR="/tmp/claude-tool-failures-${SESSION_CORRUPT}"
+CORRUPT_TRACK_DIR="${TMP_BASE}/claude-tool-failures-${SESSION_CORRUPT}"
 mkdir -p "$CORRUPT_TRACK_DIR"
 echo "not-a-number" > "$CORRUPT_TRACK_DIR/bash.count"
 
@@ -260,7 +267,7 @@ exit_code=0
 
 lifecycle_log="$LIFECYCLE_TRACK_DIR/bash.log"
 lifecycle_count="$LIFECYCLE_TRACK_DIR/bash.count"
-fallback_dir="/tmp/claude-tool-failures-${SESSION_LIFECYCLE}"
+fallback_dir="${TMP_BASE}/claude-tool-failures-${SESSION_LIFECYCLE}"
 
 if [[ $exit_code -eq 0 \
    && -f "$lifecycle_log" \
@@ -275,6 +282,33 @@ fi
 # Cleanup: remove the lifecycle fixture session dir per task spec.
 rm -rf "$LIFECYCLE_SESSION_DIR"
 cleanup_session_dir "$SESSION_LIFECYCLE"
+
+# ---------------------------------------------------------------------------
+# Test: non-object tool_response — exits 0, creates no tracking files
+# (MCP tools return an array and some tools return a bare string; jq cannot
+# index either with a string, and under `set -e` that aborted the hook with
+# exit 5 before it ever reached the Bash filter.)
+# ---------------------------------------------------------------------------
+
+for shape in array string; do
+  SESSION_SHAPE="${TEST_SESSION_BASE}-${shape}"
+  cleanup_session_dir "$SESSION_SHAPE"
+
+  exit_code=0
+  stderr_text=$(run_with_session "$FIXTURE_DIR/${shape}-tool-response.json" "$SESSION_SHAPE" 2>&1 >/dev/null) \
+    || exit_code=$?
+
+  if [[ $exit_code -eq 0 \
+     && -z "$stderr_text" \
+     && ! -d "${TMP_BASE}/claude-tool-failures-${SESSION_SHAPE}" ]]; then
+    pass "tool-failure-tracker/${shape}-tool-response-no-crash"
+  else
+    fail "tool-failure-tracker/${shape}-tool-response-no-crash" \
+      "expected silent exit 0 with no tracking dir; got exit $exit_code, stderr='$stderr_text', dir_exists=$(test -d "${TMP_BASE}/claude-tool-failures-${SESSION_SHAPE}" && echo yes || echo no)"
+  fi
+
+  cleanup_session_dir "$SESSION_SHAPE"
+done
 
 # ---------------------------------------------------------------------------
 # Summary
