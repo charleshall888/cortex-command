@@ -316,7 +316,9 @@ def _events_log_has_event(events_log: Path, event_name: str) -> bool:
     return needle_no_space in content
 
 
-def _events_log_meta(feature_dir: Path) -> dict[str, str | None]:
+def _events_log_meta(
+    feature_dir: Path, events_log: Path | None = None
+) -> dict[str, str | None]:
     """Return ``{"latest_ts": str|None, "last_event": str|None}`` for the
     feature's ``events.log``.
 
@@ -329,7 +331,7 @@ def _events_log_meta(feature_dir: Path) -> dict[str, str | None]:
     caller can render a partial diagnostic.
     """
 
-    events_log = feature_dir / "events.log"
+    events_log = events_log or (feature_dir / "events.log")
     try:
         content = events_log.read_text(encoding="utf-8")
     except (OSError, ValueError):
@@ -393,6 +395,63 @@ def _emit_diag(record: dict, root: Path) -> None:
         pass
 
 
+def _resolve_main_lifecycle_dir(cwd: Path) -> Path | None:
+    """Return the main root's ``cortex/lifecycle`` when *cwd* is a worktree.
+
+    ``events.log`` is anchored at the main repo root for every appending verb
+    (#484), while the lifecycle *directories* this hook enumerates are tracked
+    artifacts and so follow the CWD (#497). In a primary checkout the two
+    coincide and this returns ``None`` — the callers then use ``feature_dir``'s
+    own log and nothing changes. From a linked worktree they differ, and the
+    worktree's copy is a stale committed snapshot no verb writes to any more,
+    which is what made the ``complete:awaiting-merge`` badge and the phase
+    behind it read from the wrong file (#494).
+
+    Walks from *cwd* — the session's tree, taken from the hook payload — and not
+    from the process CWD, which is not the same thing when the hook is invoked
+    from elsewhere. ``CORTEX_REPO_ROOT`` is deliberately not consulted: the
+    statusline describes the tree the session is in, and an env pin left over
+    from another context would relabel it.
+
+    Never raises and never shells out: the worktree gitfile pointer is parsed in
+    pure Python, and this hook runs on every prompt.
+    """
+    try:
+        from cortex_command.interactive_lock import _main_root_from_gitfile
+
+        current = cwd.resolve()
+        while True:
+            git_entry = current / ".git"
+            if git_entry.is_file():
+                main_root = _main_root_from_gitfile(git_entry)
+                break
+            if git_entry.is_dir():
+                return None  # a primary checkout: one anchor, nothing to do
+            parent = current.parent
+            if parent == current:
+                return None
+            current = parent
+    except Exception:  # noqa: BLE001 — statusline hook: degrade, never fail
+        return None
+
+    if main_root is None:
+        return None
+    try:
+        if main_root.resolve() == cwd.resolve():
+            return None
+    except OSError:
+        return None
+    candidate = main_root / "cortex" / "lifecycle"
+    return candidate if candidate.is_dir() else None
+
+
+def _events_log_in(main_lifecycle_dir: Path | None, feature_dir: Path) -> Path | None:
+    """The explicit ``events.log`` for *feature_dir*, or ``None`` to use its own."""
+    if main_lifecycle_dir is None:
+        return None
+    return main_lifecycle_dir / feature_dir.name / "events.log"
+
+
 def _emit_candidate_diag(
     feature_dir: Path,
     feature: str,
@@ -402,6 +461,7 @@ def _emit_candidate_diag(
     backlog_status_map: dict[str, str],
     stale_days: int,
     root: Path,
+    events_log: Path | None = None,
 ) -> None:
     """Construct and emit one per-candidate JSONL diagnostic record.
 
@@ -421,7 +481,7 @@ def _emit_candidate_diag(
 
     import datetime as _dt
 
-    meta = _events_log_meta(feature_dir)
+    meta = _events_log_meta(feature_dir, events_log)
     backlog_status = backlog_status_map.get(feature)
     has_mismatch = (
         _is_terminal_mismatch(encoded_phase, backlog_status)
@@ -443,7 +503,9 @@ def _emit_candidate_diag(
     }, root)
 
 
-def _is_stale(feature_dir: Path, threshold_days: int) -> bool:
+def _is_stale(
+    feature_dir: Path, threshold_days: int, events_log: Path | None = None
+) -> bool:
     """Return True if the latest events.log event is older than threshold_days.
 
     Uses the max ``ts`` field across parseable JSON lines in
@@ -461,7 +523,7 @@ def _is_stale(feature_dir: Path, threshold_days: int) -> bool:
 
     if threshold_days <= 0:
         return False
-    events_log = feature_dir / "events.log"
+    events_log = events_log or (feature_dir / "events.log")
     try:
         content = events_log.read_text(encoding="utf-8")
     except (OSError, ValueError):
@@ -942,6 +1004,10 @@ def main(argv: list[str] | None = None) -> int:
 
     candidate_dirs: list[Path] = []
     candidate_features: list[str] = []
+    # Two anchors: the directories below follow the CWD, their events.log does
+    # not (#484/#494). ``None`` in a primary checkout, where they coincide.
+    main_lifecycle_dir = _resolve_main_lifecycle_dir(cwd)
+
     try:
         children = sorted(lifecycle_dir.iterdir())
     except OSError:
@@ -954,10 +1020,11 @@ def main(argv: list[str] | None = None) -> int:
         # non-dir entries) are pre-candidate — no diagnostic emitted.
         if feature in ("archive", "sessions"):
             continue
-        if _is_stale(child, stale_days):
+        child_log = _events_log_in(main_lifecycle_dir, child)
+        if _is_stale(child, stale_days, child_log):
             _emit_candidate_diag(
                 child, feature, "excluded", "stale", None,
-                backlog_status_map, stale_days, cwd,
+                backlog_status_map, stale_days, cwd, child_log,
             )
             continue
         # Phantom guard (runs AFTER _is_stale, so the empty/absent/unparseable
@@ -969,7 +1036,7 @@ def main(argv: list[str] | None = None) -> int:
         if is_phantom_lifecycle_dir(child):
             _emit_candidate_diag(
                 child, feature, "excluded", "phantom", None,
-                backlog_status_map, stale_days, cwd,
+                backlog_status_map, stale_days, cwd, child_log,
             )
             continue
         # Suppress Morning Review batch features.
@@ -978,7 +1045,7 @@ def main(argv: list[str] | None = None) -> int:
         ):
             _emit_candidate_diag(
                 child, feature, "excluded", "morning_review", None,
-                backlog_status_map, stale_days, cwd,
+                backlog_status_map, stale_days, cwd, child_log,
             )
             continue
         candidate_dirs.append(child)
@@ -987,8 +1054,9 @@ def main(argv: list[str] | None = None) -> int:
     # --- Phase detection per candidate (bash precedent lines 249-326) ---
     incomplete: list[tuple[str, str, bool, str | None]] = []
     for feature_dir, feature in zip(candidate_dirs, candidate_features):
+        events_log = _events_log_in(main_lifecycle_dir, feature_dir)
         try:
-            r = resolve_lifecycle_phase(feature_dir)
+            r = resolve_lifecycle_phase(feature_dir, events_log)
         except Exception:
             continue
         phase = str(r.get("phase", "") or "")
@@ -1014,7 +1082,7 @@ def main(argv: list[str] | None = None) -> int:
         # nor ``feature_wontfix`` are. Otherwise filter complete features
         # out of the incomplete list. (Bash precedent lines 311-321.)
         if encoded == "complete":
-            events_log = feature_dir / "events.log"
+            events_log = events_log or (feature_dir / "events.log")
             if (
                 _events_log_has_event(events_log, "pr_opened")
                 and not _events_log_has_event(
@@ -1032,7 +1100,7 @@ def main(argv: list[str] | None = None) -> int:
                 # surfaces in the JSONL for post-mortem review.
                 _emit_candidate_diag(
                     feature_dir, feature, "excluded", "complete_no_pr",
-                    encoded, backlog_status_map, stale_days, cwd,
+                    encoded, backlog_status_map, stale_days, cwd, events_log,
                 )
                 continue
 
@@ -1045,7 +1113,7 @@ def main(argv: list[str] | None = None) -> int:
         # their respective continue branches above.
         _emit_candidate_diag(
             feature_dir, feature, "included", None, encoded,
-            backlog_status_map, stale_days, cwd,
+            backlog_status_map, stale_days, cwd, events_log,
         )
 
     # No incomplete features and no pipeline context — nothing to inject.

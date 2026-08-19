@@ -273,8 +273,7 @@ def test_pr_opened_from_a_worktree_promotes_the_main_root_session_scan(
     row, so a main-root session now sees the awaiting-merge state it used to
     miss — the feature was previously filtered out entirely as complete-no-PR.
 
-    This pins the shift, it does not fix ``scan_lifecycle``: a *worktree*
-    session still reads the worktree's ``cortex/lifecycle`` (#494).
+    The worktree half is pinned by the sibling test below (#494).
     """
     main, wt = worktree
     main_dir = main / "cortex" / "lifecycle" / _SLUG
@@ -323,4 +322,55 @@ def test_pr_opened_from_a_worktree_promotes_the_main_root_session_scan(
     hook_output = json.loads(out)["hookSpecificOutput"]
     assert hook_output["sessionTitle"] == _SLUG
     # ``complete:awaiting-merge``, rendered — not filtered out as complete-no-PR.
+    assert "Complete (awaiting merge)" in hook_output["additionalContext"]
+
+
+def test_a_worktree_session_reads_the_badge_from_the_main_root_log(
+    worktree, monkeypatch, capsys
+) -> None:
+    """#494: the badge follows the pinned log, not the worktree's stale copy.
+
+    ``scan_lifecycle`` enumerates lifecycle *directories* from the payload cwd,
+    which is right — they are tracked artifacts. Its ``events.log`` reads were
+    anchored the same way, which is wrong: post-#484 no verb writes there. A
+    worktree session therefore resolved phase and the ``pr_opened`` promotion
+    from a committed snapshot, and the awaiting-merge badge never appeared.
+
+    The worktree copy here carries a *contradicting* row — ``feature_complete``,
+    which suppresses the promotion — so reading the right file is the only way
+    the badge can render.
+    """
+    main, wt = worktree
+    main_dir = main / "cortex" / "lifecycle" / _SLUG
+    wt_dir = wt / "cortex" / "lifecycle" / _SLUG
+    wt_dir.mkdir(parents=True, exist_ok=True)
+
+    def _row(**kw):
+        return json.dumps({"ts": "2026-08-13T12:00:00Z", "feature": _SLUG, **kw}) + "\n"
+
+    (main_dir / "events.log").write_text(
+        _row(event="phase_transition", **{"from": "review", "to": "complete"})
+        + _row(event="pr_opened", pr_number=42),
+        encoding="utf-8",
+    )
+    # The stale committed snapshot the worktree still carries.
+    (wt_dir / "events.log").write_text(
+        _row(event="phase_transition", **{"from": "review", "to": "complete"})
+        + _row(event="feature_complete"),
+        encoding="utf-8",
+    )
+
+    monkeypatch.delenv("LIFECYCLE_SESSION_ID", raising=False)
+    monkeypatch.setenv("CLAUDE_ENV_FILE", str(wt / ".claude-env"))
+    monkeypatch.setenv("CORTEX_SCAN_LIFECYCLE_STALE_DAYS", "0")
+    monkeypatch.setattr(
+        "sys.stdin",
+        io.StringIO(json.dumps({"session_id": "sess-494", "cwd": str(wt)})),
+    )
+
+    assert scan_lifecycle.main() == 0
+
+    out = capsys.readouterr().out
+    assert out, "the worktree session was filtered out entirely"
+    hook_output = json.loads(out)["hookSpecificOutput"]
     assert "Complete (awaiting merge)" in hook_output["additionalContext"]

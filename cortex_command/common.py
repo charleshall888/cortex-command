@@ -594,7 +594,9 @@ _MACHINE_STATE_NAMES: frozenset[str] = frozenset({
 _EVENTS_TERMINAL_STATES: frozenset[str] = frozenset({"complete", "escalated", "cancelled"})
 
 
-def _phase_from_machine_rows(feature_dir: Path) -> tuple[str | None, bool]:
+def _phase_from_machine_rows(
+    feature_dir: Path, events_log: Path | None = None
+) -> tuple[str | None, bool]:
     """Derive the events-authoritative lifecycle state from machine rows.
 
     Returns ``(machine_state, raw_paused)``.
@@ -611,7 +613,7 @@ def _phase_from_machine_rows(feature_dir: Path) -> tuple[str | None, bool]:
     Reads events.log with ``errors="replace"`` (spec R5) and never raises: a
     missing/unreadable log or a torn line yields ``(None, False)``.
     """
-    events_log = feature_dir / "events.log"
+    events_log = events_log or (feature_dir / "events.log")
     try:
         content = events_log.read_text(errors="replace")
     except (OSError, ValueError):
@@ -648,7 +650,9 @@ def _phase_from_machine_rows(feature_dir: Path) -> tuple[str | None, bool]:
     return machine_state, last_significant == "feature_paused"
 
 
-def resolve_lifecycle_phase(feature_dir: Path) -> dict[str, str | int]:
+def resolve_lifecycle_phase(
+    feature_dir: Path, events_log: Path | None = None
+) -> dict[str, str | int]:
     """Events-first shared resolver for a feature's lifecycle phase (ADR-0025).
 
     The one function that decides events-vs-artifacts (spec R15). events.log is
@@ -672,12 +676,20 @@ def resolve_lifecycle_phase(feature_dir: Path) -> dict[str, str | int]:
     Args:
         feature_dir: Path to the lifecycle feature directory
                      (e.g. ``Path("cortex/lifecycle/my-feature")``).
+        events_log: Optional explicit ``events.log`` path, for the callers whose
+                    two anchors genuinely differ. Artifacts follow the CWD while
+                    ``events.log`` follows the pinned main-root resolver (#484),
+                    so a worktree session reading both from ``feature_dir`` takes
+                    its plan progress from the right tree and its phase from a
+                    log no verb writes to any more. Defaults to
+                    ``feature_dir / "events.log"``, which is correct wherever the
+                    two anchors coincide — every existing caller.
 
     Returns:
         The resolved phase dict (see :func:`detect_lifecycle_phase`).
     """
     artifact = detect_lifecycle_phase(feature_dir)
-    machine_state, raw_paused = _phase_from_machine_rows(feature_dir)
+    machine_state, raw_paused = _phase_from_machine_rows(feature_dir, events_log)
     if machine_state is None:
         # Legacy fallback: no machine row, artifact derivation is authoritative.
         return artifact
