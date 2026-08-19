@@ -376,3 +376,74 @@ def test_create_item_cli_accepts_tags_and_areas_flags(tmp_path: Path) -> None:
     fm = resolve_item._parse_frontmatter(created_files[0])
     assert fm["tags"] == ["foo", "bar"]
     assert fm["areas"] == ["skills", "docs"]
+
+
+# ---------------------------------------------------------------------------
+# #496 — an ID held only on another branch is not reallocated
+# ---------------------------------------------------------------------------
+
+
+def _git(*args: str, cwd: Path) -> None:
+    subprocess.run(["git", *args], cwd=str(cwd), check=True, capture_output=True)
+
+
+def _repo_with_backlog(tmp_path: Path, *filenames: str) -> Path:
+    """Init a repo with ``cortex/backlog`` holding *filenames*; return its root."""
+    root = tmp_path / "repo"
+    backlog = root / "cortex" / "backlog"
+    backlog.mkdir(parents=True)
+    for name in filenames:
+        _stub(backlog, name)
+    _git("init", "-q", "-b", "main", cwd=root)
+    _git("config", "user.email", "t@example.com", cwd=root)
+    _git("config", "user.name", "Test", cwd=root)
+    _git("config", "commit.gpgsign", "false", cwd=root)
+    _git("config", "core.hooksPath", os.devnull, cwd=root)
+    _git("add", "-A", cwd=root)
+    _git("commit", "-q", "-m", "seed", cwd=root)
+    return root
+
+
+def test_id_held_only_on_a_sibling_branch_is_not_reallocated(tmp_path: Path) -> None:
+    """The defect: two branches both read the same max and both take max + 1.
+
+    The files have different names, so ``558-foo.md`` and ``558-bar.md`` merge
+    cleanly and silently — nothing surfaces the collision. Here ``006`` exists
+    only on ``sibling``; the working directory tops out at 005.
+    """
+    root = _repo_with_backlog(tmp_path, "005-here.md")
+    backlog = root / "cortex" / "backlog"
+
+    _git("checkout", "-q", "-b", "sibling", cwd=root)
+    _stub(backlog, "006-filed-in-parallel.md")
+    _git("add", "-A", cwd=root)
+    _git("commit", "-q", "-m", "parallel filing", cwd=root)
+    _git("checkout", "-q", "main", cwd=root)
+
+    assert not (backlog / "006-filed-in-parallel.md").exists(), "fixture is wrong"
+    assert _get_next_id(backlog) == "007"
+
+
+def test_a_number_freed_by_renumbering_is_reusable(tmp_path: Path) -> None:
+    """Tips, not history: a vacated number is genuinely free.
+
+    Scanning ``--all --diff-filter=A`` was tried first and reserved every ID that
+    ever existed, including debris deleted long ago — one committed-then-deleted
+    smoke-test artifact at ``995`` pushed this repo's next ID from 498 to 996.
+    """
+    root = _repo_with_backlog(tmp_path, "005-here.md", "006-typo.md")
+    backlog = root / "cortex" / "backlog"
+
+    _git("rm", "-q", str(backlog / "006-typo.md"), cwd=root)
+    _git("commit", "-q", "-m", "renumbered away", cwd=root)
+
+    assert _get_next_id(backlog) == "006"
+
+
+def test_absent_git_falls_back_to_the_working_directory_scan(tmp_path: Path) -> None:
+    """Filing must not start failing because git is missing, slow or broken."""
+    backlog = tmp_path / "cortex" / "backlog"
+    backlog.mkdir(parents=True)
+    _stub(backlog, "005-here.md")
+
+    assert _get_next_id(backlog) == "006"

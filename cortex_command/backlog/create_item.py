@@ -20,6 +20,7 @@ import os
 import re
 import subprocess
 import sys
+import time
 from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -100,22 +101,109 @@ def _warn_if_parent_closed(parent: str | None, backlog_dir: Path) -> None:
 _SEED_FIXTURE_RE = re.compile(r"^\d+-seed-.+\.md$")
 
 
+# Branch tips consulted before an ID is minted. Bounded so a repo with hundreds
+# of stale branches cannot turn filing a ticket into a multi-second operation;
+# the deadline is the same bound expressed in time.
+_REF_SCAN_LIMIT = 100
+_REF_SCAN_DEADLINE_S = 5.0
+
+
+def _ids_taken_on_other_branches(backlog_dir: Path) -> set[int]:
+    """Return backlog IDs held under *backlog_dir* on any local or remote branch.
+
+    The working directory alone cannot see a sibling branch, another worktree or
+    an unmerged commit, so two sessions filing in parallel both read the same
+    maximum and both take ``max + 1``. Neither commit conflicts, because the two
+    files have *different names* — ``558-foo.md`` and ``558-bar.md`` merge
+    cleanly and silently. Measured in one consumer on 2026-08-19: 8 backlog IDs
+    held by two or three tickets each, one of them a four-way collision, and 3
+    now permanent because every holder is cited from shipped source.
+
+    Reads branch **tips**, not history. History was tried first and is wrong: a
+    single smoke-test artifact committed and later deleted (``995-release-gate-
+    empirical-…``) sat in ``--all --diff-filter=A`` output forever and pushed the
+    next ID from 498 to 996. Tips also give the right semantics for the consumer's
+    ratified renumbering rule — once a collision is resolved by renaming, the
+    vacated number is genuinely free, because nothing cites it any more.
+
+    Tags are excluded: 151 of this repo's 166 refs are release tags, they carry
+    no ticket a live branch does not, and scanning them is pure cost.
+
+    **This narrows the window; it does not close it.** A branch on another machine
+    that has never been pushed is invisible to any local scan, as is a ticket that
+    a sibling worktree has written but not yet committed. Failure is silent by
+    design: git absent, no commits, a timeout or any non-zero exit yields an empty
+    set and the caller falls back to the working-directory scan — exactly today's
+    behaviour. Filing a ticket must not start failing because git is slow.
+
+    ADR numbers have the same defect and are deliberately not covered: they have
+    no allocator at all — the number is chosen by whoever writes the file — and
+    #464 ruled the ADR side report-only after measuring that arming the existing
+    ``adr_citation_audit.detect_duplicates`` produced 631 findings and 0 actions.
+    """
+    def _git(args: list[str], timeout: float) -> str | None:
+        # Deliberately broad: this is a best-effort narrowing of a race, and
+        # nothing it can hit is worth failing a ticket filing over. Callers in
+        # the suite also stub ``subprocess.run`` wholesale, so the result may not
+        # be a CompletedProcess at all.
+        try:
+            result = subprocess.run(
+                ["git", *args],
+                cwd=str(backlog_dir),
+                capture_output=True,
+                text=True,
+                timeout=timeout,
+                check=False,
+            )
+            return result.stdout if result.returncode == 0 else None
+        except Exception:  # noqa: BLE001 — never block filing
+            return None
+
+    refs_out = _git(
+        ["for-each-ref", "--format=%(refname)", "refs/heads", "refs/remotes"],
+        timeout=_REF_SCAN_DEADLINE_S,
+    )
+    if refs_out is None:
+        return set()
+
+    deadline = time.monotonic() + _REF_SCAN_DEADLINE_S
+    ids: set[int] = set()
+    for ref in refs_out.split()[:_REF_SCAN_LIMIT]:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            break  # partial is still strictly better than the local scan alone
+        listing = _git(["ls-tree", "-r", "--name-only", ref, "--", "."], remaining)
+        if listing is None:
+            continue
+        for line in listing.splitlines():
+            name = line.rsplit("/", 1)[-1]
+            if not name.endswith(".md") or _SEED_FIXTURE_RE.match(name):
+                continue
+            if m := re.match(r"^(\d+)-", name):
+                ids.add(int(m.group(1)))
+    return ids
+
+
 def _get_next_id(backlog_dir: Path) -> str:
     """Return the next available numeric ID (no zero-padding for IDs > 999).
 
     Scans ``backlog_dir`` and its ``archive/`` subdirectory, so an archived ID is
     never reallocated to a new item, and skips stale dashboard-seed fixtures.
+    Unions that with the IDs held on every local and remote branch tip
+    (:func:`_ids_taken_on_other_branches`), so a parallel branch or worktree the
+    working directory cannot see does not get handed the same number.
     """
     paths = [
         *backlog_dir.glob("[0-9]*-*.md"),
         *(backlog_dir / "archive").glob("[0-9]*-*.md"),
     ]
-    ids = [
+    ids = {
         int(m.group(1))
         for p in paths
         if not _SEED_FIXTURE_RE.match(p.name)
         if (m := re.match(r"^(\d+)-", p.name))
-    ]
+    }
+    ids |= _ids_taken_on_other_branches(backlog_dir)
     next_id = (max(ids) + 1) if ids else 1
     return f"{next_id:03d}" if next_id < 1000 else str(next_id)
 

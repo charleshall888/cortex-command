@@ -2,11 +2,11 @@
 schema_version: "1"
 uuid: 25255dee-b16e-43b8-a926-f72cdb289c88
 title: Auto-close-parent fires on last-child-terminal alone, closing a parent that has open work of its own
-status: backlog
+status: complete
 priority: medium
 type: bug
 created: 2026-08-13
-updated: 2026-08-13
+updated: 2026-08-19
 tags: ['backlog', 'epic', 'parent', 'auto-close', 'cli']
 areas: ['lifecycle']
 blocked-by: []
@@ -74,3 +74,28 @@ works.
 - `cortex_command/lifecycle/review_verdict.py`, `cortex_command/lifecycle/finalize.py` — the two callers
   observed flipping the parent
 - `cortex_command/backlog/build_epic_map.py` — existing epic-shape knowledge worth reusing
+
+---
+
+## Resolution, 2026-08-19 — `type: epic` is the existing signal, and it is populated
+
+The ticket asked to prefer reading an existing signal over adding a `no-auto-close` field, and one
+exists. Measured across this repo's active and archived corpus: **42 distinct parents, 35 of them
+`type: epic`.** The 7 that are not — one `spike`, three `feature`, two `chore`, one `bug` — are exactly
+the parent-as-work-item class the ticket describes. So the distinction is already recorded; nothing read
+it.
+
+`_check_and_close_parent` now declines unless the parent is `type: epic`, and says so on stderr. The fix
+sits in the shared function rather than either caller, so `review-verdict` and `finalize` are both
+covered — the ticket's point about it having been reverted twice.
+
+The close leg now prints too. Both decline branches already print on the stated reasoning that "without
+this the event is invisible", and that argument is strongest for the branch that actually mutates a file:
+the operator otherwise finds out by noticing a ticket they were working on has gone.
+
+Cost of being wrong in each direction, which is what settles the default: a genuine aggregate mistyped as
+`feature` now needs one manual close, and the note names it. A work item wrongly closed is silent, and
+the only detector is a human noticing. Declining is the cheap error.
+
+Untouched, deliberately: the already-terminal branch keeps its decline-never-reopen asymmetry, and
+`_derive_parent_outcome` still decides *what* to close with.

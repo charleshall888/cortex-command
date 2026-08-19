@@ -323,3 +323,65 @@ class TestMixedOutcomeIsSurfaced:
         assert closed is not None
         assert "status: abandoned" in epic.read_text()
         assert "did not ship" not in err
+
+
+# ---------------------------------------------------------------------------
+# #489 — a parent that is a work item, not an aggregate, is not closeable
+# from its children alone
+# ---------------------------------------------------------------------------
+
+class TestParentIsAnAggregateBeforeItCloses:
+    """A work item that acquired a child carries acceptance criteria of its own.
+
+    Nothing in frontmatter can see those, so last-child-terminal is not evidence
+    the parent is done. Observed in wild-light #549: an ``in-progress`` parent
+    with three open items of its own was flipped to ``complete`` twice in one
+    day, by ``review-verdict`` and by ``finalize``, and reverted by hand both
+    times. The fix sits in ``_check_and_close_parent`` rather than either caller,
+    so both are covered.
+    """
+
+    def _close_last_child(self, backlog, child_path):
+        from cortex_command.backlog.update_item import _check_and_close_parent
+
+        return _check_and_close_parent(child_path, "2026-08-19", backlog)
+
+    def test_non_epic_parent_is_left_open(self, tmp_path, capsys):
+        backlog = tmp_path / "cortex" / "backlog"
+        backlog.mkdir(parents=True)
+        parent = _write(backlog, 200, "Work Item Parent", status="in-progress",
+                        item_type="feature")
+        child = _write(backlog, 201, "Only Child", status="complete", parent=200)
+
+        assert self._close_last_child(backlog, child) is None
+        assert "status: in-progress" in parent.read_text()
+        assert "not an epic" in capsys.readouterr().err, "the decline was silent"
+
+    def test_epic_parent_still_closes(self, tmp_path, capsys):
+        """The aggregate close is the behaviour worth keeping; it must survive."""
+        backlog = tmp_path / "cortex" / "backlog"
+        backlog.mkdir(parents=True)
+        parent = _write(backlog, 210, "Real Epic", status="open", item_type="epic")
+        child = _write(backlog, 211, "Only Child", status="complete", parent=210)
+
+        assert self._close_last_child(backlog, child) == parent
+        assert "status: complete" in parent.read_text()
+
+    def test_the_close_announces_itself(self, tmp_path, capsys):
+        """Silence was half the defect: the mutating branch was the quiet one.
+
+        Both decline branches print, on the stated reasoning that without a line
+        the event is invisible. That argument is strongest for the branch that
+        actually changes a file — the operator otherwise finds out by noticing a
+        ticket they were working on has gone.
+        """
+        backlog = tmp_path / "cortex" / "backlog"
+        backlog.mkdir(parents=True)
+        _write(backlog, 220, "Real Epic", status="open", item_type="epic")
+        child = _write(backlog, 221, "Only Child", status="complete", parent=220)
+
+        self._close_last_child(backlog, child)
+
+        err = capsys.readouterr().err
+        assert "closed parent" in err
+        assert "220" in err

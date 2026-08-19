@@ -329,6 +329,31 @@ def _check_and_close_parent(
         )
         return None  # already closed
 
+    # Parent-as-epic vs parent-as-work-item. Only an aggregate — an epic that
+    # is nothing but its children — is closeable from its children alone. A work
+    # item that happens to have acquired a child carries its own acceptance
+    # criteria, and nothing in frontmatter can see them, so closing on
+    # last-child-terminal reports work as delivered that no one did. Observed:
+    # wild-light #549 flipped in-progress -> complete twice in one day, by two
+    # different verbs, and was reverted by hand both times.
+    #
+    # ``type`` is the existing signal the ticket asked to prefer over a new
+    # opt-out field, and it is populated: of 42 distinct parents in this corpus,
+    # 35 are ``type: epic`` and the 7 that are not (spike/feature/chore/bug) are
+    # precisely the work-item class. Declining is the safe direction — the cost
+    # is one manual close, against a silent wrong close that only a human
+    # noticing their ticket vanished would catch.
+    parent_type = (_get_frontmatter_value(parent_text, "type") or "").strip()
+    if parent_type != "epic":
+        print(
+            f"Note: parent {parent_path.name} is type {parent_type or 'unset'!r}, "
+            f"not an epic, so it was left open although every child is terminal. "
+            f"A work item's own acceptance criteria are not visible here — close "
+            f"it by hand if its own work is done.",
+            file=sys.stderr,
+        )
+        return None
+
     # Get the parent identifier for sibling matching
     parent_id_for_match = _get_item_id(parent_path)
     parent_uuid = _get_frontmatter_value(parent_text, "uuid")
@@ -392,6 +417,15 @@ def _check_and_close_parent(
     # children actually reached, not an unconditional success.
     outcome = _derive_parent_outcome(sibling_statuses)
     _warn_if_mixed_outcome(parent_path.name, outcome, siblings)
+    # The close leg was the only branch here with no line. Both decline branches
+    # print precisely because "without this the event is invisible", and that
+    # argument is strongest for the branch that actually mutates something: the
+    # operator otherwise finds out by noticing a ticket has gone.
+    print(
+        f"Note: closed parent {parent_path.name} as {outcome!r} — every child "
+        f"({len(siblings)}) is terminal.",
+        file=sys.stderr,
+    )
     parent_text = _set_frontmatter_value(parent_text, "status", outcome)
     parent_text = _set_frontmatter_value(parent_text, "updated", today)
     atomic_write(parent_path, parent_text)

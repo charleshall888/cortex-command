@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 6c518dba-14f7-4337-b9a4-168637fce973
 title: Backlog and ADR ids are allocated from a local directory scan, so parallel branches mint the same number and merge cleanly
-status: backlog
+status: complete
 priority: medium
 type: bug
 created: 2026-08-19
@@ -89,3 +89,39 @@ The consumer-side hook wiring stays in `wild-light` (`#592` there), per its own 
 defect in `cortex_command/` is filed here while `.pre-commit-config.yaml` and hook scoping stay local.
 Worth knowing that the consumer's evidence puts the right stage at **pre-push** and **post-merge**, not
 pre-commit — a pre-commit check catches none of these, because each parallel branch is clean on its own.
+
+---
+
+## Resolution, 2026-08-19 — Option 1, scoped to branch tips; explicitly not Option 2
+
+The ticket recommends Option 2, a `cortex-check-duplicate-ids` detector verb. Declined, on cost:
+
+- **A detector is a new shipped surface with no caller here.** Consumers would have to wire it themselves,
+  and this repo has nothing to wire it to — measured 2026-08-19, **0 duplicated IDs across 489 backlog
+  files and 37 ADRs**. A verb that reports nothing in its own repo is overhead, not protection.
+- **The ADR half is already decided.** #464 (`status: complete`) covers ADR collisions and ruled the ADR
+  side report-only, after measuring that arming the existing `adr_citation_audit.detect_duplicates`
+  produces 631 findings and 0 actions. Shipping a second ADR detector would re-open a ratified decision
+  with no new evidence.
+- **Detection is the weaker half anyway.** The ticket's own analysis says the exposed window runs from
+  allocation to merge, and a check taken at filing time is stale by the time it matters.
+
+So: Option 1, prevention, in the allocator that already exists. `_get_next_id` unions the working-directory
+scan with the IDs held on every local and remote **branch tip**. No new verb, no consumer wiring, no docs.
+
+**Tips, not history — this mattered.** The first implementation read `git log --all --diff-filter=A`, which
+reserves every ID that ever existed on any ref. One committed-then-deleted smoke-test artifact
+(`995-release-gate-empirical-…`) pushed this repo's next ID from **498 to 996**. Tips also give the right
+semantics for the consumer's ratified renumbering rule: once a collision is resolved by renaming, the
+vacated number is genuinely free, because nothing cites it any more.
+
+Tags are excluded — 151 of this repo's 166 refs are release tags, carrying no ticket a live branch does not.
+
+Cost: **125ms per ticket filing** (14 branches), bounded by a 100-ref cap and a 5s deadline. Every failure
+mode — git absent, no commits, timeout, non-zero exit, a stubbed `subprocess.run` — yields an empty set and
+falls back to today's behaviour. Filing must not start failing because git is slow.
+
+**Not closed, and the ticket should not claim otherwise.** A branch on another machine that has never been
+pushed is invisible to any local scan, as is a ticket a sibling worktree has written but not committed.
+Options 3 and 4 (non-authoritative numbers; collision-resistant minting) remain the only ways to close it
+outright, and neither is justified by the damage measured so far.

@@ -110,7 +110,9 @@ def test_backend_external_reports_external_and_writes_nothing(
 
 
 def test_parent_epic_also_closed_flag(tmp_path: Path, backlog_dir: Path) -> None:
-    make_item(backlog_dir, "010-epic.md", "The Epic", extra="status: open\n")
+    make_item(
+        backlog_dir, "010-epic.md", "The Epic", extra="status: open\ntype: epic\n"
+    )
     make_item(
         backlog_dir,
         "011-child-a.md",
@@ -257,7 +259,9 @@ def test_cascaded_parent_epic_path_is_reported(tmp_path: Path, backlog_dir: Path
     """Closing the last open child closes the parent epic — both files were
     written, so both must appear in changed_paths. Reporting only the child
     would strand the epic's close as an uncommitted local edit."""
-    make_item(backlog_dir, "010-epic.md", "The Epic", extra="status: open\n")
+    make_item(
+        backlog_dir, "010-epic.md", "The Epic", extra="status: open\ntype: epic\n"
+    )
     make_item(
         backlog_dir, "011-child-a.md", "Child A", extra="status: complete\nparent: 10\n"
     )
