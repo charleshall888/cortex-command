@@ -72,11 +72,36 @@ def _make_worktree_fixture(root: Path) -> tuple[Path, Path]:
 def test_resolve_main_repo_root_honours_env(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """``CORTEX_REPO_ROOT`` is honoured verbatim (resolved), no walk."""
+    """A marker-bearing ``CORTEX_REPO_ROOT`` is honoured (resolved), no walk.
+
+    Marker required since #493: the env branch now applies the same
+    ``is_valid_repo_root`` check the CWD branch always applied.
+    """
     root = (tmp_path / "explicit").resolve()
-    root.mkdir()
+    (root / "cortex").mkdir(parents=True)
     monkeypatch.setenv("CORTEX_REPO_ROOT", str(root))
     assert log_resolver.resolve_main_repo_root() == root
+
+
+def test_resolve_main_repo_root_rejects_a_marker_less_env_pin(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A pin that names no repo falls through instead of being returned.
+
+    Before #493 the env branch returned its value with no existence check and no
+    marker check, so ``CORTEX_REPO_ROOT=/nonexistent`` silently redirected the
+    log every pinned verb reads and appends to. The walk from a CWD holding no
+    project then finds nothing, so the correct outcome is the error — not a path
+    that cannot exist.
+    """
+    from cortex_command.common import CortexProjectRootError
+
+    monkeypatch.setenv("CORTEX_REPO_ROOT", str(tmp_path / "nowhere"))
+    monkeypatch.chdir(tmp_path)
+
+    with pytest.raises(CortexProjectRootError) as excinfo:
+        log_resolver.resolve_main_repo_root()
+    assert "CORTEX_REPO_ROOT" in str(excinfo.value), "the rejected pin is unnamed"
 
 
 def test_resolve_events_log_path_shape(
@@ -84,7 +109,7 @@ def test_resolve_events_log_path_shape(
 ) -> None:
     """events.log is anchored under ``<root>/cortex/lifecycle/<slug>/``."""
     root = (tmp_path / "proj").resolve()
-    root.mkdir()
+    (root / "cortex").mkdir(parents=True)
     monkeypatch.setenv("CORTEX_REPO_ROOT", str(root))
     events = log_resolver.resolve_events_log(_SLUG)
     assert events == root / "cortex" / "lifecycle" / _SLUG / "events.log"
@@ -146,22 +171,22 @@ def test_verdict_root_rejects_a_bogus_env_root_for_the_cwd_tree(
 ) -> None:
     """A ``CORTEX_REPO_ROOT`` that does not hold the slug loses to the CWD walk.
 
-    ``resolve_main_repo_root`` returns the env value verbatim and unchecked, so
-    without validation a stale export makes a real lifecycle look absent — the
-    "no artifacts" reading that drives the finalize arm. The slug directory
-    lives in the CWD tree here, so that tree wins.
+    A stale export that survives #493's marker check — it names a real repo,
+    just not this one — still makes a real lifecycle look absent, which is the
+    "no artifacts" reading that drives the finalize arm. Marker validation and
+    slug validation answer different questions, so this wrapper is still needed.
+    The slug directory lives in the CWD tree here, so that tree wins.
     """
     main, wt = _make_worktree_fixture(tmp_path)
     (wt / "cortex" / "lifecycle" / _SLUG).mkdir(parents=True)
     monkeypatch.setenv("CORTEX_REPO_ROOT", str(tmp_path / "nonexistent" / "bogus"))
     monkeypatch.chdir(wt)
 
-    # Sanity: the unvalidated resolver does hand back the bogus root.
-    assert log_resolver.resolve_main_repo_root() == (
-        tmp_path / "nonexistent" / "bogus"
-    ).resolve()
+    # Since #493 the shared resolver rejects the bogus pin itself and walks;
+    # from the worktree CWD that walk lands on the main root, which does not
+    # hold the slug. The slug-scoped wrapper is what picks the tree that does.
+    assert log_resolver.resolve_main_repo_root() == main
 
-    # The validated one walks from the CWD to the tree that holds the slug.
     assert log_resolver.resolve_verdict_root(_SLUG) == wt
 
 
@@ -201,17 +226,19 @@ def test_verdict_root_honours_an_env_root_that_holds_the_slug(
 def test_verdict_root_keeps_the_env_result_when_neither_tree_holds_the_slug(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Never-crash: with no slug directory anywhere, the env result stands.
+    """With no slug directory anywhere, the resolved root stands.
 
-    A genuinely new lifecycle has no directory yet, and the CWD walk can raise
-    ``CortexProjectRootError`` outright. Neither may become an exception or a
-    behaviour change — the read simply finds nothing, exactly as before.
+    A genuinely new lifecycle has no directory yet, so step 3 must not become a
+    behaviour change — the read simply finds nothing. The pin is marker-bearing
+    because since #493 an unmarked one is rejected before this wrapper sees it;
+    the property under test is step 3's fall-through, not the pin's validity.
     """
-    bogus = (tmp_path / "nonexistent" / "bogus").resolve()
-    monkeypatch.setenv("CORTEX_REPO_ROOT", str(bogus))
+    pinned = (tmp_path / "elsewhere").resolve()
+    (pinned / "cortex").mkdir(parents=True)
+    monkeypatch.setenv("CORTEX_REPO_ROOT", str(pinned))
     monkeypatch.chdir(tmp_path)
 
-    assert log_resolver.resolve_verdict_root(_SLUG) == bogus
+    assert log_resolver.resolve_verdict_root(_SLUG) == pinned
 
 
 # --- #484: the already-split log is reported, not merely prevented -----------

@@ -2,11 +2,11 @@
 schema_version: "1"
 uuid: 52629531-6334-4e75-a5c6-4fe1408b421c
 title: finalize reads its idempotency scan from the CWD log while log_event writes feature_complete to the main root
-status: backlog
+status: complete
 priority: high
 type: bug
 created: 2026-08-13
-updated: 2026-08-13
+updated: 2026-08-19
 tags: ['lifecycle', 'worktree', 'events-log', 'finalize']
 areas: ['lifecycle']
 ---

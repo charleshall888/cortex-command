@@ -416,11 +416,17 @@ def test_resolve_main_repo_root_env_first(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Req 5: CORTEX_REPO_ROOT short-circuits before any .git parse, even from
-    a worktree CWD (no regression to the overnight env-pin)."""
+    a worktree CWD (no regression to the overnight env-pin).
+
+    The pin names ``<main>`` rather than the bare ``tmp_path`` it once named:
+    since #493 the env branch applies ``is_valid_repo_root``, so a directory
+    bearing neither ``.git`` nor ``cortex/`` no longer short-circuits anything.
+    ``<main>`` is what the overnight writers actually pin, so this is the pinned
+    shape the requirement is about."""
     monkeypatch.delenv("CLAUDE_CODE_SESSION_ID", raising=False)
     fx = _build_worktree_skeleton(tmp_path, with_worktree_cortex=True)
     monkeypatch.chdir(fx["wt"])
-    monkeypatch.setenv("CORTEX_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("CORTEX_REPO_ROOT", str(fx["main"]))
 
     # Prove the .git parse path is never reached when the env var is set.
     def _boom(*_args: Any, **_kwargs: Any) -> None:
@@ -428,7 +434,7 @@ def test_resolve_main_repo_root_env_first(
 
     monkeypatch.setattr(il, "_main_root_from_gitfile", _boom)
 
-    assert il._resolve_main_repo_root() == tmp_path.resolve()
+    assert il._resolve_main_repo_root() == fx["main"].resolve()
 
 
 def test_resolve_main_repo_root_no_git_cortex_fallback(

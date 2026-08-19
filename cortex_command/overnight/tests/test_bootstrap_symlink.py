@@ -48,6 +48,9 @@ def test_bootstrap_session_creates_top_level_symlink(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """The top-level ``overnight-state.json`` symlink points at the session file."""
+    # ``cortex/`` is the repo marker ``is_valid_repo_root`` requires of an env
+    # pin since #493; every real overnight root already carries one.
+    (tmp_path / "cortex").mkdir(exist_ok=True)
     monkeypatch.setenv("CORTEX_REPO_ROOT", str(tmp_path))
     session_id = "overnight-2026-06-01-2200"
     _stub_initialize(monkeypatch, session_id)
@@ -70,6 +73,9 @@ def test_no_arg_load_state_returns_session_state_after_bootstrap(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """No-arg ``load_state()`` resolves via the symlink, not ``FileNotFoundError``."""
+    # ``cortex/`` is the repo marker ``is_valid_repo_root`` requires of an env
+    # pin since #493; every real overnight root already carries one.
+    (tmp_path / "cortex").mkdir(exist_ok=True)
     monkeypatch.setenv("CORTEX_REPO_ROOT", str(tmp_path))
     session_id = "overnight-2026-06-01-2300"
     _stub_initialize(monkeypatch, session_id)
@@ -87,6 +93,9 @@ def test_symlink_overwritten_on_repeat_bootstrap(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """A second bootstrap repoints the single-active-session symlink."""
+    # ``cortex/`` is the repo marker ``is_valid_repo_root`` requires of an env
+    # pin since #493; every real overnight root already carries one.
+    (tmp_path / "cortex").mkdir(exist_ok=True)
     monkeypatch.setenv("CORTEX_REPO_ROOT", str(tmp_path))
 
     first_id = "overnight-2026-06-01-2200"

@@ -1730,3 +1730,87 @@ def test_accepted_edge_foreign_head_branch_cannot_reach_step8(
     assert result["route"] == "merged_not_ancestor"
     assert result["continue_to"] is None, "a foreign head_branch reached step8"
     assert result["terminal"] is True
+
+
+def _archive_lifecycle(root: Path, *rows: str) -> None:
+    """Move the live lifecycle dir to ``archive/<slug>`` and write *rows* there.
+
+    Mirrors ``wontfix_cli``'s move-then-append invariant (``wontfix.md:9``):
+    the row only ever exists under ``archive/``, never under the live path.
+    """
+    live = root / "cortex" / "lifecycle" / SLUG
+    dst = root / "cortex" / "lifecycle" / "archive" / SLUG
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    live.rename(dst)
+    (dst / "events.log").write_text("\n".join(rows) + "\n", encoding="utf-8")
+
+
+def test_wontfix_row_in_the_archive_reaches_branch_1(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A wontfix'd lifecycle routes wontfix, not on_main/step9.
+
+    ``wontfix_cli`` archives the directory and only then appends the
+    ``feature_wontfix`` row, so scanning the live path alone left Branch 1
+    unreachable by its own producer. The fall-through was the damage: from the
+    primary on main the route was ``on_main``/``step9`` — Finalize — which
+    marks the abandoned backlog item complete and emits ``feature_complete``.
+    The gh stub is loaded to report orphan PRs, so a route of ``wontfix``
+    proves the archive scan fired before any PR logic.
+    """
+    monkeypatch.delenv("CORTEX_REPO_ROOT", raising=False)
+    root = _make_root(tmp_path)
+    _init_repo(root)
+    (root / "README").write_text("x\n")
+    _git("add", "README", cwd=root)
+    _git("commit", "-m", "c0", cwd=root)
+    _archive_lifecycle(
+        root,
+        _BENIGN_EVENT,
+        json.dumps(
+            {"ts": "2026-06-02T01:02:03Z", "event": "feature_wontfix", "feature": SLUG}
+        ),
+    )
+    _install_gh_stub(monkeypatch, tmp_path)
+    monkeypatch.setenv("GH_STUB_PR_LIST_COUNT", "5")
+    monkeypatch.chdir(root)
+
+    result = classify(SLUG, root)
+
+    assert result["route"] == "wontfix"
+    assert result["terminal"] is True
+    assert result["continue_to"] is None
+
+
+def test_a_live_log_wins_over_an_archived_one_of_the_same_slug(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Slug reuse: a re-entered lifecycle never consults its archived predecessor.
+
+    The archive is a fallback for an absent live log, not an additional source.
+    Without live-first ordering a fresh lifecycle reusing a wontfix'd slug
+    would be classified terminal on its predecessor's row.
+    """
+    monkeypatch.delenv("CORTEX_REPO_ROOT", raising=False)
+    root = _make_root(tmp_path)
+    _init_repo(root)
+    (root / "README").write_text("x\n")
+    _git("add", "README", cwd=root)
+    _git("commit", "-m", "c0", cwd=root)
+    archived = root / "cortex" / "lifecycle" / "archive" / SLUG
+    archived.mkdir(parents=True)
+    (archived / "events.log").write_text(
+        json.dumps(
+            {"ts": "2026-06-02T01:02:03Z", "event": "feature_wontfix", "feature": SLUG}
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    _write_events(root, _BENIGN_EVENT)  # the live re-entry
+    _install_gh_stub(monkeypatch, tmp_path)
+    monkeypatch.setenv("GH_STUB_PR_LIST_COUNT", "5")
+    monkeypatch.chdir(root)
+
+    result = classify(SLUG, root)
+
+    assert result["route"] != "wontfix"

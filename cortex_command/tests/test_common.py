@@ -67,7 +67,12 @@ class TestResolveUserProjectRoot:
             _resolve_user_project_root()
 
     def test_env_override_takes_precedence(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-        """Returns Path(CORTEX_REPO_ROOT) verbatim when that env var is set."""
+        """Returns Path(CORTEX_REPO_ROOT) when that env var names a repo root.
+
+        Marker-bearing since #493: an unmarked or missing value is rejected and
+        falls through to the walk instead of being trusted (ADR-0013).
+        """
+        (tmp_path / "cortex").mkdir(exist_ok=True)
         monkeypatch.setenv("CORTEX_REPO_ROOT", str(tmp_path))
 
         result = _resolve_user_project_root()

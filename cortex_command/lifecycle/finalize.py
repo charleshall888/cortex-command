@@ -53,11 +53,17 @@ envelope — the caller applies the same disambiguation rule it applied to the
 underlying ``cortex-update-item`` exit-2. Only *unexpected* exceptions
 JSON-encode.
 
-Path resolution uses the cwd flavor (``_resolve_user_project_root_from_cwd``)
-so the counters read, the idempotent ``events.log`` scan, and ``log_event``'s
-own write target all resolve against the same physical tree — ``log_event``
-resolves its path from cwd internally and cannot be handed a root, so finalize
-matches it rather than diverging under ``CORTEX_REPO_ROOT``.
+Two anchors, deliberately (the verb-family convention, #484/#487): tracked
+artifacts (``plan.md``, the backlog item) follow the cwd flavor
+(``_resolve_user_project_root_from_cwd``) because they belong to the invoking
+checkout, while ``events.log`` follows the pinned main-root resolver because it
+is the lifecycle's single copy. The idempotency scan and the rework counter read
+whatever ``log_event`` writes, so they resolve through ``resolve_events_log``
+rather than off the cwd root. Before #490 they read the cwd log while
+``log_event`` wrote the main-root one: from a worktree the scan saw an empty log,
+never found the row it had just written, and re-emitted ``feature_complete`` on
+every re-run — the idempotency guard was inert for the whole worktree population,
+and the counters on those rows were computed from a partial log.
 
 Root-resolution invariant across the verb family: ``enter`` resolves the project
 root via ``CORTEX_REPO_ROOT`` (env-honoring) while ``finalize`` and
@@ -81,6 +87,7 @@ from cortex_command.backlog.resolve_item import (
 )
 from cortex_command.backlog.update_item import update_item
 from cortex_command.common import _resolve_user_project_root_from_cwd
+from cortex_command.lifecycle.log_resolver import resolve_events_log
 from cortex_command.lifecycle.counters import count_rework_cycles, count_tasks
 from cortex_command.lifecycle.protocol import PROTOCOL_VERSION
 from cortex_command.lifecycle_event import log_event
@@ -189,7 +196,10 @@ def finalize(
 
     feature_dir = root / "cortex" / "lifecycle" / feature
     tasks_total, _tasks_checked = count_tasks(feature_dir / "plan.md")
-    events_log = feature_dir / "events.log"
+    # Not ``feature_dir / "events.log"``: that is the cwd anchor, and ``log_event``
+    # below writes through the pinned main-root resolver. Reading one and writing
+    # the other is what made the idempotency scan inert from a worktree (#490).
+    events_log = resolve_events_log(feature)
     rework_cycles = count_rework_cycles(events_log)
 
     if _feature_complete_exists(events_log):

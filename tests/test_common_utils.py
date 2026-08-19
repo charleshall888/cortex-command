@@ -612,11 +612,15 @@ def test_resolve_user_project_root_env_override_skips_walk(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """``CORTEX_REPO_ROOT`` env var is honored verbatim and bypasses the walk."""
-    # Override points to a directory that does NOT contain markers — the walk
-    # would otherwise fail. The env var must win without inspecting the path.
+    """``CORTEX_REPO_ROOT`` bypasses the walk when it names a real repo root.
+
+    The override points somewhere the walk would never reach, so returning it
+    proves the walk was skipped. Since #493 the value must bear a marker — a
+    ``.git`` entry or a ``cortex/`` directory — because an unmarked or missing
+    pin is now rejected rather than trusted (ADR-0013).
+    """
     override = tmp_path / "explicit-root"
-    override.mkdir()
+    (override / "cortex").mkdir(parents=True)
     monkeypatch.setenv("CORTEX_REPO_ROOT", str(override))
     monkeypatch.chdir(tmp_path)
 

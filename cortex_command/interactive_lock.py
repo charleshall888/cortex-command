@@ -69,7 +69,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
-from cortex_command.common import _resolve_user_project_root
+from cortex_command.common import _resolve_user_project_root, is_valid_repo_root
 
 # ---------------------------------------------------------------------------
 # Module constants
@@ -158,9 +158,15 @@ def _resolve_main_repo_root() -> Path:
 
     Order is load-bearing (eager worktree-detect, NOT walk-first):
 
-    (a) If ``CORTEX_REPO_ROOT`` is set, return it ``.resolve()``-canonicalized
-        verbatim (no ``.git`` parse, no subprocess) — preserves the overnight
-        env-pin.
+    (a) If ``CORTEX_REPO_ROOT`` is set **and passes**
+        :func:`common.is_valid_repo_root`, return it ``.resolve()``-canonicalized
+        (no ``.git`` parse, no subprocess) — preserves the overnight env-pin,
+        whose three writers all point at real trees. A value that fails the
+        marker check falls through to (b)/(c) per ADR-0013 rather than
+        redirecting every pinned verb beneath a path that may not exist (#493).
+        The guard is only load-bearing because (c)'s ``_resolve_user_project_root``
+        applies the same check — before #493 it re-trusted the same variable, so
+        a guard here alone would have been inert.
     (b) Else eagerly walk from ``Path.cwd().resolve()`` upward; on the first
         ``.git`` entry that is a **file** (a worktree gitfile), parse it via
         :func:`_main_root_from_gitfile`. This branch takes precedence over any
@@ -175,7 +181,7 @@ def _resolve_main_repo_root() -> Path:
         shared resolver — also keeps #241 R2's reference-count grep ≥ 2).
     """
     env_root = os.environ.get("CORTEX_REPO_ROOT")
-    if env_root:
+    if env_root and is_valid_repo_root(env_root):
         return Path(env_root).resolve()
 
     current = Path.cwd().resolve()

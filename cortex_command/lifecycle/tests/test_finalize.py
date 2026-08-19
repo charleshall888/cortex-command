@@ -337,3 +337,83 @@ def test_every_state_is_known(
     seen.add("error")
 
     assert seen == set(fin.KNOWN_STATES)
+
+
+# ---------------------------------------------------------------------------
+# Two-anchor resolution from a worktree (#490)
+# ---------------------------------------------------------------------------
+
+
+def _scaffold_worktree(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> tuple[Path, Path]:
+    """chdir into a resolvable linked worktree; return (main_root, worktree_root).
+
+    The shape a real session has, reused from
+    ``test_lifecycle_event.py::test_write_from_a_real_worktree_lands_in_the_main_root``:
+    gitfile → admin dir → ``commondir`` → a main root that carries ``cortex/``.
+    """
+    monkeypatch.delenv("CORTEX_REPO_ROOT", raising=False)
+    main = tmp_path / "main"
+    admin = main / ".git" / "worktrees" / "wt1"
+    admin.mkdir(parents=True)
+    (admin / "commondir").write_text("../..\n", encoding="utf-8")
+    (main / "cortex" / "lifecycle" / "feat").mkdir(parents=True)
+    (main / "cortex" / "backlog").mkdir(parents=True)
+
+    wt = tmp_path / "wt"
+    wt.mkdir()
+    (wt / ".git").write_text(f"gitdir: {admin}\n", encoding="utf-8")
+    (wt / "cortex" / "lifecycle" / "feat").mkdir(parents=True)
+    (wt / "cortex" / "backlog").mkdir(parents=True)
+    monkeypatch.chdir(wt)
+    return main, wt
+
+
+def test_idempotency_scan_reads_the_log_log_event_writes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A second finalize from a worktree does not re-emit feature_complete.
+
+    ``log_event`` writes through the pinned main-root resolver while the scan
+    used to read the CWD log. From a worktree those are different files, so the
+    scan read an empty log, never saw the row it had just written, and re-emitted
+    on every re-run.
+    """
+    main, wt = _scaffold_worktree(tmp_path, monkeypatch)
+
+    first = fin.finalize(feature="feat", backend="none", backlog_file="")
+    second = fin.finalize(feature="feat", backend="none", backlog_file="")
+
+    assert first["emitted"] is True
+    assert second["emitted"] is False, "re-emitted feature_complete on re-run"
+
+    main_rows = _events_rows(main / "cortex" / "lifecycle" / "feat")
+    assert [r["event"] for r in main_rows].count("feature_complete") == 1
+    assert not (wt / "cortex" / "lifecycle" / "feat" / "events.log").exists()
+
+
+def test_rework_cycles_are_counted_from_the_written_log(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The counter reads the same log the row lands in, not the CWD one.
+
+    A worktree-local log holding decoy rework rows must not reach the emitted
+    ``rework_cycles`` value; the main-root log is the lifecycle's single copy.
+    """
+    main, wt = _scaffold_worktree(tmp_path, monkeypatch)
+    rework = json.dumps(
+        {
+            "ts": "2026-06-02T01:02:03Z",
+            "event": "review_verdict",
+            "verdict": "CHANGES_REQUESTED",
+        }
+    )
+    (wt / "cortex" / "lifecycle" / "feat" / "events.log").write_text(
+        rework + "\n" + rework + "\n", encoding="utf-8"
+    )
+
+    result = fin.finalize(feature="feat", backend="none", backlog_file="")
+
+    main_rows = _events_rows(main / "cortex" / "lifecycle" / "feat")
+    row = [r for r in main_rows if r["event"] == "feature_complete"][0]
+    assert row["rework_cycles"] == 0, "counted the worktree-local decoy rows"
+    assert result["emitted"] is True

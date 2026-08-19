@@ -58,11 +58,41 @@ class CortexProjectRootError(RuntimeError):
     """
 
 
+def is_valid_repo_root(candidate: Path | str | None) -> bool:
+    """Return ``True`` when *candidate* is, in place, a real repo root.
+
+    Valid means: non-null, resolvable, an existing directory, not the
+    filesystem root, and bearing a repo marker — a ``.git`` entry (file or
+    directory, so a linked worktree passes) or a ``cortex/`` directory.
+
+    ADR-0013 states the rule this enforces: "a poisoned value (``/``,
+    marker-less, missing) is rejected and falls through rather than being
+    trusted." The check is deliberately **non-walking** — it tests the supplied
+    path and nothing above it. A walking validator applied to a stale
+    ``CORTEX_REPO_ROOT`` could resolve *up* to a marker-bearing ancestor (a
+    monorepo root, ``$HOME/.git``) and silently select the wrong repo, which is
+    the failure it exists to prevent.
+    """
+    if candidate is None:
+        return False
+    try:
+        resolved = Path(candidate).resolve()
+    except (OSError, RuntimeError, ValueError):
+        return False
+    if not resolved.is_dir():
+        return False
+    if resolved == Path("/"):
+        return False
+    return (resolved / ".git").exists() or (resolved / "cortex").is_dir()
+
+
 def _resolve_user_project_root() -> Path:
     """Resolve the directory containing the user's cortex project.
 
     Returns ``Path(os.environ["CORTEX_REPO_ROOT"])`` when that environment
-    variable is set (the user's explicit override is trusted verbatim).
+    variable is set **and passes** :func:`is_valid_repo_root`; a value that
+    fails the marker check is ignored and named in the raised error rather
+    than trusted (ADR-0013, #493).
     Otherwise walks upward from ``Path.cwd().resolve()`` to the first
     ancestor whose ``cortex/`` child is a directory.
     The walk terminates on either ``(current / ".git").exists()`` (file
@@ -85,8 +115,15 @@ def _resolve_user_project_root() -> Path:
             directory the walk visited.
     """
     env_root = os.environ.get("CORTEX_REPO_ROOT")
+    rejected_env: str | None = None
     if env_root:
-        return Path(env_root)
+        if is_valid_repo_root(env_root):
+            return Path(env_root)
+        # ADR-0013: a poisoned pin falls through to the walk rather than being
+        # trusted. Before #493 this branch returned the value verbatim — no
+        # existence check, no marker check — so ``CORTEX_REPO_ROOT=/nonexistent``
+        # silently redirected every lifecycle read and append beneath it.
+        rejected_env = env_root
 
     searched: list[Path] = []
     current = Path.cwd().resolve()
@@ -101,7 +138,14 @@ def _resolve_user_project_root() -> Path:
             break
         current = parent
 
+    rejected = (
+        f"CORTEX_REPO_ROOT={rejected_env!r} was ignored: it is not an existing "
+        "directory bearing a .git entry or a cortex/ directory. "
+        if rejected_env
+        else ""
+    )
     raise CortexProjectRootError(
+        f"{rejected}"
         "Run from your cortex project root, set CORTEX_REPO_ROOT, or "
         "create a new project here with `git init && cortex init` "
         "(cortex init requires a git repository). "

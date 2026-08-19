@@ -576,6 +576,23 @@ def classify(slug: str, root: Path) -> dict:
     lifecycle_dir = artifact_root / "cortex" / "lifecycle" / slug
     pr_json = lifecycle_dir / "pr.json"
     events_log = lifecycle_dir / "events.log"
+    # Branch 1 reads the archive when the live directory is gone, because that
+    # is where its only producer puts the row: ``wontfix_cli`` moves the
+    # directory to ``archive/<slug>`` and only then appends ``feature_wontfix``
+    # (a code invariant — wontfix.md:9). Scanning the live path alone made
+    # Branch 1 unreachable, and the fall-through is not benign: measured
+    # 2026-08-19, ``complete-route`` on a wontfix'd slug returned
+    # ``on_main``/``step9`` from the primary on main, which is Finalize — it
+    # would mark the abandoned item complete and emit ``feature_complete``.
+    # Off main it lands on ``first_run``/``step1`` and restarts the lifecycle.
+    # Live-first ordering keeps slug reuse correct: a re-entered lifecycle has
+    # its own live log and never consults the archived one.
+    if not events_log.is_file():
+        archived = (
+            artifact_root / "cortex" / "lifecycle" / "archive" / slug / "events.log"
+        )
+        if archived.is_file():
+            events_log = archived
 
     result = _base_result()
 
