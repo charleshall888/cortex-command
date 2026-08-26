@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 5f1d55c6-4c9b-4faa-8787-2d97808bc214
 title: Write verbs report success having written nothing, so a silent no-op reads as a completed step
-status: backlog
+status: complete
 priority: medium
 type: bug
 created: 2026-08-25
@@ -77,3 +77,34 @@ separate note for the no-index case, which is the discriminant the row asks for.
 
 Re-measure each remaining row before building it — one of the five was already
 false, and the same could be true of the rest.
+
+---
+
+## 2026-08-25 (later) — the remaining three rows are refuted too; closing
+
+Each was run, not read:
+
+- **`cortex-refine reconcile-clarify`** does **not** exit 0 silently. On a no-op it
+  prints `{"state":"noop","rows":0,"tier":...,"criticality":...}` on stdout, and it
+  warns on stderr when a supplied `--tier-reason`/`--criticality-reason` was dropped
+  because the rank comparison suppressed the row. Reproduced on a synthetic
+  lifecycle. The `changed:` discriminant this ticket asks for is already there, and
+  the code comment explains why it was added. The "seed left in place" half is not a
+  defect either: the events log is the tier's state, the backlog `complexity:` is an
+  inert seed (#453, wontfix).
+- **`cortex-complexity-escalator --gate …`** appends nothing and writes nothing. Its
+  module docstring is explicit — "**It writes nothing.**" — and records that the
+  earlier behaviour of appending the override directly was removed *because* it made
+  a bullet count the decider. The row describes a version that no longer exists.
+- **`cortex-lifecycle-stage-artifacts --phase complete`** does stage the review-drift
+  requirements file. `_extract_drift_files` parses `## Suggested Requirements Update`
+  — the same heading §3a auto-applies from — and `_collect_candidates` appends each
+  recorded path at `--phase complete`. Verified by running the extractor over a
+  review.md fixture: `['cortex/requirements/lifecycle.md']`.
+
+`cortex-load-requirements` was already off the list (four distinct `COVERAGE:` states).
+
+So all five rows are refuted **as stated**, and the ticket still earned its keep: going
+to look at the code the false row 1 pointed at is what surfaced the real
+frontmatter-no-op defect, now fixed. The lesson is the one in the header of this
+section — the shape was right, every specific was wrong.

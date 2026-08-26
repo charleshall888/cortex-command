@@ -2,11 +2,11 @@
 schema_version: "1"
 uuid: 8ad0e15c-194f-4280-a4f1-6dd4683e714e
 title: lifecycle_staleness is resume-only, spec-anchored and whole-HEAD, so a fresh backlog pickup gets no premise-drift signal at all
-status: backlog
+status: wontfix
 priority: low
 type: feature
 created: 2026-08-23
-updated: 2026-08-23
+updated: 2026-08-25
 tags: ['backlog', 'lifecycle', 'staleness', 'build', 'cli']
 areas: ['tooling']
 blocked-by: []
@@ -79,3 +79,42 @@ Not a score, and not a verdict. A **no-claim briefing** at pickup — the same s
   signal and should be reported, not dropped.
 - Anything that prints a *number* here will be read as a verdict. The measurement above says a verdict
   is not available at usable precision, which is the main reason to keep this a list.
+
+---
+
+## Resolution — 2026-08-25: closed wontfix, its own instrument measures against it
+
+This ticket's data half is the **since-filing window**: commits touching the ticket's
+cited paths, or naming its id, since its `created:` anchor. Its own body already puts
+that at 58% precision against a 33% base and calls it "a noise generator if it is
+scored", and already names the class it cannot see — *"seven of the twelve tickets were
+already false on the day they were filed ... so no since-filing window can see them"*.
+
+A second, independent sample now says the blind class is not seven-of-twelve but
+effectively all of it. Eight ready tickets were triaged on 2026-08-25; four carried a
+premise that did not survive being run (#501 row 1, #502, #503, #504 part 2). Every one
+of those four was **created 2026-08-25**, and every fix that refuted them had already
+landed:
+
+| refuting fix | landed |
+|---|---|
+| `lifecycle/log_resolver.py` (the #484 one-resolver pin) | 2026-08-13 |
+| `lifecycle/complete_route.py` (`on_main` gated on worktree absence) | 2026-08-19 |
+| `lifecycle/load_requirements_cli.py` (four `COVERAGE:` states) | 2026-08-07 |
+
+Six to eighteen days *before* the anchor. A window opening at `created:` sees zero
+relevant commits for all four — **0 of 4 caught**, against a 50% base rate in that
+sample. The proposal is not weakly discriminative here; it is inert.
+
+What actually caught all four was checking the claim against HEAD with no reference to
+dates at all: a grep for the fix, the ticket's own measurement re-run over this corpus,
+and reading the code the claim pointed at. That is a habit, not a data feed, so there is
+nothing here for a briefing verb to supply.
+
+The durable finding — a ticket filed from another repo describes **that repo's installed
+wheel**, not this repo's HEAD, so its premise must be run here before it is built — is
+recorded outside the backlog and needs no ticket to stay live.
+
+`lifecycle_staleness` is left exactly as it is: resume-only, spec-anchored, emitted in
+`cortex-lifecycle-resolve`'s `staleness` key and surfaced tersely by `build` on resume.
+Nothing above argues it is wrong for the job it currently does.
