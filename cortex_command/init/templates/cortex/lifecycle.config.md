@@ -35,10 +35,3 @@ backlog:
 # Lifecycle Configuration
 
 Project-specific overrides for the lifecycle skill.
-
-## Review Criteria
-
-Add project-specific review criteria beyond default spec compliance + code quality:
-<!-- Example: -->
-<!-- - Verify all new routes have authentication middleware -->
-<!-- - Check that database migrations are reversible -->

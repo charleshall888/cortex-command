@@ -144,9 +144,14 @@ _GROUP_RANK = {"live": 0, "waiting": 1, "nested": 2, "dark": 3, "dormant": 4}
 # those are off-board by the test below, which runs first. A panel for it would
 # be a label no row can carry — the same unreachable-arm defect as the
 # "discharged blocker" markup this table's rows used to render.
+# "Untriaged" is not among them either, and for the same measured reason.
+# That panel held records at ``status: new`` and asked the operator to set a
+# status; #498 made ``new`` a ``backlog`` synonym in the one status vocabulary,
+# so the value is normalized away before any record reaches here and the panel
+# could only ever render empty. Such a record now ranks like any other backlog
+# item, which is what its author meant by writing the word.
 _TAIL_PANELS: tuple[tuple[str, str, str], ...] = (
     ("deferred", "deferred", ""),
-    ("untriaged", "untriaged", "status: new — set a status and they rank"),
     ("offboard", "off the board", "absent from the board's ordering"),
     ("unruled", "unrecognised status", "not a status or priority the bands know"),
 )
@@ -322,8 +327,8 @@ def _unrecognised_status_note(record: dict) -> str:
     """Name a status cortex does not know, or return the empty string.
 
     Unrecognised statuses are deliberately still ranked — cortex installs into
-    repos that run their own vocabularies, and a board that swept ``must-have``
-    into "untriaged" would be empty in such a repo. The obligation that comes
+    repos that run their own vocabularies, and a board that quarantined
+    ``must-have`` would be empty in such a repo. The obligation that comes
     with ranking them is to say so.
     """
     status = _text(record.get("status"))
@@ -645,7 +650,7 @@ def _epic(
     deferred = sum(1 for tid in kids if band_of.get(tid) == "F")
     # The two bands the three counters above do not reach. ``_READY_KEYS`` is
     # A-E*/G′, ``held`` is G alone and ``deferred`` is F alone, which leaves E′
-    # (an active nested container) and H (untriaged, closed-in-place, or
+    # (an active nested container) and H (closed-in-place or
     # off-board) falling through all three. They are counted here because the
     # group state below is only sound if the five counters partition the child
     # list exactly — see the predicate's own comment.
@@ -663,7 +668,7 @@ def _epic(
     # it is spelled ``deferred == len(kids)`` rather than "no ready and no
     # held". Those are not the same predicate: E′ and H children are counted by
     # neither, so the loose spelling calls a group dormant while it holds
-    # untriaged tickets or a live sub-epic, and then sinks and drains exactly
+    # band-H tickets or a live sub-epic, and then sinks and drains exactly
     # the work somebody needs to look at. The ``kids and`` guard is not
     # decoration: ``0 == 0`` is true, so without it an empty group becomes the
     # most confident possible statement about a set with no members.
@@ -772,11 +777,9 @@ def _tail_panel_of(row: bands_mod.Row, order_ids: frozenset[str] | None) -> str:
     """Which tail panel a non-ready, non-blocked record belongs in.
 
     The order of the tests is the order ``bands._RULES`` applies, and that is
-    the whole correctness argument: band H is assigned off-board-first, so a
-    record that is both absent from the ordering and ``status: new`` is banded
-    for the former. A panel split that tested ``new`` first would file it under
-    the reason the band did not use, and the label on the panel would be a
-    claim the banding does not make.
+    the whole correctness argument: a panel split that tested the facts in a
+    different order would file a record under a reason the band did not use,
+    and the label on the panel would be a claim the banding does not make.
 
     The final arm is a real destination rather than a fallthrough. A record
     whose status or priority is outside cortex's vocabulary reaches it —
@@ -788,8 +791,6 @@ def _tail_panel_of(row: bands_mod.Row, order_ids: frozenset[str] | None) -> str:
         return "deferred"
     if order_ids is not None and row.id not in order_ids:
         return "offboard"
-    if status == "new":
-        return "untriaged"
     return "unruled"
 
 
@@ -1048,7 +1049,7 @@ def _navigator_model(state: object) -> dict:
     # ``dormant`` sorts below ``dark`` deliberately. A child is drawn inside
     # its epic's map and nowhere else on the page, so a group's position is the
     # only thing determining whether its children can be found — sinking a
-    # group that holds untriaged tickets hides them, sinking one whose children
+    # group that holds band-H tickets hides them, sinking one whose children
     # are all deferred hides nothing that was not already declared out of play.
     # A new state is INSERTED at the position matching what an operator would
     # do about it, never appended.

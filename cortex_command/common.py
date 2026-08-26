@@ -1468,6 +1468,12 @@ def atomic_write(
 
 _STATUS_MAP: dict[str, str] = {
     "open": "backlog",
+    # ``new`` is the word a human reaches for when hand-authoring a ticket, and
+    # it means exactly what ``backlog`` means. Without this row it passed
+    # through unchanged into index.json, where every eligible-status gate
+    # (ready.py, overnight, triage) rejected it — six live wild-light tickets
+    # were invisible to the triage board on 2026-08-19 with no error anywhere.
+    "new": "backlog",
     "in-progress": "in_progress",
     "blocked": "backlog",
     "done": "complete",
@@ -1485,6 +1491,7 @@ def normalize_status(raw: str) -> str:
 
     Known legacy mappings:
         open        -> backlog
+        new         -> backlog
         in-progress -> in_progress
         blocked     -> backlog
         done        -> complete

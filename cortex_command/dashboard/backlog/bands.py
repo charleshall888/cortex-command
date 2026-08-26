@@ -229,7 +229,7 @@ _BAND_META: tuple[tuple[str, str, str, bool], ...] = (
     ("F", "HELD · DEFERRED BY DECISION", "dotted", False),
     ("G", "DOWNSTREAM · NOT STARTABLE", "dashed", False),
     ("G′", "HOLD LAPSED · BLOCKER ALREADY COMPLETE", "ghost", False),
-    ("H", "UNTRIAGED · CLOSED IN PLACE · OFF-BOARD", "ghost", False),
+    ("H", "CLOSED IN PLACE · OFF-BOARD", "ghost", False),
 )
 
 # The bands whose members are startable work competing for the same day. This
@@ -429,10 +429,6 @@ def _why_off_board(_facts: _Facts) -> str:
     return "present in the slice but absent from the board's own ordering"
 
 
-def _why_untriaged(_facts: _Facts) -> str:
-    return "status: new — needs triage"
-
-
 def _why_deferred(_facts: _Facts) -> str:
     return "deferred — a decision that was made, not an obstacle that appeared"
 
@@ -546,11 +542,11 @@ def _always(_facts: _Facts) -> bool:
 
 
 # (band key, predicate, gloss builder). Order is **match precedence**, not the
-# order bands render in. Three rules feed band H on purpose: its three named
+# order bands render in. Several rules feed band H on purpose: its named
 # members have to outrank F and G, and the catch-all has to stay last, which
 # is only possible if the band can be reached from more than one rule.
 _RULES: tuple[tuple[str, _Predicate, _Reason], ...] = (
-    # --- H's three named members, tested first ------------------------------
+    # --- H's named members, tested first ------------------------------
     # These outrank F and G deliberately. An abandoned ticket that also names
     # a live blocker is closed, not blocked; drawing it in band G would invite
     # somebody to go unblock work nobody intends to do.
@@ -560,7 +556,16 @@ _RULES: tuple[tuple[str, _Predicate, _Reason], ...] = (
         _why_closed,
     ),
     ("H", lambda f: not f.on_order, _why_off_board),
-    ("H", lambda f: f.status == "new", _why_untriaged),
+    # A third named member matched ``status == "new"`` as "untriaged". It is
+    # gone because it can no longer fire: #498 put ``new`` into ``_STATUS_MAP``
+    # as a ``backlog`` synonym, and every record reaches this table through
+    # ``overnight.backlog``'s ``normalize_status`` call, so the literal never
+    # survives to be tested. The two boards disagreed about the word for as
+    # long as it sat outside the vocabulary — the CLI dropped those tickets
+    # from triage silently while this table quarantined them and asked for a
+    # status — and one meaning settles both. A repo running its own vocabulary
+    # is unaffected: an unrecognised status was never swept in here (see
+    # OPEN_STATUSES above), it ranks and is disclosed on the row.
     # --- held by decision, then held by dependency --------------------------
     # Deferral outranks a blocker: a deferred ticket that is also blocked is
     # not getting picked either way, and band F states the fact the operator

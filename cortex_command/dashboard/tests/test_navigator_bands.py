@@ -509,14 +509,14 @@ class MembershipTests(unittest.TestCase):
                 "A": 2,
                 "B": 1,
                 "C": 2,
-                "D": 28,
+                "D": 31,
                 "E": 16,
                 "E*": 0,
                 "E′": 5,
                 "F": 8,
                 "G": 5,
                 "G′": 2,
-                "H": 4,
+                "H": 1,
             },
         )
         self.assertEqual(sum(counts.values()), 73)
@@ -577,8 +577,16 @@ class MembershipTests(unittest.TestCase):
         self.assertEqual(self._ids("B"), {"281"})
         self.assertEqual(self._ids("C"), {"147", "407"})
 
-    def test_untriaged_and_closed_share_the_catch_all_band(self):
-        self.assertEqual(self._ids("H"), {"103", "513", "514", "515"})
+    def test_the_catch_all_band_holds_only_closed_in_place_records(self):
+        """#513/#514/#515 used to sit here on ``status: new``.
+
+        #498 folded ``new`` into ``backlog`` in the single status vocabulary,
+        so those three rank as ordinary backlog work (they are in D above) and
+        band H is left with the one record that is closed in place. The slice
+        total is unchanged, which is the check that they moved rather than
+        vanished.
+        """
+        self.assertEqual(self._ids("H"), {"103"})
 
 
 class DegenerateSliceTests(unittest.TestCase):

@@ -36,6 +36,27 @@ class TestFinishedSynonymsNormalize:
         assert normalize_status(raw) in TERMINAL_STATUSES
 
 
+class TestHandAuthoredNewNormalizes:
+    """`new` is a backlog synonym, not its own bucket (#498).
+
+    Measured in wild-light on 2026-08-19: six live tickets carried
+    `status: new` and `cortex-backlog-triage` listed none of them, while a
+    `status: backlog` control listed. Nothing errored — every eligible-status
+    gate simply did not recognize the value, so the items were invisible.
+    """
+
+    def test_new_maps_to_backlog(self):
+        assert normalize_status("new") == "backlog"
+
+    def test_new_is_not_terminal(self):
+        assert normalize_status("new") not in TERMINAL_STATUSES
+
+    def test_normalized_new_is_pickup_eligible(self):
+        """The point of the alias: the gate that hid the six items accepts it."""
+        from cortex_command.overnight.backlog import ELIGIBLE_STATUSES
+        assert normalize_status("new") in ELIGIBLE_STATUSES
+
+
 class TestVocabularyNotNarrowed:
     """#435 must not narrow the terminal set in the same change.
 

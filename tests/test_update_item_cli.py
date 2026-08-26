@@ -355,3 +355,56 @@ def test_a_status_flip_is_staged(tmp_path, monkeypatch):
         cwd=str(root), capture_output=True, text=True, check=True,
     ).stdout
     assert "cortex/backlog/001-thing.md" in staged
+
+
+# ---------------------------------------------------------------------------
+# (g) #501 — a write that cannot land must not report success
+# ---------------------------------------------------------------------------
+#
+# Before this guard, a file with no parseable `---` block took every field
+# write as a no-op: `_set_frontmatter_value` returned the text unchanged,
+# `update_item` rewrote it byte-identically, `UpdateResult.changed_paths`
+# named it, and the CLI printed `Updated: <path>` at exit 0. The miss was
+# invisible at the call site and surfaced downstream as a wrong decision.
+
+def _plain_item(directory: Path, body: str) -> Path:
+    path = directory / "445-no-frontmatter.md"
+    path.write_text(body, encoding="utf-8")
+    return path
+
+
+def test_missing_frontmatter_refuses_instead_of_reporting_success(
+    tmp_path: Path,
+) -> None:
+    from cortex_command.backlog.update_item import (
+        FrontmatterMissingError,
+        update_item,
+    )
+
+    item = _plain_item(tmp_path, "no frontmatter here\n")
+    before = item.read_text(encoding="utf-8")
+    with pytest.raises(FrontmatterMissingError):
+        update_item(item, {"complexity": "complex"}, tmp_path, session_id="t")
+    assert item.read_text(encoding="utf-8") == before
+
+
+def test_unterminated_frontmatter_refuses(tmp_path: Path) -> None:
+    """An opening `---` with no closing one is the same nowhere-to-write case."""
+    from cortex_command.backlog.update_item import (
+        FrontmatterMissingError,
+        update_item,
+    )
+
+    item = _plain_item(tmp_path, "---\nstatus: backlog\nbody\n")
+    with pytest.raises(FrontmatterMissingError):
+        update_item(item, {"status": "complete"}, tmp_path, session_id="t")
+
+
+def test_absent_key_is_still_inserted_not_refused(tmp_path: Path) -> None:
+    """The guard fires on a missing *block*, never on a missing key."""
+    from cortex_command.backlog.update_item import update_item
+
+    item = tmp_path / "447-fine.md"
+    item.write_text("---\nstatus: backlog\n---\nbody\n", encoding="utf-8")
+    update_item(item, {"complexity": "complex"}, tmp_path, session_id="t")
+    assert "complexity: complex" in item.read_text(encoding="utf-8")

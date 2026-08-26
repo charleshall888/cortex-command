@@ -2,11 +2,11 @@
 schema_version: "1"
 uuid: 1cba0874-f1f8-4756-a82e-45c1b214cd44
 title: No CLI verb backfills a missing uuid on an existing backlog item
-status: backlog
+status: complete
 priority: low
 type: feature
 created: 2026-08-19
-updated: 2026-08-19
+updated: 2026-08-25
 tags: ['backlog', 'uuid', 'frontmatter', 'cli']
 areas: ['tooling']
 blocked-by: []

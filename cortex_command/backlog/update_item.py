@@ -64,11 +64,29 @@ def _get_frontmatter_value(text: str, key: str) -> str | None:
     return None
 
 
+class FrontmatterMissingError(ValueError):
+    """A backlog item has no parseable ``---`` frontmatter block.
+
+    Raised rather than returning the text unchanged (#501). The silent return
+    made every field write a no-op while ``update_item`` still rewrote the file
+    byte-identically, ``UpdateResult.changed_paths`` still named it, and the CLI
+    still printed ``Updated: <path>`` at exit 0. A caller could not tell a
+    completed write from a write that never happened, and the miss only
+    surfaced downstream as a wrong decision — a tier that reads as the old one,
+    a status that reads as never-triaged.
+    """
+
+
 def _set_frontmatter_value(text: str, key: str, value: str) -> str:
     """Replace ``key: <anything>`` inside the frontmatter block.
 
     If the key does not exist in frontmatter, inserts it before the
     closing ``---``.
+
+    Raises:
+        FrontmatterMissingError: When *text* carries no opening ``---`` line or
+            no closing one after it. There is nowhere to put the key, and
+            pretending otherwise is the #501 defect.
 
     The scalar is routed through the key-scoped ``quote_scalar`` helper so
     string-intended keys (``lifecycle_slug``/``feature``/``parent``/``spec``)
@@ -92,7 +110,9 @@ def _set_frontmatter_value(text: str, key: str, value: str) -> str:
                 break
 
     if first_dash == -1 or fm_closes == -1:
-        return text  # no frontmatter
+        raise FrontmatterMissingError(
+            f"no parseable frontmatter block, so {key!r} could not be written"
+        )
 
     for i in range(first_dash + 1, fm_closes):
         if re.match(rf"^{re.escape(key)}:\s", lines[i]):
@@ -267,7 +287,18 @@ def _remove_uuid_from_blocked_by(
         new_val = ", ".join(filtered)
         new_line = f"blocked-by: [{new_val}]"
         updated = pattern.sub(new_line, text)
-        updated = _set_frontmatter_value(updated, "updated", today)
+        try:
+            updated = _set_frontmatter_value(updated, "updated", today)
+        except FrontmatterMissingError:
+            # One malformed dependent must not abort the close it depends on,
+            # but it must not pass unreported either: `written` is what the
+            # caller stages, so a silent skip here loses the edit at commit.
+            print(
+                f"Warning: {p} has no frontmatter block; its stale blocked-by "
+                "reference to the closed item was left in place",
+                file=sys.stderr,
+            )
+            continue
         atomic_write(p, updated)
         written.append(p)
 
@@ -427,8 +458,18 @@ def _check_and_close_parent(
         f"({len(siblings)}) is terminal.",
         file=sys.stderr,
     )
-    parent_text = _set_frontmatter_value(parent_text, "status", outcome)
-    parent_text = _set_frontmatter_value(parent_text, "updated", today)
+    try:
+        parent_text = _set_frontmatter_value(parent_text, "status", outcome)
+        parent_text = _set_frontmatter_value(parent_text, "updated", today)
+    except FrontmatterMissingError:
+        # The "closed parent" line above has already printed, so staying silent
+        # here would leave a claim on stderr that the write contradicts.
+        print(
+            f"Warning: {parent_path.name} has no frontmatter block; it was NOT "
+            "closed despite the note above",
+            file=sys.stderr,
+        )
+        return None
     atomic_write(parent_path, parent_text)
     return parent_path
 
@@ -572,15 +613,19 @@ def update_item(
     item_uuid = _get_frontmatter_value(text, "uuid")
     item_id = _get_item_id(item_path)
 
-    # Apply field updates
-    for key, value in fields.items():
-        if value is None:
-            text = _set_frontmatter_value(text, key, "null")
-        else:
-            text = _set_frontmatter_value(text, key, str(value))
+    # Apply field updates. A missing frontmatter block aborts before the write
+    # rather than rewriting the file byte-identically and reporting success.
+    try:
+        for key, value in fields.items():
+            if value is None:
+                text = _set_frontmatter_value(text, key, "null")
+            else:
+                text = _set_frontmatter_value(text, key, str(value))
 
-    # Always update the `updated` field
-    text = _set_frontmatter_value(text, "updated", today)
+        # Always update the `updated` field
+        text = _set_frontmatter_value(text, "updated", today)
+    except FrontmatterMissingError as exc:
+        raise FrontmatterMissingError(f"{item_path}: {exc}") from None
 
     # Write atomically
     atomic_write(item_path, text)
@@ -834,7 +879,11 @@ def main() -> int:
     item_path = result.item
     assert item_path is not None  # status="ok" guarantees item is set
 
-    update_item(item_path, fields, BACKLOG_DIR, session_id=session_id)
+    try:
+        update_item(item_path, fields, BACKLOG_DIR, session_id=session_id)
+    except FrontmatterMissingError as exc:
+        print(f"No change: {exc}", file=sys.stderr)
+        return 1
     print(f"Updated: {item_path}")
     return 0
 

@@ -2,11 +2,11 @@
 schema_version: "1"
 uuid: 1c155f36-e15d-423e-a644-e66ba6ada5e5
 title: 'normalize_status omits ''new'', so tickets with status: new are silently invisible to backlog triage'
-status: backlog
+status: complete
 priority: medium
 type: bug
 created: 2026-08-19
-updated: 2026-08-19
+updated: 2026-08-25
 tags: ['backlog', 'status-vocabulary', 'triage']
 areas: ['tooling']
 blocked-by: []

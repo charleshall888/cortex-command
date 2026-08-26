@@ -48,8 +48,19 @@ _DORMANT_KEYS = frozenset(
 )
 _KNOWN_KEYS = _LIVE_CODE_KEYS | _LIVE_PROSE_KEYS | _DORMANT_KEYS
 
+# Body headings. Only the frontmatter is executed: `test-command` is the whole
+# of what Review runs. `## Review Criteria` is the one heading the scaffolded
+# template invites an operator to fill in, and nothing has ever loaded it —
+# measured 2026-08-06 (#479), a grep for the string across the installed skill
+# package hit only the template asset. A bullet added there is inert prose that
+# reads as authoritative to a human and to an agent alike (#504), so the
+# heading is announced rather than removed: the criteria people already wrote
+# under it are real requirements that should move somewhere consumed.
+_DORMANT_HEADINGS = frozenset({"Review Criteria"})
+
 # Once-per-process dedup so multi-read consumers (statusline, hooks) don't spam.
 _WARNED_KEYS: set = set()
+_WARNED_HEADINGS: set = set()
 
 
 def _warn_config_keys(parsed: dict, config_path: _pathlib.Path) -> None:
@@ -71,6 +82,40 @@ def _warn_config_keys(parsed: dict, config_path: _pathlib.Path) -> None:
             print(
                 f"warning: unknown lifecycle.config.md key '{key}' in "
                 f"{config_path} — ignored",
+                file=_sys.stderr,
+            )
+
+
+def _warn_config_headings(text: str, config_path: _pathlib.Path) -> None:
+    """Warn (stderr, once per process per heading) on body sections no consumer
+    reads. The body-level counterpart to :func:`_warn_config_keys`: never
+    raises, never changes a parsed value, fail-open by contract."""
+    body = text
+    frontmatter_text = _extract_frontmatter_text(text)
+    if frontmatter_text is not None:
+        # Everything after the closing delimiter. Splitting on the frontmatter
+        # text itself avoids re-walking the delimiters.
+        body = text.split(frontmatter_text, 1)[-1]
+    for line in body.splitlines():
+        stripped = line.strip()
+        if not stripped.startswith("## "):
+            continue
+        heading = stripped[3:].strip()
+        if not heading or heading in _WARNED_HEADINGS:
+            continue
+        if heading in _DORMANT_HEADINGS:
+            _WARNED_HEADINGS.add(heading)
+            print(
+                f"warning: '## {heading}' in {config_path} is documented but "
+                "not read by any consumer — only the frontmatter is honored, "
+                "so anything written under it has no effect",
+                file=_sys.stderr,
+            )
+        else:
+            _WARNED_HEADINGS.add(heading)
+            print(
+                f"warning: unknown lifecycle.config.md section '## {heading}' "
+                f"in {config_path} — ignored",
                 file=_sys.stderr,
             )
 
@@ -131,6 +176,7 @@ def read_branch_mode(repo_root: _pathlib.Path) -> str | None:
         return None
 
     _warn_config_keys(parsed, config_path)
+    _warn_config_headings(text, config_path)
     value = parsed.get(_FIELD_NAME)
     if value is None:
         return None
@@ -184,6 +230,7 @@ def resolve_backlog_backend(repo_root: _pathlib.Path) -> str:
         return _BACKLOG_BACKEND_DEFAULT
 
     _warn_config_keys(parsed, config_path)
+    _warn_config_headings(text, config_path)
     backlog_block = parsed.get(_BACKLOG_BLOCK_FIELD)
     if not isinstance(backlog_block, dict):
         return _BACKLOG_BACKEND_DEFAULT
@@ -237,6 +284,7 @@ def read_commit_artifacts(repo_root: _pathlib.Path) -> bool:
         return _COMMIT_ARTIFACTS_DEFAULT
 
     _warn_config_keys(parsed, config_path)
+    _warn_config_headings(text, config_path)
     if _COMMIT_ARTIFACTS_FIELD not in parsed:
         return _COMMIT_ARTIFACTS_DEFAULT
 

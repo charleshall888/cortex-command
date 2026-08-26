@@ -47,6 +47,10 @@ new rows in two days. So the 50-further-rows arm is not on a path to fire soon a
 operative trigger**; do not re-run the query before then expecting movement. Neither arm can fire yet, so
 this stays open and unbuilt rather than being decided early.
 
+Re-checked 2026-08-25 (18 days in): `{"rows": 58, "filled": 2, "tags": {"other": 2}}` — **one new row in
+13 days**, 3.4% fill. The 50-further-rows arm is not on a path to fire; 2026-10-06 remains the operative
+trigger. Left open and unbuilt.
+
 Re-run at 60 days (2026-10-06) or once 50 further rows have accumulated, whichever comes first:
 
 - `filled/rows` ≥ 5% **and** `tags` dominated by `other` → build the §5.2 vocabulary. That is the positive result.

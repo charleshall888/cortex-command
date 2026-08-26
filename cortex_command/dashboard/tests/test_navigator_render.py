@@ -1839,26 +1839,34 @@ class TestHeadStateComesFromTheHead(unittest.TestCase):
         # that rather than being smoothed into one agreeing story.
         self.assertEqual("dormant", epic["group_state"])
 
-    def test_untriaged_children_beside_a_deferred_one_are_not_dormant(self):
+    def test_a_live_sub_epic_beside_a_deferred_child_is_not_dormant(self):
         """The predicate is ``deferred == count``, and this is why.
 
         Eleven bands exist; ``ready`` counts seven of them, ``held`` counts G
         and ``deferred`` counts F, which leaves E′ and H reaching none of the
         three. So "no ready and no held" does NOT mean "every child deferred" —
-        a group can satisfy it while holding untriaged tickets, which land in
-        band H. Under the loose spelling this group sinks to the bottom of the
+        a group can satisfy it while holding a live sub-epic, which lands in
+        band E′. Under the loose spelling this group sinks to the bottom of the
         section and drains, and because a child is drawn inside its epic's map
-        and nowhere else on the page, those untriaged tickets become
+        and nowhere else on the page, everything under that sub-epic becomes
         effectively unfindable. The whole point of the treatment is to quiet
-        work that was decided, not work nobody has looked at yet.
+        work that was decided, not work still in play.
+
+        This used to be written with an untriaged (``status: new``) child.
+        #498 folded ``new`` into ``backlog`` in the single status vocabulary,
+        so such a child now counts as ``ready`` and cannot demonstrate the gap
+        — the predicate it guards is unchanged, and E′ still reaches none of
+        the three counters.
         """
         epics = self._epics(
             [
                 {"id": "1", "title": "Mixed epic", "type": "epic",
                  "status": "backlog", "priority": "medium"},
                 {**self._CHILD, "status": "deferred"},
-                {"id": "3", "title": "Never triaged", "type": "feature",
-                 "status": "new", "priority": "medium", "parent": "1"},
+                {"id": "3", "title": "Live sub-epic", "type": "epic",
+                 "status": "backlog", "priority": "medium", "parent": "1"},
+                {"id": "4", "title": "Grandchild", "type": "chore",
+                 "status": "backlog", "priority": "medium", "parent": "3"},
             ]
         )
         epic = epics["1"]
@@ -1883,15 +1891,19 @@ class TestTailPanelsNameOneReasonEach(_Fixture):
 
     The single panel this replaced was labelled "untriaged · closed in place ·
     off-board" — three unrelated findings under one heading, so no row in it
-    could be read without opening the ticket. The split is asserted at the
+    could be read without opening the ticket. Only two of the three survive:
+    #498 retired the untriaged reason with the status it was keyed on. The split is asserted at the
     classifier, because the corpus a test can write does not reach every arm
     and an arm that cannot be reached from a fixture is exactly the one that
     rots.
     """
 
     #: Every panel key the view may emit. A panel outside this set is one the
-    #: template has no gloss for.
-    DECLARED = {"deferred", "untriaged", "offboard", "unruled"}
+    #: template has no gloss for. ``untriaged`` was one of these until #498
+    #: folded ``status: new`` into ``backlog`` in the single status
+    #: vocabulary; the panel keyed on it can no longer take a member, so its
+    #: absence here keeps it from being re-added as an arm that never fires.
+    DECLARED = {"deferred", "offboard", "unruled"}
 
     @staticmethod
     def _row(tid: str, status: str) -> bands_mod.Row:
@@ -1903,7 +1915,6 @@ class TestTailPanelsNameOneReasonEach(_Fixture):
     def test_each_arm_of_the_classifier(self):
         cases = (
             ("5", "deferred", frozenset({"5"}), "deferred"),
-            ("7", "new", frozenset({"7"}), "untriaged"),
             ("8", "icebox", frozenset({"8"}), "unruled"),
             ("9", "backlog", frozenset({"1"}), "offboard"),
         )
@@ -1913,18 +1924,18 @@ class TestTailPanelsNameOneReasonEach(_Fixture):
                     expected, view_mod._tail_panel_of(self._row(tid, status), order)
                 )
 
-    def test_off_board_is_tested_before_untriaged(self):
+    def test_off_board_is_tested_before_the_catch_all(self):
         """The precedence is ``bands._RULES``', and it has to be.
 
         ``bands`` assigns band H off-board-first, so a record that is both
-        absent from the ordering and ``status: new`` is banded for the former.
-        A split that tested ``new`` first would file it under a reason the
-        banding did not use, and the panel's label would be a claim no other
-        part of the page makes.
+        absent from the ordering and carrying a status the bands do not know
+        is banded for the former. A split that tested the status first would
+        file it under a reason the banding did not use, and the panel's label
+        would be a claim no other part of the page makes.
         """
         self.assertEqual(
             "offboard",
-            view_mod._tail_panel_of(self._row("9", "new"), frozenset({"1"})),
+            view_mod._tail_panel_of(self._row("9", "icebox"), frozenset({"1"})),
         )
 
     def test_an_absent_ordering_puts_nothing_off_board(self):
