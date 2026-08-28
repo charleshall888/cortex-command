@@ -1,31 +1,29 @@
-"""Scoped structural guard test for the finalization-commit-step region.
+"""Absence guard for the finalization-commit-step region of complete.md.
 
 Slices the ``<!-- finalization-commit-step -->`` …
 ``<!-- /finalization-commit-step -->`` region out of the canonical
-``skills/build/references/complete.md`` and asserts:
+``skills/build/references/complete.md`` and asserts that a set of staging
+patterns — each of which caused a real, named defect — stays out of it.
 
 After #331 Phase 2 the Step-11a staging mechanics (the enumerated ``git add``,
 the resolver lookup, the ``-u`` sweep, the "never directory-glob" warnings)
 collapsed into the ``cortex-lifecycle-stage-artifacts --phase complete`` verb.
-The region keeps only the residual control flow; the verb's behavioral staged-set
-test (``tests/test_stage_artifacts.py``, Req 13) owns the staging-discipline
-assertions that used to live here.
+The region keeps only the residual control flow; the verb's behavioral
+staged-set test (``tests/test_stage_artifacts.py``, Req 13) owns the
+staging-discipline assertions that used to live here.
 
-Positive tokens (all must be present in the region):
-- ``cortex-lifecycle-stage-artifacts`` — the staging verb the enumerated
-  ``git add`` / resolver lookup / ``-u`` sweep collapsed into (Req 14)
-- ``cortex-read-commit-artifacts`` — binstub invocation (Flag Check stays prose)
-- ``git commit --only`` — the index-safe commit form the region mandates
-- A halt-on-failure clause for a non-zero commit/stage exit
-- A ``main`` / ``master`` non-default-branch advisory (R13)
-
-The staging-mechanics tokens that moved into the verb are no longer asserted
-here: the enumerated lifecycle filenames, ``Suggested Requirements Update``, and
-``cortex-resolve-backlog-item`` (dropped — the verb owns them), and
-``git add -u cortex/backlog/`` (flipped to a *negative* token below — the bug-2
-``-u`` sweep was narrowed away, Req 11).
+The companion positive-token test was deleted on 2026-08-28 under
+``docs/policies.md`` § "No tests on skill prose": asserting that
+``cortex-lifecycle-stage-artifacts``, ``git commit --only``, a halt clause and
+a ``main``/``master`` advisory *appear* in the region could only be satisfied
+by keeping those words, which is the gradient that grows skill prose. The
+region is scoped rather than file-wide because these patterns may legitimately
+appear elsewhere in complete.md.
 
 Negative tokens (must NOT appear in the region):
+- ``cortex-read-commit-artifacts`` — the commit-artifacts flag read folded INTO
+  ``cortex-lifecycle-stage-artifacts`` (one round-trip instead of two); a
+  separate binstub invocation here is the round-trip that was removed
 - ``git push`` — pushing is not part of the finalization commit step
 - ``gh pr create`` — PR creation is not part of the finalization commit step
 - ``git add cortex/lifecycle/`` — R5-forbidden directory-glob staging pattern
@@ -92,59 +90,6 @@ def _extract_region(text: str) -> str:
     return region
 
 
-def test_finalization_commit_region_positive_tokens() -> None:
-    """All required tokens must be present within the anchored region."""
-    repo_root = _repo_root()
-    complete_md = repo_root / "skills" / "build" / "references" / "complete.md"
-    assert complete_md.exists(), f"complete.md missing at {complete_md}"
-
-    region = _extract_region(complete_md.read_text(encoding="utf-8"))
-
-    # Req 14: the Step-11a staging mechanics collapsed into the verb invocation.
-    assert "cortex-lifecycle-stage-artifacts" in region, (
-        "finalization-commit-step region must invoke the "
-        "'cortex-lifecycle-stage-artifacts' staging verb (Req 14) — the "
-        "enumerated git-add / resolver lookup / -u sweep collapsed into it"
-    )
-
-    # The commit-artifacts flag read folded INTO stage-artifacts (one round-trip
-    # instead of two), so the region no longer invokes the standalone binstub —
-    # it must route the verb's config_disabled signal instead.
-    assert "cortex-read-commit-artifacts" not in region, (
-        "finalization-commit-step region must NOT invoke cortex-read-commit-artifacts "
-        "separately — cortex-lifecycle-stage-artifacts reads the flag itself"
-    )
-    assert "config_disabled" in region, (
-        "finalization-commit-step region must route the stage-artifacts "
-        "'config_disabled' signal (the folded commit-artifacts read)"
-    )
-    assert "git commit --only" in region, (
-        "finalization-commit-step region must mandate git commit --only"
-    )
-    # NOTE: the enumerated lifecycle filenames, 'Suggested Requirements Update',
-    # and 'cortex-resolve-backlog-item' staging-mechanics tokens moved into the
-    # stage-artifacts verb (Req 14) and are now pinned by the verb's behavioral
-    # staged-set test (tests/test_stage_artifacts.py, Req 13). 'git add -u
-    # cortex/backlog/' and 'git diff --cached --quiet' flipped to negative tokens
-    # (bug-2 Req 11; #417) — see below.
-
-    # Halt-on-failure clause: commit failure must stop progress
-    region_lower = region.lower()
-    halt_tokens = ("stop", "halt", "do not")
-    assert any(t in region_lower for t in halt_tokens), (
-        f"finalization-commit-step region must encode a halt-on-failure clause "
-        f"(one of {halt_tokens})"
-    )
-
-    # Non-default-branch advisory (R13): must mention main and master
-    assert "main" in region, (
-        "finalization-commit-step region must reference 'main' in the branch advisory (R13)"
-    )
-    assert "master" in region, (
-        "finalization-commit-step region must reference 'master' in the branch advisory (R13)"
-    )
-
-
 def test_finalization_commit_region_negative_tokens() -> None:
     """Forbidden tokens must NOT appear within the anchored region."""
     repo_root = _repo_root()
@@ -158,6 +103,14 @@ def test_finalization_commit_region_negative_tokens() -> None:
     # share one index, and the unscoped exit goes 1 on a concurrent session's
     # staging alone — documenting the equivalence taught consumers to trust a
     # false positive and commit a sibling's in-flight work.
+    # The commit-artifacts flag read folded INTO stage-artifacts (one
+    # round-trip instead of two), so the region must route the verb's
+    # config_disabled signal rather than invoke the standalone binstub.
+    assert "cortex-read-commit-artifacts" not in region, (
+        "finalization-commit-step region must NOT invoke "
+        "cortex-read-commit-artifacts separately — "
+        "cortex-lifecycle-stage-artifacts reads the flag itself"
+    )
     assert "git diff --cached --quiet" not in region, (
         "finalization-commit-step region must NOT equate the verb's signal to "
         "'git diff --cached --quiet' (#417) — that exit reflects the whole shared "

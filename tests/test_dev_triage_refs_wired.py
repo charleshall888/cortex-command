@@ -46,10 +46,6 @@ _MOVED_TOKENS = (
     "priority/type badges",
 )
 
-# The stub headings that must survive as anchors.
-_STUB_HEADINGS = ("## Step 2: Criticality Pre-Assessment",)
-
-
 def _repo_root() -> pathlib.Path:
     return pathlib.Path(__file__).resolve().parents[1]
 
@@ -145,12 +141,6 @@ def test_envelope_carries_no_unread_structured_mirrors(
         "the caller parses JSON nothing reads"
     )
     assert "Ready thing" in envelope["blocks"]
-
-
-def test_stub_headings_survive() -> None:
-    lines = {ln.strip() for ln in _skill_lines()}
-    for heading in _STUB_HEADINGS:
-        assert heading in lines, f"stub heading must be kept as an anchor: {heading}"
 
 
 def test_moved_content_absent_from_body_negative_control() -> None:

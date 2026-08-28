@@ -49,24 +49,3 @@ def test_refine_skill_wires_reconcile_clarify() -> None:
         "standalone /refine will skip the §3b critical-review gate for "
         "Clarify-assessed complex/high features"
     )
-
-
-def test_reconcile_clarify_precedes_specify_delegation() -> None:
-    """reconcile-clarify must appear before the §5 specify.md delegation.
-
-    The §3a/§3b tier/criticality reads live inside the delegated specify.md,
-    so reconcile must run first. Anchoring on the delegation phrase (not the
-    bare first `specify.md`) binds the requirement to the §5 delegation that
-    triggers those reads.
-    """
-    content = _skill_md()
-    assert _DELEGATION_ANCHOR in content, (
-        "could not find the §5 specify.md delegation line; anchor may have "
-        "drifted"
-    )
-    assert content.index("cortex-refine reconcile-clarify") < content.index(
-        _DELEGATION_ANCHOR
-    ), (
-        "cortex-refine reconcile-clarify must be positioned before the §5 "
-        "specify.md delegation so it precedes the §3a/§3b tier/criticality reads"
-    )

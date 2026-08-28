@@ -13,8 +13,8 @@ Two structural invariants introduced by the Task 4 refactor:
    argument ``"LIFECYCLE_SESSION_ID"``. Verified via ``ast.parse`` — no
    subprocess, no runtime cost.
 
-Both tests are skipped pending the Task 4 module refactor. Task 4 removes
-both ``@pytest.mark.skip`` decorators to activate the assertions.
+Both assertions are live: the Task 4 module refactor landed and the
+``@pytest.mark.skip`` decorators that once guarded them were removed.
 """
 
 from __future__ import annotations
