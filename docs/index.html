@@ -5633,7 +5633,7 @@
     <div class="rr-compare">
       <!-- LEFT · subtitle + figure -->
       <div class="rr-left">
-        <p class="rr-lede" style="margin-top: 0;">Give it a brief — vague or detailed — and it returns a rapid sequence of questions that draw the real requirements out of your head and onto <em>project.md</em>. Watch the charter densify, a glossary term get minted, and an ADR spin off the moment a decision clears the gate.</p>
+        <p class="rr-lede" style="margin-top: 0;">Give it a brief — vague or detailed — and it asks the questions that get the real requirements out of your head and onto <em>project.md</em>. As you answer, the charter fills in, new terms are added to the glossary, and any decision that is hard to reverse is written up as an ADR.</p>
         <div class="rr-ex-fig rr-fig-bench" data-fig="fig · brief in → charter, glossary &amp; ADR out">
           <svg viewBox="0 0 360 148" preserveAspectRatio="xMidYMid meet" style="height: 148px;">
 
@@ -5750,7 +5750,7 @@
       <div class="rr-right">
         <h4>HOW IT WORKS</h4>
         <ul>
-          <li class="rr-done">Relentless questioning. Question-beams fire one at a time and a meter tallies them. Keep asking until the gaps are addressed.</li>
+          <li class="rr-done">It keeps asking until nothing else needs your judgement. Questions that don't depend on each other come in one batch, grouped by section, and each one leads with a recommended answer — so you confirm or redirect instead of writing from scratch. Anything the codebase already answers is confirmed, not asked.</li>
           <li class="rr-done">An ADR spins off at the gate. When a decision is hard to reverse · surprising · a real trade-off, the interview proposes an ADR (lands proposed, promotes to accepted at merge). The project.md row keeps only a → 0007 back-pointer; the ADR owns the rationale.</li>
           <li class="rr-done">Progressive disclosure keeps context lean. project.md stays terse and always-loaded; the why lives in ADRs and the words in the glossary, pulled in on demand only when a stage needs them. Downstream agents read the rule, not the whole backstory.</li>
         </ul>
@@ -5762,7 +5762,7 @@
     <div class="hero-explain">
       <div class="ex">
         <span class="ex-num">§1.3</span>
-        <h2><code>/discovery</code> fires it off</h2>
+        <h2><code>/discovery</code> turns it into tickets</h2>
         <div class="ex-fig fig-prism" data-fig="fig 1 · prompt → tickets" aria-hidden="true">
           <svg viewBox="0 0 360 130" preserveAspectRatio="xMidYMid meet">
 
@@ -5836,7 +5836,7 @@
         <h2><code>/refine</code> each ticket separately</h2>
         <div class="ex-fig fig-calip" data-fig="fig 2 · the loop, three times" aria-hidden="true">
           <svg viewBox="0 0 360 130" preserveAspectRatio="xMidYMid meet">
-        <text class="cap" x="12" y="14">/refine · close to tolerance</text>
+        <text class="cap" x="12" y="14">/refine · one ticket, one spec</text>
 
         <!-- upper jaw (moves down +6 across cycle) -->
         <g class="jaw-top">
@@ -5933,9 +5933,9 @@
   <!-- ───────── §2.1 · the patch atlas (complexity × criticality patches the lifecycle) ───────── -->
   <section class="playground-section" id="playground">
     <div class="pg-header">
-      <div class="marker">§2.1 · the patch atlas</div>
+      <div class="marker">§2.1 · how much rigor a ticket earns</div>
       <h2 class="pg-title">Complexity earns ceremony. <em>Simplicity skips it.</em></h2>
-      <p class="pg-lede">Two values on the ticket — <code>complexity</code> (<em>simple · moderate · complex</em>) and <code>criticality</code> — set how much rigor the work earns. <em>/refine</em> pins them in Clarify, before a line of research is dispatched; every stage after that reads them and patches the track to match. Below <em>moderate</em> there is no track at all: <em>simple</em> work is implemented on the spot.</p>
+      <p class="pg-lede">Two values on the ticket — <code>complexity</code> (<em>simple · moderate · complex</em>) and <code>criticality</code> — set how much rigor the work earns. <em>/refine</em> sets them in Clarify, then re-checks them once the research is in; every stage after that reads them and patches the track to match. Below <em>moderate</em> there is no track at all: <em>simple</em> work is implemented on the spot.</p>
     </div>
 
     <!-- Comparison strip: the two ends of the lifecycle, in real numbers. The
@@ -5957,11 +5957,11 @@
         <div class="ax-compare-h">complex · critical</div>
         <div class="ax-compare-name">the nightline game loop</div>
         <div class="ax-compare-stats">
-          <div class="ax-compare-stat"><span class="ax-compare-stat-v">9</span><span class="ax-compare-stat-k">phases</span></div>
-          <div class="ax-compare-stat"><span class="ax-compare-stat-v">10</span><span class="ax-compare-stat-k">research agents</span></div>
+          <div class="ax-compare-stat"><span class="ax-compare-stat-v">7</span><span class="ax-compare-stat-k">phases</span></div>
+          <div class="ax-compare-stat"><span class="ax-compare-stat-v">6</span><span class="ax-compare-stat-k">research agents</span></div>
           <div class="ax-compare-stat"><span class="ax-compare-stat-v">2</span><span class="ax-compare-stat-k">review gates</span></div>
         </div>
-        <div class="ax-compare-extras">ten-angle research ending in an adversarial pass · <em>/critical-review</em> before the spec is approved · two plans race for the winner · a builder implements it · a review phase before merge.</div>
+        <div class="ax-compare-extras">six-angle research ending in an adversarial pass · <em>/critical-review</em> before the spec is approved · two or three plans race for the winner · a builder implements it · a review phase before merge.</div>
       </div>
     </div>
 
@@ -6164,7 +6164,7 @@
       <!-- Inline "under the hood" annotations — appear as the rail activates -->
       <div class="pipe-annot" id="annot-discovery"
            style="left: 14%; top: 30%;">
-        spawns 4 research branches in parallel — one rail per reference signal
+        runs 4 research agents at the same time — one per angle
       </div>
       <div class="pipe-annot" id="annot-refine"
            style="left: 47%; top: 70%;">
@@ -6190,7 +6190,7 @@
           <div>
             <div class="pm-name">/discovery — fan-out</div>
             <div class="pm-sub">cortex/research/{topic}/research.md</div>
-            <div class="pm-detail">spawns research branches in parallel — one rail per reference signal.</div>
+            <div class="pm-detail">runs several research agents at the same time — one per angle.</div>
             <ul class="pm-children">
               <li class="pm-child">→ Stardew Valley · feedback-loop ref</li>
               <li class="pm-child">→ Sea of Thieves · social-ritual ref</li>
@@ -6310,30 +6310,26 @@
                  cap dashed line sits where that gauge's threshold is.
                  Animations stagger chunk opacity so bars appear to fill. -->
 
-            <!-- GAUGE 1 · zero-progress rounds (5 chunks, fills to dashed cap @ y=42)
-                 column body y=20..80 (60 tall); 5 chunks of 12 each from y=80 up.
-                 chunks 5..1 sit at y=68,56,44,32,20 — first 3 chunks fill (to y=44),
-                 stopping just under the cap line at y=42. -->
+            <!-- GAUGE 1 · zero-progress rounds. The breaker trips at TWO
+                 consecutive rounds that merge nothing (runner.py:3467), so the
+                 cap line sits at the column top and the column holds 2 chunks
+                 of 27. One fills: 1 of 2 used, still under the cap. -->
             <text class="schem-cap" x="22" y="14" text-anchor="middle">rounds</text>
             <rect class="schem-rect" x="14" y="20" width="16" height="60" rx="1"/>
-            <line class="schem-line dashed" x1="11" y1="42" x2="33" y2="42"/>
-            <text class="schem-tag dim" x="36" y="44">5×</text>
+            <line class="schem-line dashed" x1="11" y1="19" x2="33" y2="19"/>
+            <text class="schem-tag dim" x="36" y="22">2×</text>
             <!-- chunk 5 (bottom) -->
-            <rect class="g1-chunk c1" x="16" y="68" width="12" height="10" fill="var(--blue)" opacity="0">
+            <rect class="g1-chunk c1" x="16" y="51" width="12" height="27" fill="var(--blue)" opacity="0">
               <animate attributeName="opacity" values="0;0;0.7;0.7" keyTimes="0;0.06;0.14;1" dur="6s" repeatCount="indefinite"/>
             </rect>
-            <rect class="g1-chunk c2" x="16" y="56" width="12" height="10" fill="var(--blue)" opacity="0">
-              <animate attributeName="opacity" values="0;0;0.7;0.7" keyTimes="0;0.16;0.22;1" dur="6s" repeatCount="indefinite"/>
-            </rect>
-            <rect class="g1-chunk c3" x="16" y="44" width="12" height="10" fill="var(--blue)" opacity="0">
-              <animate attributeName="opacity" values="0;0;0.7;0.7" keyTimes="0;0.24;0.30;1" dur="6s" repeatCount="indefinite"/>
-            </rect>
 
-            <!-- GAUGE 2 · time (6 chunks of ~10 each, 6h elapsed of 10h cap @ y=32) -->
+            <!-- GAUGE 2 · time. /overnight passes --time-limit 21600 (6h) and
+                 `overnight prepare` defaults to --time-limit-hours 6, so the cap
+                 is 6h. 6 chunk slots = 1h each; 4 fill (4h of 6h). -->
             <text class="schem-cap" x="68" y="14" text-anchor="middle">time</text>
             <rect class="schem-rect" x="60" y="20" width="16" height="60" rx="1"/>
-            <line class="schem-line dashed" x1="57" y1="32" x2="79" y2="32"/>
-            <text class="schem-tag dim" x="82" y="34">10h</text>
+            <line class="schem-line dashed" x1="57" y1="19" x2="79" y2="19"/>
+            <text class="schem-tag dim" x="82" y="22">6h</text>
             <!-- 6 chunks from y=70 up to y=20 (chunk size 10, gap implied by stroke):
                  we'll render 6 chunks @ y=70,60,50,40,30,20. fill 6 of them to reach cap. -->
             <rect class="g2-chunk" x="62" y="70" width="12" height="8" fill="var(--blue)" opacity="0">
@@ -6349,12 +6345,14 @@
               <animate attributeName="opacity" values="0;0;0.7;0.7" keyTimes="0;0.34;0.40;1" dur="6s" repeatCount="indefinite"/>
             </rect>
 
-            <!-- GAUGE 3 · failures — this one trips (5 chunks, fills to cap @ y=22)
-                 chunks @ y=68,56,44,32,20 — all 5 fill in sequence. -->
-            <text class="schem-cap" x="114" y="14" text-anchor="middle">fails</text>
+            <!-- GAUGE 3 · the stall watchdog — the third breaker named in the
+                 caption. Trips at 30 min of inactivity (runner.STALL_TIMEOUT_SECONDS
+                 = 1800) under a 4h absolute ceiling. This is the one that trips:
+                 5 chunks fill in sequence to the cap. -->
+            <text class="schem-cap" x="114" y="14" text-anchor="middle">stall</text>
             <rect class="schem-rect alarm" x="106" y="20" width="16" height="60" rx="1"/>
             <line class="schem-line ochre" x1="103" y1="22" x2="125" y2="22"/>
-            <text class="schem-tag ochre" x="128" y="24">cap</text>
+            <text class="schem-tag ochre" x="128" y="24">30m</text>
             <rect class="g3-chunk" x="108" y="68" width="12" height="10" fill="var(--ochre)" opacity="0">
               <animate attributeName="opacity" values="0;0;0.85;0.85" keyTimes="0;0.20;0.28;1" dur="6s" repeatCount="indefinite"/>
             </rect>
@@ -6420,7 +6418,7 @@
             <text class="schem-tag" x="66" y="100">try</text>
             <text class="schem-tag dim" x="124" y="100">attempt 1</text>
 
-            <text class="schem-tag" x="66" y="82">retry</text>
+            <text class="schem-tag" x="66" y="82">retry ×2</text>
             <text class="schem-tag dim" x="124" y="82">+ learnings</text>
 
             <text class="schem-tag blue" x="66" y="64">last try</text>
@@ -6478,11 +6476,11 @@
 
             <!-- bottom rule + caption -->
             <line class="schem-line" x1="14" y1="118" x2="246" y2="118" opacity="0.3"/>
-            <text class="schem-cap" x="130" y="130" text-anchor="middle">three rungs · one judge · calm pause</text>
+            <text class="schem-cap" x="130" y="130" text-anchor="middle">four attempts · one judge · calm pause</text>
           </svg>
         </div>
         <p class="tg-body">Failed gates don't loop blindly. A failure that's worth another go runs again with the previous attempt's learnings appended — each retry is a fresh process, so nothing carries over but the notes. A refusal or an infrastructure failure skips the retries entirely and pauses on the spot. When the attempts are spent, a separate brain agent triages: <code>SKIP</code>, <code>DEFER</code>, or <code>PAUSE</code>. There is deliberately no <code>RETRY</code> verdict — it would re-enter the caller that just gave up.</p>
-        <p class="tg-body">A <code>DEFER</code> writes <code>deferred/&lt;slug&gt;-q001.md</code> with what it tried and what it needs from you — then carries on with the rest of the queue. Three rungs, a judge, one calm exit.</p>
+        <p class="tg-body">A <code>DEFER</code> writes <code>deferred/&lt;slug&gt;-q001.md</code> with what it tried and what it needs from you — then carries on with the rest of the queue. Four attempts, a judge, one calm exit.</p>
         <div class="tg-cap">try → retry → triage → calm pause</div>
       </article>
 
@@ -6526,7 +6524,7 @@
             <line class="schem-line dashed" x1="198" y1="104" x2="214" y2="104" opacity="0.5"/>
           </svg>
         </div>
-        <p class="tg-body">Each ticket runs in its own git worktree on its own branch. The agent can’t reach <code>main</code>, can’t touch packed-refs, can’t read other repos, and has its tool list pinned ahead of time. The fence is enforced at the seatbelt layer, not asked-for politely — the agent literally cannot do the things outside it.</p>
+        <p class="tg-body">Each ticket runs in its own git worktree on its own branch. The agent can’t reach <code>main</code>, can’t touch packed-refs, can’t read other repos, and has its tool list pinned ahead of time. The fence is enforced by the OS sandbox, not by asking the agent nicely — it literally cannot do the things outside it.</p>
         <div class="tg-cap">sandboxed by design · seatbelt-enforced</div>
       </article>
 
@@ -6651,20 +6649,20 @@
           <svg viewBox="0 0 240 120" preserveAspectRatio="xMidYMid meet" class="tg-fig-report" aria-hidden="true">
             <!-- 5 log streams flowing right into the morning report.
                  Labels live x=6..~62; streams start at x=72 so no overlap. -->
-            <text class="schem-tag dim" x="6" y="20">phase.jsonl</text>
-            <line class="schem-line stream s1" x1="72" y1="18" x2="160" y2="44" />
+            <text class="schem-tag dim" x="6" y="20">overnight-events.log</text>
+            <line class="schem-line stream s1" x1="122" y1="18" x2="160" y2="44" />
 
-            <text class="schem-tag dim" x="6" y="38">spawn.jsonl</text>
-            <line class="schem-line stream s2" x1="72" y1="36" x2="160" y2="50" />
+            <text class="schem-tag dim" x="6" y="38">pipeline-events.log</text>
+            <line class="schem-line stream s2" x1="122" y1="36" x2="160" y2="50" />
 
-            <text class="schem-tag dim" x="6" y="56">retry.jsonl</text>
-            <line class="schem-line stream s3" x1="72" y1="54" x2="160" y2="56" />
+            <text class="schem-tag dim" x="6" y="56">events.log</text>
+            <line class="schem-line stream s3" x1="122" y1="54" x2="160" y2="56" />
 
-            <text class="schem-tag dim" x="6" y="74">conflict.jsonl</text>
-            <line class="schem-line stream s4" x1="72" y1="72" x2="160" y2="62" />
+            <text class="schem-tag dim" x="6" y="74">agent-activity.jsonl</text>
+            <line class="schem-line stream s4" x1="122" y1="72" x2="160" y2="62" />
 
-            <text class="schem-tag dim" x="6" y="92">brain.jsonl</text>
-            <line class="schem-line stream s5" x1="72" y1="90" x2="160" y2="68" />
+            <text class="schem-tag dim" x="6" y="92">escalations.jsonl</text>
+            <line class="schem-line stream s5" x1="122" y1="90" x2="160" y2="68" />
 
             <!-- the morning-report document on the right -->
             <rect class="schem-rect tight" x="160" y="32" width="60" height="48" rx="1"/>
@@ -7014,10 +7012,10 @@
                     <!-- stop bar between failed implement and unreached merge -->
                     <line x1="111" y1="42" x2="111" y2="68" stroke="var(--ochre)" stroke-width="2"/>
                     <!-- ralph loop retry indicator -->
-                    <text class="a-mono sm gold" x="16" y="86" font-weight="600">↻ × 3 attempts · ralph loop exhausted</text>
+                    <text class="a-mono sm gold" x="16" y="86" font-weight="600">↻ × 4 attempts · retries used up</text>
                   </g>
 
-                  <text class="a-mono gold b" x="452" y="804">ralph loop exhausted · 3 implement attempts failed</text>
+                  <text class="a-mono gold b" x="452" y="804">retries used up · 4 implement attempts failed</text>
                   <text class="a-mono dim sm" x="452" y="828">brain.py post-retry triage → <tspan font-weight="600">DEFER</tspan> · no RETRY action by design</text>
                   <text class="a-mono dim sm" x="452" y="852">blocking question filed to <tspan font-weight="600">deferred/&lt;slug&gt;-q001.md</tspan> · worktree intact</text>
 
@@ -7217,7 +7215,7 @@
                 <span class="hm-dot" aria-hidden="true"></span>
                 <div>
                   <div class="hm-name">round 2 · 00:30 → 02:15</div>
-                  <div class="hm-sub">planner ④ · ralph loop exhausted · brain.py DEFER</div>
+                  <div class="hm-sub">planner ④ · retries used up · brain.py DEFER</div>
                   <div class="hm-detail">feature ④ writes a blocking question to deferred/&lt;slug&gt;-q001.md. integration held.</div>
                 </div>
               </li>
@@ -8334,7 +8332,14 @@
       if (cplx === SIMPLE)
         return 'no lifecycle · /dev implements it here, commits, closes the ticket';
       const set = new Set(seq);
-      const parts = [`${seq.length} phases`];
+      // Count real lifecycle phases only. /critical-review runs INSIDE Specify
+      // and plan B is a second plan agent, not a phase — both are drawn as
+      // track boxes but neither is a row in the transition table's phase
+      // vocabulary. Counting them made complex+critical read "9 phases" when a
+      // clean run is 7. They stay visible via the "adversarial gate at spec"
+      // and "race two plans" parts below.
+      const phaseCount = seq.filter(id => id !== 'review1' && id !== 'planB').length;
+      const parts = [`${phaseCount} phases`];
       if (!set.has('plan'))    parts.push('short road — spec straight to implement');
       parts.push(`${RESEARCH_AGENTS[crit][cplx]}-angle research`);
       if (set.has('review1'))  parts.push('adversarial gate at spec');
