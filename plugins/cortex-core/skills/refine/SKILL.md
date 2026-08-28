@@ -88,6 +88,6 @@ cortex-complexity-escalator <feature> --gate specify_open_decisions
 cortex-lifecycle-stage-artifacts --phase refine --feature {lifecycle-slug}
 ```
 
-The verb reads `commit-artifacts` itself. Act on `signal`: `config_disabled` → relay its `message` and skip the commit; `nothing_staged` → exit silently; `staged` → commit. A non-zero exit is a staging failure — halt rather than commit a partial set. Commit subject from the staged set: `Refine {feature}: research and spec`, or `Refine {feature}: cancelled at spec approval` when `spec.md` is absent. If `/cortex-core:commit` exits non-zero, surface the error and halt — the uncommitted transition row waits until the operator resolves it and re-invokes.
+The verb reads `commit-artifacts` itself. Act on `signal`: `config_disabled` → relay its `message` and skip the commit; `nothing_staged` → exit silently; `staged` → commit. A non-zero exit is a staging failure — halt rather than commit a partial set. Commit subject from the staged set: `Refine {feature}: research and spec`, or `Refine {feature}: cancelled at spec approval` when `spec.md` is absent. If the commit exits non-zero, surface the error and halt — the uncommitted transition row waits until the operator resolves it and re-invokes.
 
 Announce: the item, the lifecycle directory, the artifacts produced, the fields written (`complexity`, `criticality`, `status: refined`, `spec`, `areas`), and that `/cortex-core:build {lifecycle-slug}` is the next step.

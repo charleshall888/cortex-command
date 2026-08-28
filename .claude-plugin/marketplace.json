@@ -7,7 +7,7 @@
     "email": "charliemhall@gmail.com"
   },
   "metadata": {
-    "description": "Cortex-command plugin marketplace — interactive Claude Code skills, overnight runner integration, and opt-in extras for autonomous development workflows."
+    "description": "Cortex-command plugin marketplace \u2014 interactive Claude Code skills, overnight runner integration, and opt-in extras for autonomous development workflows."
   },
   "plugins": [
     {
@@ -31,25 +31,13 @@
     {
       "name": "cortex-backlog",
       "source": "./plugins/cortex-backlog",
-      "description": "Recommended — plain-markdown backlog tickets the cortex CLI reads and writes directly; the default backlog backend and a prerequisite for cortex-overnight unless the repo configures another backend (e.g. GitHub Issues)",
+      "description": "Recommended \u2014 plain-markdown backlog tickets the cortex CLI reads and writes directly; the default backlog backend and a prerequisite for cortex-overnight unless the repo configures another backend (e.g. GitHub Issues)",
       "category": "development"
     },
     {
       "name": "cortex-overnight",
       "source": "./plugins/cortex-overnight",
       "description": "Integrates the cortex MCP server and overnight skill runner hooks to drive autonomous lifecycle execution",
-      "category": "development"
-    },
-    {
-      "name": "cortex-pr-review",
-      "source": "./plugins/cortex-pr-review",
-      "description": "Single high-effort GitHub pull request reviewer for Claude Code — no-autopost by default, with a dropped-findings observability footer",
-      "category": "development"
-    },
-    {
-      "name": "cortex-ui-extras",
-      "source": "./plugins/cortex-ui-extras",
-      "description": "Experimental UI design skills for Claude Code interactive workflows",
       "category": "development"
     }
   ]

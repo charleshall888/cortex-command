@@ -8,8 +8,8 @@ separate actions: resolve repo identity + atomically write ``pr.json`` (Step
 This verb composes them, mirroring how Step 11a's
 ``cortex-lifecycle-stage-artifacts`` consolidated its own multi-step staging
 mechanics — leaving the judgment-bearing PR creation itself (Step 3's
-``/cortex-core:pr`` invocation, which crafts a title/body) in skill prose,
-since that is an LLM action this verb cannot perform.
+``gh pr create`` call, which crafts a title/body) in skill prose, since that
+is an LLM action this verb cannot perform.
 
 ``pr_opened`` is one of ADR-0020's hand-written exempt events — its canonical
 shape places ``schema_version`` before ``feature``, unlike the uniform
@@ -24,7 +24,7 @@ already duplicated once, for the Branch-3 orphan-PR reconstruction) rather
 than re-implementing them a third time.
 
 ``--url``/``--head-branch`` (ADR-0019 dumb-arg-actor shape): the caller has
-just run ``gh pr create`` via ``/cortex-core:pr`` and already holds both the
+just run ``gh pr create`` and already holds both the
 PR's URL and its own current branch — passing them in lets this verb skip the
 ``gh pr view`` round-trip entirely. When either is omitted, the verb falls
 back to resolving them via ``gh pr view --repo <repo>`` (the repo locked by

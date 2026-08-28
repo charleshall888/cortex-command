@@ -75,10 +75,10 @@ def _utility_rows() -> dict[str, int]:
 
 
 # Three skills chosen to exercise distinct YAML scalar forms:
-# - commit:          description only (no when_to_use)        — single-line plain
+# - hmm:             description only (no when_to_use)        — single-line plain
 # - critical-review: description + when_to_use (double-quoted escaped form)
 # - lifecycle:       description + when_to_use (double-quoted escaped form)
-CALIBRATION_SKILLS = ("commit", "build", "critical-review")
+CALIBRATION_SKILLS = ("hmm", "build", "critical-review")
 
 
 @pytest.mark.parametrize("skill", CALIBRATION_SKILLS)

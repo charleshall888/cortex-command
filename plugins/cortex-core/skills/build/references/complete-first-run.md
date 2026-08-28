@@ -12,13 +12,13 @@ Failures → report and halt until resolved. First-run only; the router skips th
 
 ## Step 2 — Commit artifacts
 
-`cortex-read-commit-artifacts`: `true` (default) → stage `cortex/lifecycle/{slug}/` plus any uncommitted source and commit via `/cortex-core:commit`; `false` → commit only the source.
+`cortex-read-commit-artifacts`: `true` (default) → stage `cortex/lifecycle/{slug}/` plus any uncommitted source and commit; `false` → commit only the source.
 
 ## Step 3 — Push and open the PR
 
 Push the branch, then create a PR whose title and body reflect the feature's purpose and link the lifecycle directory. Capture the PR number, URL, and current branch for Step 4.
 
-Running from inside an `interactive/{slug}` worktree — both `read_lock(slug)` non-None **and** `git rev-parse --show-toplevel` is that worktree root — wrap `/cortex-core:pr` in a cd-in-then-out around the worktree; otherwise invoke it from the current cwd. Advisory, non-blocking.
+Running from inside an `interactive/{slug}` worktree — both `read_lock(slug)` non-None **and** `git rev-parse --show-toplevel` is that worktree root — wrap `gh pr create` in a cd-in-then-out around the worktree; otherwise run it from the current cwd. Advisory, non-blocking.
 
 ## Step 4 — Record it
 

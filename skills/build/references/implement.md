@@ -81,4 +81,4 @@ cortex-lifecycle-advance implement-transition --mode transition --feature {featu
 
 The verb reads departure state, tier and criticality through the reducer, applies the routing it owns, and records the transition idempotently. Route on the returned `state` per SKILL.md § Advance-verb routing — **`review`**, **`complete`** or **`rework-review`** → proceed there.
 
-Every commit goes through `/cortex-core:commit` — orchestrator checkpoints and worktree sub-agents included, never raw git.
+Every commit — orchestrator checkpoints and worktree sub-agents included — uses `git commit --only -- <staged paths>`, never a bare `git commit`.

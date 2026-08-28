@@ -116,7 +116,7 @@ def test_d1_body_token_outside_prompt_not_flagged() -> None:
     legitimate and must pass.
     """
     text = (
-        "# pr-review SKILL body\n"
+        "# example SKILL body\n"
         "The skill directory is `${CLAUDE_SKILL_DIR}`; every reference path uses\n"
         "`${CLAUDE_SKILL_DIR}/references/foo.md`.\n"
     )

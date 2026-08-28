@@ -7,7 +7,7 @@
 
 A grouped inventory of the skills in this repo. Each entry shows what the skill does and links to its full SKILL.md for trigger phrases, inputs, outputs, and implementation details.
 
-See also [Optional Plugins](#optional-plugins) below for UI skills and `pr-review`, which ship as separate plugins in the `cortex-command` marketplace.
+See also [Optional Plugins](#optional-plugins) below for skills that ship as separate plugins in the `cortex-command` marketplace.
 
 > **Note on `pipeline`:** `pipeline` is not a user-facing skill and has no entry in `skills/`. It is an internal Python orchestration module (`cortex_command/pipeline/`, `cortex_command/overnight/`) invoked automatically by `/cortex-overnight:overnight` to manage multi-feature batch execution. Use that skill to trigger pipeline behavior; do not invoke `pipeline` directly. For internals, see [docs/internals/pipeline.md](internals/pipeline.md).
 
@@ -88,22 +88,6 @@ Guide the user through the morning report after an overnight session. Displays t
 
 ---
 
-## Code Quality
-
-### commit
-Create git commits with consistent, well-formatted messages. Stages relevant files, composes an imperative-mood commit message, runs the GPG signing check, and commits — all without pushing. A pre-tool-use hook validates messages before execution.
-
-[skills/commit/SKILL.md](../skills/commit/SKILL.md)
-
----
-
-### pr
-Create GitHub pull requests with well-crafted titles and descriptions. Detects the base branch, pushes the current branch if needed, fills in a PR template if one exists, and creates the PR via `gh pr create`. Outputs the PR URL when done.
-
-[skills/pr/SKILL.md](../skills/pr/SKILL.md)
-
----
-
 ## Thinking Tools
 
 ### critical-review
@@ -135,14 +119,14 @@ Several skills ship as optional plugins in the `cortex-command` marketplace:
 
 | Plugin | Skills |
 |--------|--------|
-| `cortex-ui-extras` | `ui-a11y`, `ui-brief`, `ui-check`, `ui-judge`, `ui-lint`, `ui-setup` |
-| `cortex-pr-review` | `pr-review` |
+| `cortex-backlog` | `backlog` |
+| `cortex-dev-extras` | `devils-advocate` |
+| `android-dev-extras` | `android-cli`, `edge-to-edge`, `r8-analyzer` |
 
 Install via Claude Code's plugin system (see [docs/setup.md](setup.md) for the full walkthrough):
 
 ```
-/plugin install cortex-ui-extras@cortex-command
-/plugin install cortex-pr-review@cortex-command
+/plugin install cortex-backlog@cortex-command
 ```
 
 Then enable the desired plugin per project in `.claude/settings.json`.

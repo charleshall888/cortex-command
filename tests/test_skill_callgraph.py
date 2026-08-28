@@ -30,8 +30,8 @@ def module():
     "line,expected",
     [
         ("Delegate to `/cortex-core:research`:", "research"),
-        ("1. Invoke `/ui-lint`", "ui-lint"),
-        ("Invoke the `/cortex-core:commit` skill to commit all changes", "commit"),
+        ("1. Invoke `/hmm`", "hmm"),
+        ("Invoke the `/cortex-core:pick` skill to break the tie", "pick"),
         ("invoke the `critical-review` skill with the plan artifact", "critical-review"),
         ("dispatch the `/cortex-core:refine` skill now", "refine"),
         ("Delegate to `/cortex-overnight:overnight`:", "overnight"),

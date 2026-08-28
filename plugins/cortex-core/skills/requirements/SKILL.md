@@ -74,6 +74,6 @@ cortex-validate-requirements-doc --path {written-path} --scope {project|area}
 
 `pass` → surface the path for approval. `fail` → `checks` names the failing check (missing canonical H2, over-budget `## Optional`); fix in place and re-run. `file-not-found`/`error` → the doc isn't where expected; resolve before returning.
 
-On approval, stage `cortex/requirements/` and commit via `/cortex-core:commit`.
+On approval, stage `cortex/requirements/` and commit.
 
 Requirements are passive artifacts — do not auto-dispatch any consumer; downstream skills load them on their own schedule. The glossary is the one producer-managed exception.

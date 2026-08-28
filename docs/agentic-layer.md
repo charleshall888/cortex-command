@@ -8,7 +8,7 @@ For full skill descriptions and trigger details, see [skills-reference.md](skill
 
 The agentic layer is the workflow orchestration system built on top of Claude Code skills. It coordinates how development work flows from a vague idea through research, specification, planning, implementation, and review — across single features, parallel batches, or fully autonomous overnight sessions. Skills are the primitive units; hooks wire them into the development environment at the right moments; and state files let the system resume across sessions and tool invocations.
 
-This document is a reference for the full skill inventory, the main workflow diagrams, and the lifecycle phase map. It covers the core skills organized by functional group, both ASCII diagrams showing how they connect, and the tier/criticality model that governs research breadth and review requirements (it does not govern model selection — cortex selects no models; → [ADR-0032](../cortex/adr/0032-cortex-selects-no-model.md)). Start with the diagrams for an orientation, then consult the skill table for individual trigger and output details. Optional skills (UI design enforcement, `cortex-pr-review`) ship as separate plugins in the `cortex-command` marketplace; see [docs/setup.md](setup.md) for install instructions.
+This document is a reference for the full skill inventory, the main workflow diagrams, and the lifecycle phase map. It covers the core skills organized by functional group, both ASCII diagrams showing how they connect, and the tier/criticality model that governs research breadth and review requirements (it does not govern model selection — cortex selects no models; → [ADR-0032](../cortex/adr/0032-cortex-selects-no-model.md)). Start with the diagrams for an orientation, then consult the skill table for individual trigger and output details. Optional skills ship as separate plugins in the `cortex-command` marketplace; see [docs/setup.md](setup.md) for install instructions.
 
 ---
 
@@ -263,12 +263,6 @@ For overnight runner operations and architecture (state schemas, recovery, allow
 7. **requirements context** — `cortex/requirements/project.md` and per-area requirement files inform both lifecycle research and discovery sessions. The `/cortex-core:requirements` skill maintains them. They act as a stable design compass that keeps individual feature work aligned with broader project goals.
 
 8. **overnight-state.json + morning-report.md** — The overnight runner writes execution state to `overnight-state.json` and archives a full session report. `cortex/lifecycle/morning-report.md` is a regular file that the writer overwrites each session; `cortex/lifecycle/sessions/latest-overnight` is the symlink that points at the current session directory. See [overnight-operations.md](overnight-operations.md#state-file-locations) for the full file inventory. `/cortex-overnight:morning-review` reads the report to determine what succeeded, what needs review, and what should carry over to the next session.
-
----
-
-## UI Design Enforcement
-
-The UI skills ship as the `cortex-ui-extras` plugin in the `cortex-command` marketplace. Install via `/plugin install cortex-ui-extras@cortex-command`; see [docs/setup.md](setup.md) for the full install walkthrough.
 
 ---
 

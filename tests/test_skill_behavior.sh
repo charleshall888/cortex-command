@@ -54,8 +54,8 @@ fi
 # ---------------------------------------------------------------------------
 #
 # Payload mirrors exactly what Claude Code sends for a PreToolUse Bash event.
-# The command string is realistic — as the /cortex-core:commit skill would produce it when
-# the agent (incorrectly) tries: git commit -m "add new feature"
+# The command string is realistic — what an agent (incorrectly) tries:
+# git commit -m "add new feature"
 
 PAYLOAD='{
   "tool_name": "Bash",

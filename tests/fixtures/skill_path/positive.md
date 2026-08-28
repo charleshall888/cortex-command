@@ -9,7 +9,7 @@ literal in the detector-triggering context it was bugged in.
 
 ## D1 — raw token / bare consult-ref inside a subagent prompt
 
-### D1-pr-review-protocol-prompt-block
+### D1-protocol-prompt-block
 
 <!-- BEGIN SUBAGENT PROMPT -->
 

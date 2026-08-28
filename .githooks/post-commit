@@ -1,7 +1,7 @@
 #!/bin/bash
 # post-commit — resync the real index after the pre-commit mirror reconciliation.
 #
-# Under `git commit --only -- <paths>` (the form /cortex-core:commit mandates)
+# Under `git commit --only -- <paths>` (the form this repo mandates)
 # git builds a temporary index from HEAD plus the pathspec and holds
 # .git/index.lock for the entire pre-commit hook. The reconciliation phase can
 # therefore write only that temporary index; the real index keeps the previous

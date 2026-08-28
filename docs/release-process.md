@@ -55,10 +55,10 @@ Follow the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format.
 
 ### 3. Commit the version bump
 
-Use the cortex-core commit skill:
+Commit the staged paths:
 
 ```
-/cortex-core:commit
+git commit --only -m "..." -- <the staged paths>
 ```
 
 Suggested commit message: `Bump version to vX.Y.Z` (or similar — imperative mood, capitalized, no trailing period, ≤ 72 chars).
@@ -112,7 +112,7 @@ If the schema major did not change, the second tuple element stays at the curren
 Commit the bump:
 
 ```
-/cortex-core:commit
+git commit --only -m "..." -- <the staged paths>
 ```
 
 Suggested commit message: `Bump plugin CLI_PIN to vX.Y.Z`.

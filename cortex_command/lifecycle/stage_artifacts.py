@@ -11,7 +11,7 @@ compact-JSON signal on stdout::
 
 The caller acts on ``signal``: ``nothing_staged`` (the index matches HEAD after
 staging — equivalent to ``git diff --cached --quiet`` exiting 0) → skip
-``/cortex-core:commit`` silently and continue (complete → Step 12; refine →
+the commit silently and continue (complete → Step 12; refine →
 lifecycle Step 3); ``staged`` → proceed to commit. ``staged_paths`` is the
 sorted ``git diff --cached --name-only`` set (repo-relative) — the actual
 staged index, the same set the per-phase staged-set test pins.

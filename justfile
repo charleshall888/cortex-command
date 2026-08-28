@@ -514,7 +514,7 @@ test-smoke-hook:
 test-lifecycle-state:
     uv run pytest tests/test_lifecycle_state.py -q
 
-# Run behavioral tests for the commit skill hook
+# Run behavioral tests for the commit-message validation hook
 test-skill-behavior:
     bash tests/test_skill_behavior.sh
 
@@ -627,7 +627,7 @@ dangerous:
 # --- Plugin ---
 
 BUILD_OUTPUT_PLUGINS := "cortex-core cortex-overnight cortex-backlog"
-HAND_MAINTAINED_PLUGINS := "cortex-pr-review cortex-ui-extras android-dev-extras cortex-dev-extras"
+HAND_MAINTAINED_PLUGINS := "android-dev-extras cortex-dev-extras"
 
 _list-build-output-plugins:
     #!/usr/bin/env bash
@@ -648,7 +648,7 @@ build-plugin:
         BIN=()
         case "$p" in
             cortex-core)
-                SKILLS=(commit pr backlog-author requirements research discovery refine build dev critical-review interview hmm pick)
+                SKILLS=(backlog-author requirements research discovery refine build dev critical-review interview hmm pick)
                 HOOKS=(hooks/cortex-validate-commit.sh hooks/cortex-cleanup-session.sh hooks/cortex-lifecycle-continue.sh hooks/cortex-cli-background-install.sh claude/hooks/cortex-session-start-path-bootstrap.sh claude/hooks/cortex-worktree-create.sh claude/hooks/cortex-worktree-remove.sh)
                 BIN=(cortex-)
                 ;;

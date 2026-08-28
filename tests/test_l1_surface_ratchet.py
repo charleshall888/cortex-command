@@ -67,7 +67,6 @@ UTILITY = REPO_ROOT / "bin" / "cortex-measure-l1-surface"
 _BASELINES: dict[str, int] = {
     "backlog": 50,
     "backlog-author": 103,
-    "commit": 50,
     "critical-review": 193,
     "dev": 162,
     "discovery": 154,
@@ -85,11 +84,10 @@ _BASELINES: dict[str, int] = {
     # doing the work, not decoration. lifecycle-id=pick-agent-discoverable,
     # date=2026-08-19
     "pick": 152,
-    "pr": 66,
     "refine": 149,
     "requirements": 203,
     "research": 157,
-    "total": 2411,
+    "total": 2295,
 }
 
 

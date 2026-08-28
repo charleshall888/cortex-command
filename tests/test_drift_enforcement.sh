@@ -11,22 +11,22 @@
 # uncommitted work invisible here.
 #
 # Seven subtests:
-#   A) Seed drift in skills/commit/SKILL.md (top-level source) and stage it.
+#   A) Seed drift in skills/requirements/SKILL.md (top-level source) and stage it.
 #      Expect exit 0, the mirror named in the hook output, staged, and carrying
 #      the seeded edit.
 #   B) Seed drift in hooks/cortex-validate-commit.sh (top-level source) and
 #      stage it. Same as A, and additionally asserts the mirror keeps mode
 #      100755 — flattening it to 100644 would ship broken plugin binstubs.
-#   C) Seed a no-op marker in plugins/cortex-ui-extras/skills/ui-lint/SKILL.md
+#   C) Seed a no-op marker in plugins/cortex-dev-extras/skills/devils-advocate/SKILL.md
 #      (hand-maintained plugin tree) and stage it. Expect exit 0: Phase 2 sees
 #      no build-output triggers so BUILD_NEEDED=0 and the reconciliation phase
 #      is skipped entirely, leaving the hand-maintained edit untouched.
-#   D) Same as C but against plugins/cortex-pr-review/skills/pr-review/SKILL.md.
+#   D) Same as C but against plugins/android-dev-extras/skills/r8-analyzer/SKILL.md.
 #   E) Create plugins/cortex-unclassified/.claude-plugin/plugin.json with a
 #      valid name but an unclassified plugin dir. Stage it. Expect non-zero
 #      exit and stderr mentioning the fail-closed guard. This is the only
 #      remaining blocking path in the hook's plugin handling.
-#   F) Seed a no-op marker directly in plugins/cortex-core/skills/commit/SKILL.md
+#   F) Seed a no-op marker directly in plugins/cortex-core/skills/requirements/SKILL.md
 #      (build-output plugin tree) WITHOUT touching the top-level source, and
 #      stage only the plugin-tree path. Expect exit 0 and the hand-edit gone
 #      from the staged mirror: the rebuild regenerates it from the unchanged
@@ -53,12 +53,12 @@ REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$REPO_ROOT"
 
 HOOK="$REPO_ROOT/.githooks/pre-commit"
-SKILL_SRC="skills/commit/SKILL.md"
+SKILL_SRC="skills/requirements/SKILL.md"
 HOOK_SRC="hooks/cortex-validate-commit.sh"
 CLAUDE_HOOK_SRC="claude/hooks/cortex-tool-failure-tracker.sh"
-UI_EXTRAS_SKILL="plugins/cortex-ui-extras/skills/ui-lint/SKILL.md"
-PR_REVIEW_SKILL="plugins/cortex-pr-review/skills/pr-review/SKILL.md"
-INTERACTIVE_SKILL="plugins/cortex-core/skills/commit/SKILL.md"
+HAND_SKILL_1="plugins/cortex-dev-extras/skills/devils-advocate/SKILL.md"
+HAND_SKILL_2="plugins/android-dev-extras/skills/r8-analyzer/SKILL.md"
+INTERACTIVE_SKILL="plugins/cortex-core/skills/requirements/SKILL.md"
 
 PASS_COUNT=0
 FAIL_COUNT=0
@@ -70,8 +70,8 @@ FAIL_COUNT=0
 git stash push -u -- \
     "$SKILL_SRC" \
     "$HOOK_SRC" \
-    "$UI_EXTRAS_SKILL" \
-    "$PR_REVIEW_SKILL" \
+    "$HAND_SKILL_1" \
+    "$HAND_SKILL_2" \
     "$INTERACTIVE_SKILL" \
     >/dev/null 2>&1 || true
 
@@ -117,8 +117,8 @@ if [ "$HOOK_EXIT_A" -ne 0 ]; then
     echo "--- hook output ---"
     echo "$HOOK_OUTPUT_A"
     echo "-------------------"
-elif ! echo "$HOOK_OUTPUT_A" | grep -q "skills/commit/SKILL.md"; then
-    report_fail "Subtest A: hook exit 0 but output does not name the reconciled skills/commit/SKILL.md mirror."
+elif ! echo "$HOOK_OUTPUT_A" | grep -q "skills/requirements/SKILL.md"; then
+    report_fail "Subtest A: hook exit 0 but output does not name the reconciled skills/requirements/SKILL.md mirror."
     echo "--- hook output ---"
     echo "$HOOK_OUTPUT_A"
     echo "-------------------"
@@ -170,11 +170,11 @@ git checkout -- "$HOOK_SRC" "$B_MIRROR" 2>/dev/null || true
 rm -f "$(git rev-parse --git-dir)/cortex-reconciled"
 just build-plugin >/dev/null 2>&1 || true
 
-# --- Subtest C: hand-maintained pass-through (cortex-ui-extras) ---
-echo "Subtest C: seed no-op marker in $UI_EXTRAS_SKILL"
+# --- Subtest C: hand-maintained pass-through (cortex-dev-extras) ---
+echo "Subtest C: seed no-op marker in $HAND_SKILL_1"
 
-printf '\n<!-- drift-test-marker -->\n' >> "$UI_EXTRAS_SKILL"
-git add "$UI_EXTRAS_SKILL"
+printf '\n<!-- drift-test-marker -->\n' >> "$HAND_SKILL_1"
+git add "$HAND_SKILL_1"
 
 set +e
 HOOK_OUTPUT_C="$("$HOOK" 2>&1)"
@@ -187,18 +187,18 @@ if [ "$HOOK_EXIT_C" -ne 0 ]; then
     echo "$HOOK_OUTPUT_C"
     echo "-------------------"
 else
-    report_pass "Subtest C: hook passed hand-maintained ui-lint edit (exit 0)."
+    report_pass "Subtest C: hook passed hand-maintained devils-advocate edit (exit 0)."
 fi
 
-git restore --staged "$UI_EXTRAS_SKILL" 2>/dev/null || true
-git checkout -- "$UI_EXTRAS_SKILL" 2>/dev/null || true
+git restore --staged "$HAND_SKILL_1" 2>/dev/null || true
+git checkout -- "$HAND_SKILL_1" 2>/dev/null || true
 just build-plugin >/dev/null 2>&1 || true
 
-# --- Subtest D: hand-maintained pass-through (cortex-pr-review) ---
-echo "Subtest D: seed no-op marker in $PR_REVIEW_SKILL"
+# --- Subtest D: hand-maintained pass-through (android-dev-extras) ---
+echo "Subtest D: seed no-op marker in $HAND_SKILL_2"
 
-printf '\n<!-- drift-test-marker -->\n' >> "$PR_REVIEW_SKILL"
-git add "$PR_REVIEW_SKILL"
+printf '\n<!-- drift-test-marker -->\n' >> "$HAND_SKILL_2"
+git add "$HAND_SKILL_2"
 
 set +e
 HOOK_OUTPUT_D="$("$HOOK" 2>&1)"
@@ -211,11 +211,11 @@ if [ "$HOOK_EXIT_D" -ne 0 ]; then
     echo "$HOOK_OUTPUT_D"
     echo "-------------------"
 else
-    report_pass "Subtest D: hook passed hand-maintained pr-review edit (exit 0)."
+    report_pass "Subtest D: hook passed hand-maintained r8-analyzer edit (exit 0)."
 fi
 
-git restore --staged "$PR_REVIEW_SKILL" 2>/dev/null || true
-git checkout -- "$PR_REVIEW_SKILL" 2>/dev/null || true
+git restore --staged "$HAND_SKILL_2" 2>/dev/null || true
+git checkout -- "$HAND_SKILL_2" 2>/dev/null || true
 just build-plugin >/dev/null 2>&1 || true
 
 # --- Subtest E: unclassified-plugin fail-closed guard ---
@@ -263,8 +263,8 @@ if [ "$HOOK_EXIT_F" -ne 0 ]; then
     echo "--- hook output ---"
     echo "$HOOK_OUTPUT_F"
     echo "-------------------"
-elif ! echo "$HOOK_OUTPUT_F" | grep -q "plugins/cortex-core/skills/commit/SKILL.md"; then
-    report_fail "Subtest F: hook exit 0 but output does not name the reconciled plugins/cortex-core/skills/commit/SKILL.md."
+elif ! echo "$HOOK_OUTPUT_F" | grep -q "plugins/cortex-core/skills/requirements/SKILL.md"; then
+    report_fail "Subtest F: hook exit 0 but output does not name the reconciled plugins/cortex-core/skills/requirements/SKILL.md."
     echo "--- hook output ---"
     echo "$HOOK_OUTPUT_F"
     echo "-------------------"

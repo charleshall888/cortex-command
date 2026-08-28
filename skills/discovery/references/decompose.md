@@ -76,6 +76,6 @@ Re-resolve the backend **here** with `cortex-read-backlog-backend` (argless, fai
 
 ### 8. Commit and Summarize
 
-Commit the new backlog files and `decomposed.md` via `/cortex-core:commit`, then present the epic and its children (or the single ticket / zero-piece verdict), the dependency graph and suggested order, and a reminder that `/cortex-core:refine <feature>` is the next step.
+Commit the new backlog files and `decomposed.md`, then present the epic and its children (or the single ticket / zero-piece verdict), the dependency graph and suggested order, and a reminder that `/cortex-core:refine <feature>` is the next step.
 
 **No implementation planning here** — role, integration, and structural edges only; mechanism belongs to lifecycle's plan phase. At most one epic per discovery.

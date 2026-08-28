@@ -127,6 +127,6 @@ The plan→implement transition rides the plan-decision arm — no separate step
 cortex-lifecycle-stage-artifacts --phase plan --feature {feature}
 ```
 
-The verb reads `commit-artifacts` itself. Act on `signal`: `config_disabled` → relay its `message` and skip the commit; `nothing_staged` → skip silently; `staged` → commit via `/cortex-core:commit`. A non-zero exit is a staging failure — halt rather than commit a partial set. On "wait" the commit makes approval durable, then the lifecycle halts.
+The verb reads `commit-artifacts` itself. Act on `signal`: `config_disabled` → relay its `message` and skip the commit; `nothing_staged` → skip silently; `staged` → commit. A non-zero exit is a staging failure — halt rather than commit a partial set. On "wait" the commit makes approval durable, then the lifecycle halts.
 
 **Hard gate**: backlog items suggest approaches, they don't prescribe them. Unless the item has linked research/spec artifacts that already validated the approach, evaluate it critically and weigh alternatives.

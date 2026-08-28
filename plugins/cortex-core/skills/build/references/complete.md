@@ -43,9 +43,9 @@ cortex-lifecycle-finalize --feature {slug} --backend {resolved-backend} --backlo
 cortex-lifecycle-stage-artifacts --phase complete --feature {slug}
 ```
 
-The verb reads `commit-artifacts` itself (default true when absent) and owns the explicit-path staging. Act on `signal` — what this verb staged, not the shared index: **`config_disabled`** → relay its `message` and skip the commit. **`nothing_staged`** → skip `/cortex-core:commit` silently and continue to Step 12. **`staged`** → commit. A non-zero exit is a staging failure: halt rather than commit a partial set.
+The verb reads `commit-artifacts` itself (default true when absent) and owns the explicit-path staging. Act on `signal` — what this verb staged, not the shared index: **`config_disabled`** → relay its `message` and skip the commit. **`nothing_staged`** → skip the commit silently and continue to Step 12. **`staged`** → commit. A non-zero exit is a staging failure: halt rather than commit a partial set.
 
-Invoke `/cortex-core:commit` with an imperative ≤72-char subject. On non-zero exit, surface the error and stop — do not imply the artifacts were committed. After a successful commit, if the branch is not `main` or `master`, advise: `Artifacts committed on <branch> rather than the default branch — move them to main if appropriate.` No automatic branch switch.
+Commit them with `git commit --only -- <those paths>`; subject imperative, ≤72 chars. On non-zero exit, surface the error and stop — do not imply the artifacts were committed. After a successful commit, if the branch is not `main` or `master`, advise: `Artifacts committed on <branch> rather than the default branch — move them to main if appropriate.` No automatic branch switch.
 <!-- /finalization-commit-step -->
 
 ### Step 12 — Summarize

@@ -15,7 +15,7 @@ Positive tokens (all must be present in the region):
 - ``cortex-lifecycle-stage-artifacts`` — the staging verb the enumerated
   ``git add`` / resolver lookup / ``-u`` sweep collapsed into (Req 14)
 - ``cortex-read-commit-artifacts`` — binstub invocation (Flag Check stays prose)
-- ``/cortex-core:commit`` — commit skill invocation
+- ``git commit --only`` — the index-safe commit form the region mandates
 - A halt-on-failure clause for a non-zero commit/stage exit
 - A ``main`` / ``master`` non-default-branch advisory (R13)
 
@@ -118,8 +118,8 @@ def test_finalization_commit_region_positive_tokens() -> None:
         "finalization-commit-step region must route the stage-artifacts "
         "'config_disabled' signal (the folded commit-artifacts read)"
     )
-    assert "/cortex-core:commit" in region, (
-        "finalization-commit-step region must invoke /cortex-core:commit"
+    assert "git commit --only" in region, (
+        "finalization-commit-step region must mandate git commit --only"
     )
     # NOTE: the enumerated lifecycle filenames, 'Suggested Requirements Update',
     # and 'cortex-resolve-backlog-item' staging-mechanics tokens moved into the

@@ -1,5 +1,0 @@
-{
-  "name": "cortex-pr-review",
-  "description": "Single high-effort GitHub pull request reviewer for Claude Code — no-autopost by default, with a dropped-findings observability footer",
-  "author": {"name": "Charlie Hall", "email": "charliemhall@gmail.com"}
-}
