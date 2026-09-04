@@ -17,7 +17,7 @@ cortex-lifecycle-branch-decision --feature {slug}
 - **`skip`** — not on `main`/`master`; proceed on the current branch to §2.
 - **`resolved`** — a mode was fixed without prompting; run the same post-selection routing so every downstream guard still fires. `trunk` → §2. `feature-branch` → create/checkout `feature/{lifecycle-slug}`, then §2. `worktree-interactive` → record the returned `entry_mode` (`selected` or `suppressed`), then follow `${CLAUDE_SKILL_DIR}/references/worktree-entry.md` to completion before returning to §2.
 <!-- pause: implement-branch-pick config-conditional -->
-- **`prompt`** — render the picker via `AskUserQuestion` with the returned guards: on `uncommitted_changes` demote the current-branch option in place (prepend `Warning: uncommitted changes in working tree — this will mix them into the commit on main.`, drop any `(recommended)`); when `worktree_option_available` is false, drop the worktree option.
+- **`prompt`** — render the picker with the returned guards: on `uncommitted_changes` demote the current-branch option in place (prepend `Warning: uncommitted changes in working tree — this will mix them into the commit on main.`, drop any `(recommended)`); when `worktree_option_available` is false, drop the worktree option.
 
 **Picker options**:
 
@@ -52,7 +52,7 @@ cortex-lifecycle-advance implement-transition --mode batch --feature <name> --ba
 Let in-flight tasks finish. Checkpoint the successes, identify downstream tasks transitively blocked, and surface which task failed, the error, and what's blocked.
 
 <!-- pause: implement-batch-failure question -->
-Then ask the user via `AskUserQuestion`: **retry**, **skip** (mark failed, continue non-dependents), or **abort**.
+Then ask the user: **retry**, **skip** (mark failed, continue non-dependents), or **abort**.
 
 ### Builder brief
 

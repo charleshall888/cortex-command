@@ -146,7 +146,7 @@ On user approval, execute these steps in order:
 
 6. **Launch the dashboard** (if not already running): check `${XDG_CACHE_HOME:-$HOME/.cache}/cortex/dashboard.pid` for a live PID (`kill -0 $(cat <path>)` exits 0) — if alive, skip and note the URL. Otherwise poll `GET http://localhost:8080/health` (up to 5s, 1s intervals): on success, note "Dashboard available at http://localhost:8080" in the session start message; on timeout or an unreadable PID file, report "Dashboard not detected at http://localhost:8080. Run `cortex dashboard` (installer-tier) or `just dashboard` (clone-only) in a separate terminal to enable live progress monitoring" and continue — the dashboard is optional and can be started anytime during the session.
 
-7. **Execute the runner command**: ask run-now vs. schedule via AskUserQuestion:
+7. **Execute the runner command**: ask run-now vs. schedule:
 
     ```
     Run now or schedule for later?

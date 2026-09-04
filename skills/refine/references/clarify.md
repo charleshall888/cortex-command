@@ -25,7 +25,7 @@ Follow `${CLAUDE_SKILL_DIR}/references/clarify-critic.md`. The orchestrator, not
 ## 4. Question threshold
 
 <!-- pause: clarify-question-batch question -->
-All three dimensions high after §3 **and** no critic Ask items → skip questions, proceed to §5. Otherwise merge the low-confidence gaps and critic Asks into one list, present via `AskUserQuestion`, cap ≤5 — critic Asks first, then highest-impact gaps, drop the rest. Ask only about specific gaps, never for completeness, never re-asking what's already clear.
+All three dimensions high after §3 **and** no critic Ask items → skip questions, proceed to §5. Otherwise merge the low-confidence gaps and critic Asks into one list, present as choices, cap ≤5 — critic Asks first, then highest-impact gaps, drop the rest. Ask only about specific gaps, never for completeness, never re-asking what's already clear.
 
 ## 5. Produce the handoff package
 

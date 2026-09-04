@@ -24,7 +24,7 @@ A **`resume`** state is served phase-keyed: `state` is the current phase, `advan
 
 <!-- pause: empty-lifecycle-offer question -->
 <!-- pause: ambiguous-backlog-pick question -->
-**Passthrough routing states** carry a `next` directive — act on it: `derive-slug` (derive a 3–6 word kebab-case slug and re-run, no confirmation); `empty` (offer incomplete `cortex/lifecycle/*` lifecycles via `AskUserQuestion`, then re-run); `ambiguous-backlog` (present `candidates` via `AskUserQuestion`, then re-run); `wontfix` (run the named `cortex-lifecycle-wontfix` command and halt); `closed` / `parked` (the backlog item already records an outcome — relay `next` and do not build); `error` / `needs-feature` / `no-such-lifecycle` (report and stop).
+**Passthrough routing states** carry a `next` directive — act on it: `derive-slug` (derive a 3–6 word kebab-case slug and re-run, no confirmation); `empty` (offer incomplete `cortex/lifecycle/*` lifecycles as choices, then re-run); `ambiguous-backlog` (present `candidates` as choices, then re-run); `wontfix` (run the named `cortex-lifecycle-wontfix` command and halt); `closed` / `parked` (the backlog item already records an outcome — relay `next` and do not build); `error` / `needs-feature` / `no-such-lifecycle` (report and stop).
 
 ## Step 2: Enter the resolved state
 
@@ -88,4 +88,4 @@ Model choice is the dispatching agent's call at each site, never this table's. T
 - [wontfix.md](${CLAUDE_SKILL_DIR}/references/wontfix.md) — operator-decided lifecycle termination
 
 <!-- pause: resume-feature-pick question -->
-Sessions bind to one feature each via the gitignored, SessionEnd-cleaned `cortex/lifecycle/{feature}/.session` file (never commit it). If multiple incomplete lifecycles exist and the user hasn't named one, list them and ask via `AskUserQuestion` which to resume; features with `feature_complete` in events.log or an APPROVED verdict in review.md are ignored.
+Sessions bind to one feature each via the gitignored, SessionEnd-cleaned `cortex/lifecycle/{feature}/.session` file (never commit it). If multiple incomplete lifecycles exist and the user hasn't named one, list them and ask which to resume; features with `feature_complete` in events.log or an APPROVED verdict in review.md are ignored.

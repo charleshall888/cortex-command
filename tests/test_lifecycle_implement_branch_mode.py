@@ -14,16 +14,11 @@ Two test classes:
          worktree → suppressed.
     (a5) ``branch-mode: None`` (unset) → branch_mode_unset_or_invalid.
 
-* ``TestImplementMdWiring`` is a documentation-shape check on
-  ``skills/build/references/implement.md``: asserts that the dispatch
-  helpers are named, that the open-paren invocation form is present, that
-  the invocation appears before the §1 picker ``AskUserQuestion`` call site,
-  and that each of the four closed-set branch-mode values appears within
-  ±10 lines of a ``should_fire_picker`` mention (routing-block proximity).
-
-The structural-doc class catches *some* of the regressions Task 5's grep V
-cannot — it does **not** exercise the inverted-boolean regression class,
-which is a known limitation documented in the spec's Risks section.
+* ``TestImplementMdWiring`` asserts that ``implement.md`` names the
+  ``cortex-lifecycle-branch-decision`` verb, and that the verb's source
+  composes each dispatch predicate. The prose-layout assertions this
+  docstring used to describe (call-site ordering, ±10-line proximity) were
+  removed by the prose-test cull; only the two checks above remain.
 """
 
 from __future__ import annotations

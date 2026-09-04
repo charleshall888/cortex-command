@@ -96,7 +96,7 @@ cortex-lifecycle-branch-decision --feature {feature}
 Off `main`/`master` the sub-choices collapse, so the surface offers only `[Approve & implement (current branch), Approve plan but wait to implement]`.
 
 <!-- pause: plan-approval relayed-consent -->
-**Compose `AskUserQuestion` options** (≤4): the branch modes plus **"Approve plan but wait to implement"**. The platform's **"Other"** free-text escape carries Request-changes and Cancel.
+**Compose the approval options** (≤4): the branch modes plus **"Approve plan but wait to implement"**. The **"Other"** free-text escape carries Request-changes and Cancel.
 
 | Operator selection | `--decision` | `--dispatch-choice` |
 | --- | --- | --- |

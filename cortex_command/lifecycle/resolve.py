@@ -286,7 +286,7 @@ def _resolve_parsed(
             "feature": feature,
             "candidates": backlog["ambiguous"],
             "next": (
-                "Present the candidates via AskUserQuestion; re-run resolve on the "
+                "Present the candidates as choices; re-run resolve on the "
                 "chosen slug."
             ),
         }

@@ -1,6 +1,6 @@
 ---
 name: requirements
-description: Use /cortex-core:requirements to gather requirements or define project scope. Interviews, then writes cortex/requirements/{project|area}.md; disable-model-invocation:true — explicit slash command only.
+description: Use /cortex-core:requirements to gather requirements or define project scope. Interviews, then writes cortex/requirements/{project|area}.md — explicit slash command only.
 disable-model-invocation: true
 argument-hint: "[area|project|list]"
 ---
@@ -45,7 +45,7 @@ The one write that happens during the interview is a per-term entry in `cortex/r
 cortex-append-glossary-term --term "{term}"
 ```
 
-`found` → use the returned definition verbatim, or surface the conflict via `AskUserQuestion` (keep / replace / flag as ambiguity); "replace" re-invokes with `--definition` and `--replace`. `not-found` → classify, then write with `--definition` only on a pass.
+`found` → use the returned definition verbatim, or surface the conflict as a choice (keep / replace / flag as ambiguity); "replace" re-invokes with `--definition` and `--replace`. `not-found` → classify, then write with `--definition` only on a pass.
 
 Project-specific terms whose meaning is shaped by this repo's conventions ("phase transition", "kept user pauses") earn an entry; general programming terms ("timeout", "race condition") do not — explain the rejection in the interview turn and write nothing. Only a user-named or user-confirmed term persists; a mention inside a **Recommended answer:** is not consent. Entries must be definitional, not classification-shaped (`phase_transition: the named event emitted when …`), since `/cortex-core:critical-review` feeds this section in as reasoning-free Project Context.
 

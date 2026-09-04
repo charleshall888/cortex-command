@@ -8,7 +8,7 @@ argument-hint: "<subcommand> [args]"
 
 Standalone markdown files with YAML frontmatter in `cortex/backlog/`, named `NNN-slug.md` — `NNN` is the stable cross-reference used in `blocks: [7]`; the slug may drift cosmetically after retitling. Read `${CLAUDE_SKILL_DIR}/references/schema.md` when creating or validating items. Every item verb accepts any reference form: numeric ID, slug, UUID prefix, lifecycle slug, or title phrase.
 
-Subcommand: $ARGUMENTS (first word = subcommand, remainder = args). Bare invocation: present the subcommands below via `AskUserQuestion`.
+Subcommand: $ARGUMENTS (first word = subcommand, remainder = args). Bare invocation: offer the subcommands below as choices.
 
 ### add
 
@@ -28,7 +28,7 @@ Run `cortex-generate-backlog-index` if `cortex/backlog/index.md` is missing (a l
 
 ### pick
 
-Run `cortex-backlog-ready`. Take the first non-empty priority group (`critical → contingent`) and present it via `AskUserQuestion` — one item offered directly, several as the top 4 by priority (label `"NNN — Title"`) noting omissions, none as "the backlog is clear". Then ask: **Start work** (`/cortex-core:refine {{item}}`, or `/cortex-core:build {{item}}` when already refined), **View details**, or **Mark in-progress** (status `in_progress`, bump `updated`).
+Run `cortex-backlog-ready`. Take the first non-empty priority group (`critical → contingent`) and offer it as choices — one item offered directly, several as the top 4 by priority (label `"NNN — Title"`) noting omissions, none as "the backlog is clear". Then ask: **Start work** (`/cortex-core:refine {{item}}`, or `/cortex-core:build {{item}}` when already refined), **View details**, or **Mark in-progress** (status `in_progress`, bump `updated`).
 
 ### ready
 

@@ -5,8 +5,8 @@ Covers the gameable behaviors specified in Requirement 12 of the
 
 - ``test_compose_mode_emits_five_section_body``: the compose path produces a
   body that contains all five expected section headings with non-empty content.
-- ``test_compose_mode_does_not_call_askuserquestion``: the compose section of
-  SKILL.md contains zero ``AskUserQuestion`` references (R6 regression guard).
+- ``test_compose_mode_does_not_prompt_the_user``: the compose section of
+  SKILL.md carries no user-prompting language (R6 regression guard).
 - ``test_create_item_accepts_body_flag``: ``cortex-create-backlog-item --body``
   appends the body verbatim after the frontmatter closing delimiter.
 """
@@ -91,13 +91,20 @@ def test_compose_mode_emits_five_section_body() -> None:
     # Body-template reference must be present — compose reads the template.
 
 
-def test_compose_mode_does_not_call_askuserquestion() -> None:
-    """Compose section of SKILL.md contains zero AskUserQuestion references."""
-    skill_text = SKILL_MD.read_text(encoding="utf-8")
-    compose_section = _extract_skill_section(skill_text, "compose")
+#: Vocabulary that would appear if the compose path started prompting the
+#: user. Kept as a closed set so the guard stays mutation-sensitive after the
+#: host-specific tool name was removed from skill prose.
+_PROMPTING_TOKENS = ("ask the user", "as choices")
 
-    assert "AskUserQuestion" not in compose_section, (
-        "compose section of SKILL.md references AskUserQuestion — "
+
+def test_compose_mode_does_not_prompt_the_user() -> None:
+    """Compose section of SKILL.md carries no user-prompting instruction."""
+    skill_text = SKILL_MD.read_text(encoding="utf-8")
+    compose_section = _extract_skill_section(skill_text, "compose").lower()
+
+    found = [tok for tok in _PROMPTING_TOKENS if tok in compose_section]
+    assert not found, (
+        f"compose section of SKILL.md contains prompting language {found} — "
         "the compose path must not prompt the user (R6 regression)"
     )
 

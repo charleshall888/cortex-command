@@ -13,7 +13,7 @@ Per area, judge first whether research already answers it: **clear** → state i
 Problem statement (what it solves, who benefits, cost of not building) · Requirements (acceptance criteria each; must-have vs nice-to-have) · ADR posture (draft any hard-to-reverse, surprising, real-trade-off decision into `## Proposed ADR` in the same turn — don't defer) · Non-requirements (push back on vague boundaries) · Edge cases (challenge optimistic assumptions) · Technical constraints (from research).
 
 <!-- pause: spec-interview-gapfill question -->
-Probe via `AskUserQuestion` until ambiguities resolve; batch only independent questions.
+Probe until ambiguities resolve; batch only independent questions.
 
 Interactive in-session verification is a legitimate default — don't interrogate how criteria would be verified overnight. Name the grounding file for a code-derived criterion so a wrong location surfaces before code is written; omit rather than fabricate for intent-only criteria. Where criteria look under-specified, invent and surface one concrete stress scenario before locking.
 
@@ -30,7 +30,7 @@ All pass → §3, no event, no acknowledgment. Don't re-evaluate clarify.md §6'
 **Flagged, cycle 1** → present the signals as bullets (≤15 words each, no other prose), state Research must re-run, transition to Research **bypassing the Sufficiency Check** — research.md is invalidated, and without the bypass Research declares it sufficient and bounces straight back.
 
 <!-- pause: spec-confidence-loopback question -->
-**Flagged, cycle ≥2** → present the same way, then ask via `AskUserQuestion` whether to loop back or proceed.
+**Flagged, cycle ≥2** → present the same way, then ask whether to loop back or proceed.
 
 ### 2b. Pre-Write Checks
 
@@ -92,10 +92,10 @@ Otherwise the critical-review gate protocol skips to approval. The gate runs at 
 ### 4. User Approval
 
 <!-- pause: spec-complexity-value-gate question -->
-**Complexity/value gate**, regardless of critical-review. Fires on 3+ new state surfaces, a new persistent data format or config section to maintain, or a subsystem needing ongoing per-feature upkeep. Default full scope; otherwise recommend the smallest downsize preserving the primary outcome, rationale-first ("I recommend X because Y", citing the driving surface). `AskUserQuestion` only when the recommendation isn't full scope or confidence is low; else fold into the approval surface. The lead `label` ends ` (Recommended)`, its `description` opens with the rationale. Offer applicable downsizes ("drop entirely", "bugs-only", "minimum viable"), noting when one doesn't apply. This surface wins over the Open-Decisions gate when both fire.
+**Complexity/value gate**, regardless of critical-review. Fires on 3+ new state surfaces, a new persistent data format or config section to maintain, or a subsystem needing ongoing per-feature upkeep. Default full scope; otherwise recommend the smallest downsize preserving the primary outcome, rationale-first ("I recommend X because Y", citing the driving surface). Ask only when the recommendation isn't full scope or confidence is low; else fold into the approval surface. The lead option's label ends ` (Recommended)`, its description opens with the rationale. Offer applicable downsizes ("drop entirely", "bugs-only", "minimum viable"), noting when one doesn't apply. This surface wins over the Open-Decisions gate when both fire.
 
 <!-- pause: spec-approval relayed-consent -->
-Present via `AskUserQuestion` with **Produced** (one-line artifact summary), **Value** (the problem solved and why it's worth building now — flag weak cases explicitly), **Trade-offs** (alternatives and rationale), **Proposed ADRs** (comma-separated `<NNNN-slug>` list, or `None`).
+Present the approval choice with **Produced** (one-line artifact summary), **Value** (the problem solved and why it's worth building now — flag weak cases explicitly), **Trade-offs** (alternatives and rationale), **Proposed ADRs** (comma-separated `<NNNN-slug>` list, or `None`).
 
 Enumerate options as `Approve` | `Request changes` | `Cancel`, map to `--decision` (`approved` / `revise` / `cancelled`), and hand off. The verb owns this arm's ordered emissions — the consent record, the flag-gated spec-exit transition, and the backend-gated `status:refined` + `spec` + `areas` write-back — so route on the returned `state`, don't re-derive it:
 
