@@ -1,8 +1,8 @@
 """Live status display for overnight orchestration sessions.
 
 Reads cortex/lifecycle/overnight-state.json and the session events log to
-produce a single-screen status snapshot. Designed to be run in a
-refresh loop via `just overnight-status`.
+produce a single-screen status snapshot. Exposed as `cortex overnight
+status`; run it in a refresh loop (for example under `watch`).
 
 Usage:
     python3 -m cortex_command.overnight.status
