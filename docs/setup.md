@@ -140,7 +140,7 @@ claude /plugin list
 - **`remote_url`** — the git remote URL of your project, if it is a git repository (empty string otherwise)
 - **`head_sha`** — the full SHA of your project's current HEAD commit (empty string if not a git repository)
 
-`claude /plugin list` should list the plugins you installed. If one is missing, run `/reload-plugins` inside Claude Code to refresh the plugin metadata cache.
+`claude /plugin list` should list the plugins you installed. If one is missing, run `/reload-plugins` in a fresh Claude Code session to refresh the plugin metadata cache. Do it in a fresh session, not one with work in progress: a reload that adds MCP tools changes the system prompt, so the running conversation re-reads its whole history uncached.
 
 </details>
 
@@ -158,8 +158,8 @@ claude /plugin list
 **Plugin install:**
 
 1. Run `/plugin list` to confirm the plugins you installed are listed.
-2. If a skill is missing after install, run `/reload-plugins` to refresh the plugin metadata cache.
-3. As a last resort, nuke the plugin cache and re-run `/reload-plugins`:
+2. If a skill is missing after install, run `/reload-plugins` in a fresh session to refresh the plugin metadata cache (see the cache note above).
+3. As a last resort, nuke the plugin cache and re-run `/reload-plugins` in a fresh session:
 
    ```bash
    rm -rf ~/.claude/plugins/cache

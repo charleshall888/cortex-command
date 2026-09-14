@@ -194,6 +194,14 @@ if [ "$HAS_JQ" -eq 1 ]; then
       context_pct="${context_remaining_pct}%"
     fi
   fi
+
+  # Prompt-cache stats for the main conversation (Claude Code >= 2.1.251).
+  # hit_ratio is the share of input tokens served from cache; warm means the
+  # cached prefix is still inside its TTL. Absent until the first API response.
+  cache_pct=$(echo "$input" | jq -r 'if .prompt_cache.hit_ratio == null then "" else ((.prompt_cache.hit_ratio * 100) | floor | tostring) end' 2>/dev/null)
+  cache_warm=$(echo "$input" | jq -r '.prompt_cache.warm // empty' 2>/dev/null)
+  cache_ttl=$(echo "$input" | jq -r '.prompt_cache.ttl // empty' 2>/dev/null)
+  cache_miss_cause=$(echo "$input" | jq -r '.prompt_cache.last_miss_cause.causes[0] // empty' 2>/dev/null)
 fi
 
 # ---- log extracted data ----
@@ -221,6 +229,18 @@ fi
 printf '  🤖 %s%s%s' "$(model_color)" "$model_name" "$(rst)"
 if [ -n "$model_version" ] && [ "$model_version" != "null" ]; then
   printf '  🏷️ %s%s%s' "$(version_color)" "$model_version" "$(rst)"
+fi
+# Prompt cache: hit ratio, warm (✓) or cold (✗) with TTL, and the last miss cause when Claude Code names one.
+if [ -n "${cache_pct:-}" ]; then
+  if [ "${cache_warm:-}" = "true" ]; then
+    cache_state="✓"
+  else
+    cache_state="✗"
+  fi
+  printf '  💾 %s%s%% %s%s%s' "$(context_color)" "$cache_pct" "$cache_state" "${cache_ttl:+ $cache_ttl}" "$(rst)"
+  if [ -n "${cache_miss_cause:-}" ]; then
+    printf ' %s(%s)%s' "$(C 2)" "$cache_miss_cause" "$(rst)"
+  fi
 fi
 
 # ---- Line 2: Dir (basename) / git ----

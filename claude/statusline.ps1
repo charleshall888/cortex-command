@@ -128,6 +128,17 @@ if ($contextPct) {
 } else {
     $line2 = "🧠 ${contextColor}Context Remaining: TBD$rst"
 }
+# Prompt cache (Claude Code >= 2.1.251): hit ratio, warm/cold with TTL, last miss cause when named.
+$cache = $data.prompt_cache
+if ($cache -and $null -ne $cache.hit_ratio) {
+    $cachePct = [math]::Floor([double]$cache.hit_ratio * 100)
+    $cacheState = if ($cache.warm) { "✓" } else { "✗" }
+    $cacheTtl = if ($cache.ttl) { " $($cache.ttl)" } else { "" }
+    $line2 += "  💾 ${contextColor}$cachePct% $cacheState$cacheTtl$rst"
+    if ($cache.last_miss_cause -and $cache.last_miss_cause.causes) {
+        $line2 += " ($($cache.last_miss_cause.causes[0]))"
+    }
+}
 
 # Line 3: Cost and usage
 $line3 = ""
