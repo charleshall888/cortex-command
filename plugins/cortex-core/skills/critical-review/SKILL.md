@@ -22,13 +22,13 @@ Each angle must cite a specific section, claim, assumption, or design choice in 
 
 Build a `## Project Context` block for the reviewer prompts from `cortex/requirements/project.md`'s Overview (~250 words), a `**Project type:** {type}` prefix from `cortex/lifecycle.config.md` when it carries a valid `type:`, and `cortex/requirements/glossary.md`'s `## Language` section verbatim. None available → omit the section entirely, no placeholder.
 
-> **Deliberately narrow.** Critical-review skips the tag-based requirements-loading protocol other skills use — broader project context (priorities, area tags, decisions) would dilute the fresh-eyes stance. Vocabulary is admitted because it's definitional, not reasoning-shaped. Read only `## Language`, not `## Relationships`, `## Example dialogue`, or `## Flagged ambiguities`. Do not "fix" this by wiring tag-based loading into the dispatch path.
+> **Deliberately narrow.** Critical-review skips the tag-based requirements-loading protocol other skills use — broader project context (priorities, area tags, decisions) would dilute the fresh-eyes stance. Vocabulary is admitted because it's definitional, not reasoning-shaped. Read only `## Language`, not `## Relationships`, `## Example dialogue`, or `## Flagged ambiguities`.
 
 ## Step 4: Dispatch reviewers
 
 One general-purpose agent per angle, all in parallel, using `${CLAUDE_SKILL_DIR}/references/reviewer-prompt.md` verbatim with `{artifact_path}`, `{angle name}`, `{angle description}`, and the Step 3 context block substituted.
 
-Extract each reviewer's envelope: split on the **last** `<!--findings-json-->` line, `json.loads` the tail, and assert top-level `angle: str` and `findings: list`, each finding carrying `class ∈ {A,B,C}`, `finding`, and `evidence_quote`. The envelope is the reviewer's whole deliverable, so a malformed one leaves nothing to salvage — warn `⚠ Reviewer {angle} emitted malformed JSON envelope ({reason})` and drop it.
+Extract each reviewer's envelope: split on the **last** `<!--findings-json-->` line, `json.loads` the tail, and assert top-level `angle: str` and `findings: list`, each finding carrying `class ∈ {A,B,C}`, `finding`, and `evidence_quote`. A malformed envelope does not discard the review: warn `⚠ Reviewer {angle} emitted malformed JSON envelope ({reason})`, pass that reviewer's prose to the synthesizer marked `unstructured`, and leave the angle out of Step 6's residue.
 
 One reviewer failing at width 2 → synthesize from the survivor, prefixed "1 of 2 reviewer angles completed." Never wait on a silent agent. Total failure — both at 2, or the lone angle at 1 — → one general-purpose agent derives 1–2 angles itself, same output shape, prefixed `Note: reviewer dispatch failed, falling back to single reviewer`; skip synthesis.
 

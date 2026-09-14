@@ -18,7 +18,7 @@ Failures → report and halt until resolved. First-run only; the router skips th
 
 Push the branch, then create a PR whose title and body reflect the feature's purpose and link the lifecycle directory. Capture the PR number, URL, and current branch for Step 4.
 
-Running from inside an `interactive/{slug}` worktree — both `read_lock(slug)` non-None **and** `git rev-parse --show-toplevel` is that worktree root — wrap `gh pr create` in a cd-in-then-out around the worktree; otherwise run it from the current cwd. Advisory, non-blocking.
+Running from inside an `interactive/{slug}` worktree — `cortex-interactive-lock inspect {slug}` reports a `LIVE` lock **and** `git rev-parse --show-toplevel` is that worktree root — wrap `gh pr create` in a cd-in-then-out around the worktree; otherwise run it from the current cwd. Advisory, non-blocking.
 
 ## Step 4 — Record it
 

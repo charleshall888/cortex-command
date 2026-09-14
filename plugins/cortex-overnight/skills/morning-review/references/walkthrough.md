@@ -7,25 +7,12 @@ located and confirmed to exist.
 
 ## Section 1 — Executive Summary
 
-Read `cortex/lifecycle/morning-report.md` (or the file it symlinks to). Extract and
-display, before any interaction:
+From the report located in Step 1, extract and display, before any interaction:
 
 - **Verdict** — overall session outcome (e.g. "All features completed", "Partial —
   2 of 4 completed", "Session failed")
 - **Feature counts** — completed, failed, deferred
 - **Session duration** — start time, end time, elapsed time
-
-**Missing report**: if `cortex/lifecycle/morning-report.md` doesn't exist and
-`cortex/lifecycle/sessions/` has no subdirectories, print:
-
-```
-No morning report found. No overnight session has been run yet, or the report was not
-generated. To generate one, run:
-
-    cortex-report
-```
-
-Then stop — do not proceed to later sections.
 
 ---
 
@@ -59,9 +46,8 @@ missing.
 Which features have you verified? ("all", "none", or a space/comma-separated list of names)
 ```
 
-Parse the response: `"all"`/`"yes"`/`"done"`/`"y"` → all verified; `"none"`/`"skip"`/`"s"`/
-`"no"` → all skipped; otherwise treat as a feature-name list (fuzzy match: prefix or
-substring, case-insensitive) — named ones verified, rest skipped.
+Interpret the reply: everything verified, nothing verified, or a named subset (match names
+loosely, case-insensitively) — named ones verified, the rest skipped.
 
 Record status per feature and proceed immediately to Section 2a. Verified/skipped is
 reporting context only — it does not gate lifecycle advancement.
@@ -116,9 +102,7 @@ If all guards pass on the list path, pick the entry in `entries` whose `label`/`
 best matches the night's merged features and their **Key files changed** (already in
 context from Section 2 — do not re-run `git log`, `git diff`, or any file-tree read). If
 one entry is a clear winner, select it as `{selected-entry}` and proceed to the Demo
-offer. If none maps cleanly, skip Section 2a silently — do not fall back to the
-single-string path even if it's also configured; once the list path is active, it owns
-the decision.
+offer. If none maps cleanly, skip Section 2a silently.
 
 ### Demo offer
 
@@ -270,13 +254,6 @@ For each failed feature (report order):
      composed body inline if it can't be filed.
 
    On skip, move on without creating anything.
-
----
-
-## Section 5 — Auto-Close Backlog Tickets
-
-Backlog closure runs in Section 6b (post-merge, on confirmed-merge success only). Proceed
-to Section 6.
 
 ---
 
@@ -450,8 +427,3 @@ Most edge handling is specified inline per section. The cases below are stated o
 | `cortex-git-sync-rebase` not found | Report the missing script, skip sync, note "install the `cortex-core` plugin" |
 | Dirty `.git/rebase-merge/` detected | Script auto-aborts the stale rebase, warns, proceeds with sync |
 | All conflicts auto-resolved | Report "N files auto-resolved via allowlist" |
-| Agent crashes between worktree creation and command print | Worktree exists with no record for the user; next sweep retries |
-| Stale demo worktree from a prior session in `$TMPDIR` | Removed by Step 0's garbage sweep on next morning-review (if clean) |
-| Stale demo worktree contains user edits | Sweep's `git worktree remove` (no `--force`) fails; stderr printed; rescue manually |
-| Demo worktree created but session closes before the Section 6 reminder | No cleanup until next morning-review's Step 0 sweep |
-| User abandons the repo (no future morning-review) | Stale worktrees/admin entries persist until manual cleanup or reboot |

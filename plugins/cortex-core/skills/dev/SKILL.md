@@ -19,7 +19,7 @@ First match wins.
 4. **`simple` change** (you know the approach, or one read confirms it; nothing to decide — size is not the test) → implement it here, commit, and close any backlog item it resolved: `cortex-update-item {slug} --status complete` (skip when there's no item or the backend is external). Do not write a `--complexity` here — a tier recorded outside Clarify has no reader and no assessment event behind it.
 5. **Otherwise** → assess criticality (Step 2), then route by the ticket's readiness: no `spec:` field (or no ticket at all) → `/cortex-core:refine <feature-name>` with the criticality context; `status: refined` with a `spec:` → `/cortex-core:build <feature-name>`. When unsure, `cortex-lifecycle-next <feature>` reports the served phase — `research`/`specify` means refine, anything later means build.
 
-Never use built-in `EnterPlanMode` as a substitute for `/cortex-core:build`.
+Plan mode (`EnterPlanMode`) records nothing in the lifecycle, so a plan for routed work is `/cortex-core:build`'s plan phase, not plan mode.
 
 ## Step 2: Criticality Pre-Assessment
 

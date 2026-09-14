@@ -70,4 +70,4 @@ Run the orchestrator-review protocol (propagated **orchestrator-review** path) f
 
 In the fix-agent dispatch, substitute `{topic} discovery topic` for `{feature}` and `cortex/research/{topic}/{artifact}` for the lifecycle artifact path; the fix agent returns plain prose (`changed [path] — [rationale]`), not lifecycle's YAML envelope.
 
-Then run `/cortex-core:critical-review` on the artifact and address any significant challenges. Commit `cortex/research/{topic}/`, summarize, and hand off to the Research → Decompose gate — do not begin Decompose until the user answers it.
+Commit `cortex/research/{topic}/`, summarize, and hand off to the Research → Decompose gate — do not begin Decompose until the user answers it.

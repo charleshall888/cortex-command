@@ -71,7 +71,7 @@ Prose-only Verification fails review — use (a), (b), or (c).
 
 **Caller enumeration** — when a task changes or removes a function, command, or interface, search first and list ALL callers in **Files**.
 
-**Code budget** — structural context only: paths, signatures, type field names, pattern references, config keys, inter-task contracts. No copy-paste-ready code. No self-sealing verification. A task building a capture or evidence rig must produce and validate a discarded sample of the exact committed-evidence shape end to end.
+**Code budget** — structural context only: paths, signatures, type field names, pattern references, config keys, inter-task contracts. No copy-paste-ready code. No self-sealing verification.
 
 Then: `cortex-lifecycle-register-artifact --feature {feature} --artifact plan`.
 
@@ -128,5 +128,3 @@ cortex-lifecycle-stage-artifacts --phase plan --feature {feature}
 ```
 
 The verb reads `commit-artifacts` itself. Act on `signal`: `config_disabled` → relay its `message` and skip the commit; `nothing_staged` → skip silently; `staged` → commit. A non-zero exit is a staging failure — halt rather than commit a partial set. On "wait" the commit makes approval durable, then the lifecycle halts.
-
-**Hard gate**: backlog items suggest approaches, they don't prescribe them. Unless the item has linked research/spec artifacts that already validated the approach, evaluate it critically and weigh alternatives.

@@ -28,7 +28,7 @@ backlog:
   # backend: jira            # external tracker (best-effort, see below)
   # backend: none            # opt out of all cortex ticket management
   # Freeform prose hint the LLM reads to drive an EXTERNAL tracker best-effort.
-  # External backends are best-effort now and harden in #318. Example:
+  # External backends are best-effort. Example:
   # instructions: "Use the `gh` CLI; label cortex issues `cortex`; epics are milestones"
 ---
 

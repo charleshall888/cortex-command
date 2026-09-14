@@ -43,8 +43,8 @@ TEMPLATE = REPO_ROOT / "cortex_command" / "init" / "templates" / "cortex" / "lif
 
 # Load-bearing option lines the asset frontmatter must carry. Checked as
 # byte-substrings (line-integrity, not bare tokens): ``# backend: none`` rather
-# than a generic ``none``, and the documenting comment prose (incl. the #318
-# cross-reference) so convergent comment loss from both files is caught.
+# than a generic ``none``, and the documenting comment prose so convergent
+# comment loss from both files is caught.
 _REQUIRED_OPTION_LINES = (
     b"backend: cortex-backlog",
     b"# backend: github-issues",
@@ -52,7 +52,7 @@ _REQUIRED_OPTION_LINES = (
     b"# backend: none",
     b"# instructions:",
     b"# Freeform prose hint",
-    b"harden in #318",
+    b"External backends are best-effort",
 )
 
 

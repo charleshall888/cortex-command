@@ -16,6 +16,8 @@ Reference prose is ratcheted down-only: every `references/` directory (canonical
 
 New global utilities ship via the `cortex-core` plugin's `bin/` directory; canonical source lives in the repo-root `bin/` and mirrors via dual-source enforcement.
 
+A critic rubric (`skills/refine/references/clarify-critic.md` and any sibling) is capped at five dimensions. A sixth replaces one or becomes a separate critic; the cap keeps each reviewer agent's brief short enough to act on and lives here, not in the shipped reference, because it governs authoring rather than the run.
+
 ### No tests on skill prose
 
 No test asserts that a phrase, sentence, or instruction is *present* in the natural-language body of `skills/**/SKILL.md` or `skills/**/references/*.md` (`CLAUDE.md` carries the one-line statement; this is the elaboration).

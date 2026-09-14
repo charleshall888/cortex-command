@@ -31,7 +31,6 @@ Detailed step procedures, worked examples, and success-criteria checklists are e
 |-------|-----------|
 | New session flow (Steps 1–7 detail, launch sub-steps) | [new-session-flow.md](${CLAUDE_SKILL_DIR}/references/new-session-flow.md) |
 | Resume flow (load state, report, act on choice) | [resume-flow.md](${CLAUDE_SKILL_DIR}/references/resume-flow.md) |
-| Output format examples (`overnight-plan.md`, `session.json`) | [output-format-examples.md](${CLAUDE_SKILL_DIR}/references/output-format-examples.md) |
 | Success criteria checklists for `/overnight` and `/overnight resume` | [success-criteria.md](${CLAUDE_SKILL_DIR}/references/success-criteria.md) |
 
 Read **only** the reference for the flow you are in. Do not preload all references.
@@ -55,7 +54,7 @@ Validate before entering any flow:
 
 ## New Session Flow (`/overnight`)
 
-Read `${CLAUDE_SKILL_DIR}/references/new-session-flow.md` and follow it (full protocol, error handling, sub-steps, function signatures) — check for an existing session, regenerate the backlog index, select eligible features, present the selection, render the plan, run the unified plan + spec review to approval, then launch (pre-flight, bootstrap, batch-spec commit, dashboard, run-now/schedule split — `session_start` is logged only on the run-now branch; the runner is the sole fire-time author otherwise).
+Read `${CLAUDE_SKILL_DIR}/references/new-session-flow.md` and follow it (full protocol, error handling, sub-steps, function signatures) — check for an existing session, regenerate the backlog index, select eligible features, present the selection, render the plan, run the unified plan + spec review to approval, then launch (pre-flight, bootstrap, batch-spec commit, dashboard, run-now/schedule split).
 
 ## Resume Flow (`/overnight resume`)
 
@@ -63,7 +62,7 @@ Read `${CLAUDE_SKILL_DIR}/references/resume-flow.md` and follow it (full protoco
 
 ## Status Flow (`/overnight status`)
 
-Run `overnight-status` (the deployed script) and present its output to the user. If the command is not found, instruct the user to install the `cortex-core` plugin.
+Run `cortex overnight status` and present its output to the user.
 
 ## Success Criteria
 
@@ -72,13 +71,9 @@ Detailed checklists for `/overnight` and `/overnight resume` outcomes live in `$
 - New session: plan, state, and manifest written into `cortex/lifecycle/sessions/{session_id}/`; integration branch created; runner launched; `session_start` logged.
 - Resume: state reported; deferred questions surfaced; phase-appropriate next action offered.
 
-## Output Format Examples
+## Overnight vs Refine vs Build
 
-Templates for `overnight-plan.md` and `session.json` live in `${CLAUDE_SKILL_DIR}/references/output-format-examples.md`.
-
-## Overnight vs Pipeline vs Lifecycle
-
-Complementary orchestration skills: **Lifecycle** (`/lifecycle`) is interactive single-feature development, user present throughout. **Pipeline** (`/pipeline`) is batch orchestration — interactive front-end (research, spec, plan), autonomous execution back-end. **Overnight** (`/overnight`) is fully autonomous execution of features whose research and spec artifacts already exist (from `/discovery` or `/lifecycle`) — no interactive research/spec phase; handles plan approval, then hands off entirely to the runner.
+Complementary skills: **Refine** (`/cortex-core:refine`) takes a backlog item from idea to approved spec, user present. **Build** (`/cortex-core:build`) takes a refined item through plan, implement, review, and complete, user present. **Overnight** (`/overnight`) is fully autonomous execution of features whose `research.md` and `spec.md` already exist (from `/cortex-core:refine`) — no interactive research/spec phase; it handles plan approval, then hands off entirely to the runner.
 
 ## Constraints
 
@@ -88,4 +83,3 @@ Complementary orchestration skills: **Lifecycle** (`/lifecycle`) is interactive 
 - **The skill does not execute features.** It creates the plan and state, then hands off to the runner.
 - **Overnight features merge to the session's integration branch** (`overnight/{session_id}`), not directly to main. The runner opens a single PR to main at session end covering all changes.
 - **Session plan is immutable after approval** — once written to `overnight-plan.md`, it does not change. Runtime state lives in `overnight-state.json`.
-- **Parallel agent dispatch uses `Agent isolation: "worktree"`.** Same-repo worktrees resolve to `<repo>/.claude/worktrees/{feature}/` via `cortex-worktree-resolve` — repo-relative, under the project's trust scope, no per-shell sandbox registration needed. The `.mcp.json` sandbox deny is filename-scoped and does not block `git worktree add`. A failed checkout leaves an orphaned branch — clean up with `git branch -d <name>` before retrying.

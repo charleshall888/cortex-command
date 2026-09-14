@@ -81,16 +81,6 @@ class TestSkillFlowGating(unittest.TestCase):
             root / "skills" / "overnight" / "SKILL.md"
         ).read_text(encoding="utf-8")
 
-    def _step5_block(self) -> str:
-        """Return the step-5 block text from ``new-session-flow.md``."""
-        # Step 5 starts at the numbered "5." heading and runs up to the
-        # step-6 heading.
-        m = re.search(
-            r"\n5\.\s.*?(?=\n6\.\s)", self._flow, flags=re.DOTALL
-        )
-        self.assertIsNotNone(m, "could not locate step-5 block in new-session-flow.md")
-        return m.group(0)
-
     def _runnow_block(self) -> str:
         """Return the run-now (option 1) block text from ``new-session-flow.md``."""
         m = re.search(
@@ -104,34 +94,29 @@ class TestSkillFlowGating(unittest.TestCase):
     def _schedule_block(self) -> str:
         """Return the schedule (option 2) block from ``new-session-flow.md``."""
         m = re.search(
-            r"\*\*Schedule for specific time \(option 2\)\*\*.*?(?=\n8\.\s)",
+            r"\*\*Schedule for specific time \(option 2\)\*\*.*?(?=\n\d+\.\s\*\*)",
             self._flow,
             flags=re.DOTALL,
         )
         self.assertIsNotNone(m, "could not locate schedule block in new-session-flow.md")
         return m.group(0)
 
-    def test_step5_does_not_invoke_prep_session_start_log(self) -> None:
-        """Step 5 no longer issues the prep-time ``session_start`` log call.
+    def test_no_prep_session_start_log_outside_runnow_branch(self) -> None:
+        """Only the run-now branch may issue the prep-time ``session_start`` log.
 
-        The step-5 block must not contain a ``log_event(... 'session_start')``
-        invocation directive — it is deferred to the run-now branch.
+        Absence guard over the whole flow minus the run-now block: a
+        ``log_event(... session_start)`` directive anywhere else (an earlier
+        sub-step, the schedule branch, the post-launch report) re-creates the
+        duplicate-row bug the run-now gating exists to prevent. Located by
+        block heading, not sub-step number, so renumbering cannot break it.
         """
-        block = self._step5_block()
-        # No active "log_event(...session_start...)" call directive remains in
-        # step 5. The block may *mention* session_start while explaining the
-        # deferral, but must not pair it with a log_event call.
+        runnow = self._runnow_block()
+        rest = self._flow.replace(runnow, "", 1)
         self.assertNotRegex(
-            block,
-            r"Call `log_event\(\)`[^\n]*session_start",
-            "step 5 still issues a prep-time session_start log; it must be "
-            "gated to the run-now branch",
-        )
-        # And it must explicitly defer / gate the log to the run-now branch.
-        self.assertRegex(
-            block.lower(),
-            r"run-now|run now",
-            "step 5 must reference the run-now branch as the gated location",
+            rest,
+            r"log_event\([^\n]*session_start",
+            "a prep-time session_start log directive exists outside the run-now "
+            "branch; it must be gated to that branch only",
         )
 
     def test_runnow_branch_invokes_prep_session_start_log(self) -> None:

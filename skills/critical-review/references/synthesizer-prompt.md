@@ -25,6 +25,6 @@ End with: "These are the strongest objections. Proceed as you see fit."
 
 ## Output Format
 
-Sections `## Objections`, `## Through-lines`, `## Tensions`, `## Concerns` — bullets, not paragraphs, each finding a discrete bullet, multi-sentence when quoting evidence. Skip sections with no findings rather than emitting empty headers. No balanced or endorsement sections: no "## What Went Well", no "## Strengths", no "## Recommendation".
+Sections `## Objections`, `## Through-lines`, `## Tensions`, `## Concerns` — bullets, not paragraphs, each finding a discrete bullet, multi-sentence when quoting evidence. Skip sections with no findings rather than emitting empty headers. These four are the only sections: the output is a challenge, not an assessment.
 
-Do not be balanced. Do not reassure. Find the through-lines and make the strongest case.
+Find the through-lines and make the strongest case.

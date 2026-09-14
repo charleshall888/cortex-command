@@ -14,7 +14,7 @@ Resolve the backend once with `cortex-read-backlog-backend` (argless). **Two arm
 
 Four dimensions: **topic aim** (one problem space vs. vague or conflated), **domain** (belongs to one area vs. spans unrelated ones without a unifying question), **novelty** (no substantial backlog overlap), **requirements alignment** (no conflicts).
 
-All four high → skip to §4. Any low → ask ≤4 targeted questions covering only what's genuinely unclear, and wait for answers.
+All four high → skip to §4. Any low → ask targeted questions covering only what's genuinely unclear, and wait for answers.
 
 ### 4. Produce Clarify Output
 

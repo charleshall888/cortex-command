@@ -52,7 +52,7 @@ Return objections only, one per finding, in full sentences quoting the divergenc
   Concern: [why this claim is poorly supported by the source material]
 ```
 
-End with: "These are the objections. Proceed as you see fit." One-sided: focus on what's wrong, not balanced coverage.
+End with: "These are the objections. Proceed as you see fit."
 
 ---
 
@@ -73,8 +73,6 @@ dispositions: {apply, dismiss, ask}, applied_fixes_count: <int>,
 dismissals_count: <int>, status: "ok"
 ```
 
-Counts only — no per-finding prose or rationales. Keep `dismissals_count == dispositions.dismiss`. Readers tolerate every prior shape (v1, v1+dismissals, v2, YAML-block) forever; new producers emit only v3.
+Counts only — no per-finding prose or rationales. Keep `dismissals_count == dispositions.dismiss`.
 
 Critic failure, error, or timeout → write the event with `status: "failed"` and all counts zero (`parent_epic_loaded` per the pre-dispatch result), then proceed to §4 as if it hadn't run, covering all original low-confidence dimensions. Not a blocking error.
-
-**Soft cap of 5 rubric dimensions.** A sixth requires replacing one or extracting a separate critic.

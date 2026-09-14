@@ -15,7 +15,7 @@ Problem statement (what it solves, who benefits, cost of not building) · Requir
 <!-- pause: spec-interview-gapfill question -->
 Probe until ambiguities resolve; batch only independent questions.
 
-Interactive in-session verification is a legitimate default — don't interrogate how criteria would be verified overnight. Name the grounding file for a code-derived criterion so a wrong location surfaces before code is written; omit rather than fabricate for intent-only criteria. Where criteria look under-specified, invent and surface one concrete stress scenario before locking.
+Interactive in-session verification is a legitimate acceptance-criterion form. Name the grounding file for a code-derived criterion so a wrong location surfaces before code is written; omit rather than fabricate for intent-only criteria. Where criteria look under-specified, invent and surface one concrete stress scenario before locking.
 
 ### 2a. Research Confidence Check
 
@@ -27,16 +27,14 @@ All pass → §3, no event, no acknowledgment. Don't re-evaluate clarify.md §6'
 
 `current_cycle` = count of `confidence_check` events + 1.
 
-**Flagged, cycle 1** → present the signals as bullets (≤15 words each, no other prose), state Research must re-run, transition to Research **bypassing the Sufficiency Check** — research.md is invalidated, and without the bypass Research declares it sufficient and bounces straight back.
+**Flagged, cycle 1** → present the signals as terse bullets, state Research must re-run, transition to Research **bypassing the Sufficiency Check** — research.md is invalidated, and without the bypass Research declares it sufficient and bounces straight back.
 
 <!-- pause: spec-confidence-loopback question -->
 **Flagged, cycle ≥2** → present the same way, then ask whether to loop back or proceed.
 
 ### 2b. Pre-Write Checks
 
-Silent on pass; on failure surface only the failing item as one bullet (≤15 words).
-
-**Verification** — check code-behavior claims against actual code. Two recurring traps: `git diff` two-dot (`A..B`) vs three-dot (`A...B`), and state ownership (an in-memory increment silently overwritten by an end-of-batch writeback owner).
+Silent on pass; on failure surface only the failing item as one terse bullet.
 
 **Research cross-check** — re-read research.md in full; every behavioral requirement, constraint, guard, and edge case must appear in Requirements, Edge Cases, or Technical Constraints. An absent research item is a silent omission, not a scope decision — if intentional, record it in Non-Requirements or Open Decisions.
 

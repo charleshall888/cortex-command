@@ -64,7 +64,7 @@ cortex-morning-review-gc-demo-worktrees "$session_id"
 Check for the morning report in order, using whichever path resolves first:
 
 1. `$CORTEX_COMMAND_ROOT/cortex/lifecycle/sessions/latest-overnight/morning-report.md` —
-   the MC session directory (new-style worktree sessions).
+   the session directory.
 2. `cortex/lifecycle/sessions/latest-overnight/morning-report.md` — via a project-local
    `latest-overnight` symlink (if one exists).
 3. `cortex/lifecycle/morning-report.md` — regular file overwritten by each overnight
@@ -101,10 +101,6 @@ Work through the report sections in sequence, delegating the per-section protoco
    should-have backlog investigation item (walkthrough §4).
 
 Skip any section with no entries — no placeholder or empty heading.
-
-### Step 4: Auto-Close Backlog Tickets
-
-Backlog ticket closure runs post-merge in walkthrough §6b, not here.
 
 ### Step 5: Commit Morning Review Artifacts
 

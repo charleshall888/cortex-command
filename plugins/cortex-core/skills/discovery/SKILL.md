@@ -49,7 +49,7 @@ Four options:
 - **`drop`** — neutral terminus, motive-agnostic: close discovery when research is sufficient and no tickets are warranted, OR abandon outright. Exit without writing to `cortex/backlog/`; the research artifact stays as the audit trail.
 - **`promote-sub-topic`** — the user supplies a sub-topic; compose a body via `/backlog-author compose` including a `## Promoted from` section reading exactly `## Promoted from\n\nDiscovery: cortex/research/<current-topic>/` (the body section is the sole linkage — no frontmatter pointer, no nested discovery). Create one `needs-discovery` ticket under the backend routing below, then return to this gate.
 
-Emit one event per response — never hardcode the log path:
+Emit one event per response (the verb resolves the log path):
 
 ```
 cortex-discovery emit-checkpoint-response --topic <topic> --checkpoint research-decompose \

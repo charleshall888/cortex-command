@@ -24,7 +24,7 @@ The verb reads `events.log` and `pr.json` (querying `gh` only when a PR is in pl
 
 Cleanup runs only for `interactive/`-prefixed worktrees — check `git worktree list --porcelain` for `.claude/worktrees/interactive-{slug}`; no match → skip silently.
 
-Both gates required, else skip with a warning naming the cause (a dirty worktree, or a non-ancestor branch not in origin/main): `git status --porcelain --ignored=traditional` inside the worktree is empty, and `git merge-base --is-ancestor <branch-head> origin/main` succeeds. Then `cleanup_worktree(slug, branch=f"interactive/{slug}", force=False)` — never `force=True`; on failure report and retain the worktree.
+Both gates required, else skip with a warning naming the cause (a dirty worktree, or a non-ancestor branch not in origin/main): `git status --porcelain --ignored=traditional` inside the worktree is empty, and `git merge-base --is-ancestor <branch-head> origin/main` succeeds. Then, from the main repo: `git worktree remove <worktree-path>` (never `--force`), `git worktree prune`, `git branch -d interactive/{slug}`; on failure report and retain the worktree.
 
 ### Step 9 — Finalize
 

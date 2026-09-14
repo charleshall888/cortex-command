@@ -6,7 +6,7 @@ Read only on the `critical` planning arm, via plan.md §1. Dispatch 2–3 indepe
 
 **b. Dispatch** each as a parallel sub-task with the template below **verbatim**, choosing each agent's model yourself.
 
-Each agent reads the spec and research itself and designs an **architecturally distinct** approach — not merely a different ordering — populating the Overview's `**Architectural Pattern**` with exactly one of {event-driven, pipeline, layered, shared-state, plug-in} plus a one-sentence statement of how this variant differs from the others. Output is a complete plan in plan.md's standard format, targeting 5–15 min and 1–5 files per task, under the same code budget (structural context only, no function bodies or copy-paste code, no prose-only or self-sealing Verification).
+Each agent reads the spec and research itself and designs an **architecturally distinct** approach — not merely a different ordering — populating the Overview's `**Architectural Pattern**` with exactly one of {event-driven, pipeline, layered, shared-state, plug-in} plus a one-sentence statement of how this variant differs from the others. Output is a complete plan in plan.md's standard format, under its task-sizing and code-budget rules (structural context only, no function bodies or copy-paste code, no prose-only or self-sealing Verification).
 
 
 **c. Collect** — wait for all agents, continuing past any crash, timeout, or garbage output. Exactly 1 succeeds → use it as the sole variant, skip to plan.md §3. All fail → fall back to plan.md's single-plan flow.

@@ -8,7 +8,7 @@ argument-hint: "<topic>"
 
 Three phases — **Clarify** (intent gate + requirements alignment), **Research** (implementation-level exploration), **Spec** (structured requirements interview). On completion: `status: refined`, linked spec, ready for `/cortex-core:build`.
 
-Phase boundaries **auto-advance** — announce and continue, no confirmation. `<!-- pause: -->` markers, here and in the references, are the only sanctioned asks; a prior "report" or "summarize" instruction sets text cadence, not a boundary gate.
+Phase boundaries **auto-advance** — announce and continue, no confirmation. `<!-- pause: -->` markers, here and in the references, are the only sanctioned asks.
 
 <!-- pause: refine-empty-topic-prompt question -->
 Topic: $ARGUMENTS. If empty, prompt the user first.
@@ -35,7 +35,7 @@ One call resolves the item, reads the backlog backend, existence-checks epic con
 - **`spec`** — research exists; resume at Spec, where the Research Sufficiency Check applies at entry.
 - **`clarify`** — neither exists; start at Clarify.
 
-**Ordering invariant: seed → reconcile → §3b tier read.** On a non-local backend (or Context B) the seed carries the canonical `simple`/`medium` defaults, and the critical-review gate would skip silently at `tier = simple`. The gate stays alive only because Step 5's `reconcile-clarify` ratchets state up from Clarify's *computed* values before specify.md §3b reads it. The local `cortex-backlog` arm is immune either way — its `--backlog-slug` re-sources from backlog frontmatter.
+**Ordering invariant: seed → reconcile → §3b tier read.** On a non-local backend (or Context B) the seed carries the canonical `simple`/`medium` defaults, and the critical-review gate would skip silently at `tier = simple`. The gate stays alive only because Step 4's `reconcile-clarify` ratchets state up from Clarify's *computed* values before specify.md §3b reads it. The local `cortex-backlog` arm is immune either way — its `--backlog-slug` re-sources from backlog frontmatter.
 
 ## Step 2: Clarify
 
@@ -72,7 +72,7 @@ cortex-complexity-escalator <feature> --gate research_open_questions
 
 Then read `${CLAUDE_SKILL_DIR}/references/specify.md` and follow it in full, resolving its propagated target: orchestrator-review → `${CLAUDE_SKILL_DIR}/../build/references/orchestrator-review.md`.
 
-Do NOT set `status: refined` before approval. After approval, register the artifact with `cortex-lifecycle-register-artifact --feature {lifecycle-slug} --artifact spec`, then run the second escalation gate — same contract as Step 3:
+After approval, register the artifact with `cortex-lifecycle-register-artifact --feature {lifecycle-slug} --artifact spec`, then run the second escalation gate — same contract as Step 3:
 
 ```bash
 cortex-complexity-escalator <feature> --gate specify_open_decisions

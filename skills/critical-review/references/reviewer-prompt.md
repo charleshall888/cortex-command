@@ -32,7 +32,7 @@ Work within a ~40-turn cap; on reaching it, return what you have.
 
 Focus exclusively on your angle — do not cover others, do not be balanced. Cite exact artifact text in quotes; "this might not scale" is not acceptable. Investigate freely: probes, measurements, and live commands run in your own context and beat speculation.
 
-**The JSON envelope is your entire deliverable.** Anything outside it is discarded, so empirical evidence belongs in `measurement` — that is its only home. Put the delimiter on its own line, then the object:
+State your findings in prose, then end with the JSON envelope. The automated path reads only the envelope, so empirical evidence goes in `measurement`; the prose is the fallback if the envelope fails to parse. Put the delimiter on its own line, then the object:
 
 <!--findings-json-->
 {

@@ -8,7 +8,7 @@
 4. **Integration branch created**: `git branch overnight/{session_id}` exists.
 5. **Symlink deferred to runner**: `latest-overnight` is updated by the runner on startup, not by the skill.
 6. **Runner command executed**: `cortex overnight start` ran via Bash with `--state <absolute path>` and `--time-limit <seconds>`.
-7. **Session start event logged**: `overnight-events.log` has a `session_start` entry.
+7. **Session start event logged**: `overnight-events.log` has a `session_start` entry (run-now launch; a scheduled launch logs it at fire time).
 
 ## `/overnight resume`
 
