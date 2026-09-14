@@ -275,11 +275,12 @@ concrete {_GATE_BRIEF_EXAMPLE_TOKENS['tradeoff'][1]}, \
 — "it is simpler but does not cover X" is acceptable; "there are tradeoffs" \
 is not.
 
-Word target: write no more than {GATE_BRIEF_WORD_CAP} words. If you cannot \
-fit the three questions within that budget, compress the alternatives section \
-first — never drop the tradeoff or the decision.
+Length: a few short paragraphs the developer can read in under a minute — \
+answer the three questions and stop. If it runs long, compress the \
+alternatives section first; never drop the tradeoff or the decision.
 
-Strict prohibitions — do not use any of the following in your output:
+The developer has not read the research document and will not open it, so \
+nothing in the brief may point back into it. Concretely, do not use:
 - The tokens DR-N, OQ-N, RQ-N, or §N (any numbered label of this pattern)
 - The phrase "named contract surfaces"
 - The phrase "walked back"
@@ -302,21 +303,19 @@ OQ-N, RQ-N, §N), named-contract-surface phrasing, walked-back author-process
 narration, decomposition-history narration, per-template-rule narration, and
 citation-as-credibility-signal suffixes.
 
-The word target references ``GATE_BRIEF_WORD_CAP`` by name in the rubric
-prose so changes to the cap constant propagate without rewriting the rubric.
-
-The "write no more than ``GATE_BRIEF_WORD_CAP`` words" instruction is
-deliberately retained as a best-effort generation-time brevity nudge even
-though posting is now advisory — ask-for-brevity at generation while
-accepting whatever length is produced at posting is the intended design,
-not a stale posting gate (spec Req 11).
+Length is asked for qualitatively (a few short paragraphs, readable in
+under a minute) rather than as a word count: ``validate_brief`` treats
+``GATE_BRIEF_WORD_CAP`` as advisory and never fails on it, so the number was a
+prose clamp with no gate behind it. The constant survives for the validator's
+overage telemetry (``brief_word_overage``) only.
 """
 
 
 _GATE_BRIEF_RETRY_TEMPLATE: str = (
     "Your previous attempt failed validation: {reason}\n"
     "\n"
-    f"Rewrite at no more than {GATE_BRIEF_WORD_CAP} words. "
+    "Rewrite it shorter — a few short paragraphs, nothing the developer "
+    "does not need in order to decide. "
     "The brief must contain all "
     "three decision-content anchors. Use one of these tokens for the "
     "decision anchor: "

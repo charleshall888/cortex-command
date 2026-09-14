@@ -164,11 +164,12 @@ TIER_CONFIG: dict[str, dict] = {
 # haiku -> sonnet -> opus retry ladder; both were removed deliberately.
 
 # 2D effort matrix: (complexity, criticality) -> effort level for ClaudeAgentOptions.
-# Cell values follow the policy table in spec §1
-# (lifecycle/adopt-xhigh-effort-default-for-overnight-lifecycle-implement
-# /spec.md): baseline dispatches run at "high" per Anthropic's Sonnet 4.6
-# baseline guidance, and (complex, high) / (complex, critical) lift to "xhigh"
-# per Anthropic's "start with xhigh for coding" recommendation.
+# Cell values were set for earlier models (spec: lifecycle/adopt-xhigh-effort-
+# default-for-overnight-lifecycle-implement) and have not been re-swept on the
+# current CLI default, where the vendor guidance is to start at "high" and sweep
+# down — "low"/"medium" are the primary cost lever and "xhigh"/"max" are for
+# measured wins. Re-sweep against metrics.json's per-effort cost buckets before
+# changing any cell.
 #
 # Effort is now resolved without reference to a model, because cortex no longer
 # picks one. An effort the running model does not accept is handled at the CLI

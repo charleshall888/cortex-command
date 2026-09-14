@@ -2456,14 +2456,41 @@ server = FastMCP("cortex-overnight")
 
 
 _START_RUN_WARNING = (
-    "This tool spawns a multi-hour autonomous agent that bypasses "
-    "permission prompts and consumes Opus tokens. Only call when the "
-    "user has explicitly asked to start an overnight run."
+    "Start an overnight run now. Runs `cortex overnight start`, which spawns "
+    "the autonomous runner as a detached process: it executes the prepared "
+    "session plan for hours, bypasses permission prompts inside its worktrees, "
+    "and spends API budget on the CLI's default model. Use only when the user "
+    "has explicitly asked to start (not schedule) an overnight run, and only "
+    "after a session plan exists — this tool does not prepare one. Parameters: "
+    "confirm_dangerously_skip_permissions must be literally true (the user's "
+    "acknowledgement of the permission bypass; any other value is rejected "
+    "before dispatch); state_path (optional) is the path of a prepared "
+    "overnight-state.json, defaulting to the active session's. Returns "
+    "started=true with session_id, pid and started_at all null (the CLI "
+    "confirms the spawn but does not report them — call overnight_status for "
+    "live state). If a runner is already alive, returns started=false, "
+    "reason='concurrent_runner_alive', pid=the existing runner's pid and "
+    "existing_session_id, and starts nothing. Does not block on the run and "
+    "returns no progress. Like every tool here it may first run a cortex "
+    "self-upgrade if the installed CLI is behind the required schema floor."
 )
 
 _SCHEDULE_RUN_WARNING = (
-    "This tool schedules a future overnight run via a LaunchAgent plist. "
-    "Only call when the user has explicitly asked to schedule an overnight run."
+    "Schedule an overnight run to start later. Runs `cortex overnight "
+    "schedule`, which installs a macOS LaunchAgent (macOS only — other "
+    "platforms fail with 'requires macOS') that will launch the runner with "
+    "the same permission bypass as overnight_start_run. Use only when the user "
+    "has explicitly asked to schedule (not start) a run; it refuses while a "
+    "runner is active. Parameters: target_time is either 'HH:MM' (24-hour "
+    "local time; rolls to tomorrow if already past) or 'YYYY-MM-DDTHH:MM' "
+    "(local, no timezone), at most 7 days ahead; "
+    "confirm_dangerously_skip_permissions must be literally true; state_path "
+    "(optional) is the path of a prepared overnight-state.json, defaulting to "
+    "the active session's. Returns scheduled=true with session_id, label (the "
+    "LaunchAgent label) and scheduled_for_iso; on any CLI refusal (bad time, "
+    "non-macOS, runner active) returns scheduled=false with the other fields "
+    "null and no error text — run the CLI by hand for the reason. Starts "
+    "nothing now. To unschedule, call overnight_cancel with the session_id."
 )
 
 
@@ -2506,8 +2533,17 @@ async def overnight_schedule_run(
 @server.tool(
     name="overnight_status",
     description=(
-        "Return the current overnight session status (phase, round, "
-        "feature counts, integration branch)."
+        "Read-only snapshot of one overnight session. session_id (optional) "
+        "selects a session directory under cortex/lifecycle/sessions/; omit it "
+        "for the active session, or the most recent one when none is active. "
+        "Returns phase (planning, executing, paused, complete; or the sentinel "
+        "'no_active_session' — with every other field null — when no session "
+        "exists or the given session_id has no state file), "
+        "current_round, started_at, updated_at, integration_branch, "
+        "paused_reason (set only while paused), and features — counts of "
+        "features by status: pending, running, merged, paused, deferred, "
+        "failed. Does not return per-feature detail, log lines, or the "
+        "runner's pid; use overnight_logs for events."
     ),
 )
 async def overnight_status(payload: StatusInput) -> StatusOutput | str:
@@ -2522,8 +2558,21 @@ async def overnight_status(payload: StatusInput) -> StatusOutput | str:
 @server.tool(
     name="overnight_logs",
     description=(
-        "Return paginated log lines for events / agent-activity / "
-        "escalations using opaque cursor tokens."
+        "Page through a session's JSONL logs. session_id is required. files "
+        "selects which logs to read: any of 'events' (default), "
+        "'agent-activity', 'escalations'; each file is fetched separately and "
+        "the lines are concatenated in that order. limit (default 100) caps "
+        "lines per file per call; tail=N returns the last N lines of each file "
+        "instead of reading from the start. cursor is an opaque token from a "
+        "previous result's next_cursor and continues from there — it belongs "
+        "to one file, so pass a single file when paging. Each line is the "
+        "parsed JSON object, or {'raw': text} when a line is not valid JSON. "
+        "eof is never true for a non-empty files list: the CLI does not report "
+        "end-of-file, so a result with zero new lines means you have caught up "
+        "(a running session keeps appending; re-poll with the same cursor). "
+        "cursor_invalid=true (with no lines) means the cursor no longer matches "
+        "the file — start again without one. oversized_line, truncated and "
+        "original_line_bytes are reserved and currently always null."
     ),
 )
 async def overnight_logs(payload: LogsInput) -> LogsOutput | str:
@@ -2538,8 +2587,21 @@ async def overnight_logs(payload: LogsInput) -> LogsOutput | str:
 @server.tool(
     name="overnight_cancel",
     description=(
-        "Cancel the active overnight runner via SIGTERM-then-SIGKILL "
-        "against its process group."
+        "Stop an overnight session, or unschedule a pending one. session_id is "
+        "required. If the session has a live runner, sends SIGTERM to the "
+        "runner's process group (the runner handles its own shutdown; nothing "
+        "here escalates to SIGKILL) — in-flight worker dispatches stop with it, "
+        "merged features stay merged, and unmerged work stays on its feature "
+        "branches. If the session only has a scheduled LaunchAgent, removes "
+        "that schedule instead. force is accepted but currently ignored. "
+        "Returns cancelled (bool), signal_sent (['SIGTERM'] or []), and "
+        "reason: 'cancelled' on success; 'no_runner_pid' when nothing is "
+        "running or scheduled; 'start_time_skew' when the recorded pid was "
+        "stale and the lock was cleared (pid_file_unlinked=true); "
+        "'signal_not_delivered_within_timeout' when the signal could not be "
+        "delivered; 'magic_mismatch' is defined but not produced. pid is "
+        "always null. An unknown session_id raises a tool error. Use only when "
+        "the user asks to stop the run; this cannot pause or resume."
     ),
 )
 async def overnight_cancel(payload: CancelInput) -> CancelOutput | str:
@@ -2554,8 +2616,16 @@ async def overnight_cancel(payload: CancelInput) -> CancelOutput | str:
 @server.tool(
     name="overnight_list_sessions",
     description=(
-        "List active and recent overnight sessions with optional "
-        "status / since filters and cursor pagination."
+        "List overnight sessions. Returns active (sessions whose runner is "
+        "alive) and recent (the rest, newest first), each with session_id, "
+        "phase, started_at, updated_at and integration_branch, plus "
+        "total_count (the unfiltered total) and next_cursor. status filters "
+        "by phase — a list of any of 'planning', 'executing', 'paused', "
+        "'complete'; since is an ISO-8601 timestamp and keeps sessions whose "
+        "updated_at is at or after it; limit defaults to 10. cursor is accepted but currently "
+        "not forwarded, so pass a larger limit rather than paging. Read-only; "
+        "use it to find a session_id for overnight_status, overnight_logs or "
+        "overnight_cancel."
     ),
 )
 async def overnight_list_sessions(
@@ -2637,7 +2707,13 @@ def _delegate_dashboard_open(
     description=(
         "Start the cortex dashboard in the background (or report the one "
         "already running) and return its URL. Idempotent. Optionally tracks "
-        "several repositories in one process, with a switcher in the UI."
+        "several repositories in one process, with a switcher in the UI. "
+        "port (optional) overrides the listen port; root (optional) is the "
+        "repository to serve instead of the current one; also_root (optional "
+        "list) adds further repositories to the same process. Blocks until the "
+        "port answers (up to ~45s). Returns status ('started', "
+        "'already_running', or 'failed'), url, port, pid, roots (the "
+        "repositories served) and error (set when status is 'failed')."
     ),
 )
 async def dashboard_open(

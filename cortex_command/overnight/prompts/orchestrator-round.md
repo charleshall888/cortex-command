@@ -5,7 +5,7 @@ You are the overnight orchestrator agent for round {round_number}. Your job is t
 ## Important Constraints
 
 - **Thin orchestrator**: You read state files and status codes only. Do NOT accumulate implementation details in your context.
-- **One round only**: After generating the batch plan, exit cleanly. The bash runner will invoke `batch_runner.py` and `map_results.py`, then spawn a new agent for the next round.
+- **One round only**: After generating the batch plan, exit cleanly. `cortex_command/overnight/runner.py` runs the batch (`batch_runner`) and maps results (`map_results`) after you exit, then spawns a fresh agent for the next round.
 - **No interactive decisions**: If a feature encounters a blocking question, mark it as `deferred` and move on. Do not attempt to answer design questions.
 
 ## State Files
@@ -17,7 +17,7 @@ You are the overnight orchestrator agent for round {round_number}. Your job is t
 ## Round Procedure
 
 <!-- All artifact paths below use {session_dir} as the session directory.
-     {session_dir} is substituted by runner.sh's fill_prompt() and resolves to an absolute path like /path/to/cortex/lifecycle/sessions/{session_id}/. -->
+     {session_dir} is substituted by cortex_command/overnight/fill_prompt.py and resolves to an absolute path like /path/to/cortex/lifecycle/sessions/{session_id}/. -->
 
 ### 0. Resolve Worker Escalations
 
@@ -60,17 +60,10 @@ prior_resolutions = ctx["escalations"]["prior_resolutions_by_feature"].get(entry
 If `len(prior_resolutions) >= 1` (the orchestrator already resolved a question for this feature in a prior round, but the worker asked again), this is a cycle — do **not** attempt resolution:
 
 1. Delete `cortex/lifecycle/{feature}/learnings/orchestrator-note.md` if it exists (prevents stale answers from polluting future sessions).
-2. Append a `promoted` entry to `{session_dir}/escalations.jsonl`:
+2. Record the promotion (`write_escalation` only writes worker-raised rows; outcomes have their own writer):
    ```python
-   import datetime
-   promoted_entry = {
-       "type": "promoted",
-       "escalation_id": entry["escalation_id"],
-       "feature": entry["feature"],
-       "promoted_by": "orchestrator",
-       "ts": datetime.datetime.now(datetime.timezone.utc).isoformat()
-   }
-   write_escalation(promoted_entry, escalations_path)
+   from cortex_command.overnight.deferral import write_escalation_outcome
+   write_escalation_outcome(Path("{session_dir}"), kind="promoted", escalation_id=entry["escalation_id"], feature=entry["feature"])
    ```
 3. Call `write_deferral()` with the original question context from the escalation entry to create a `deferred/{feature}-q{N}.md` file for morning review.
 4. Skip to the next escalation entry.
@@ -86,17 +79,9 @@ Using the content of these files, determine whether the worker's `question` can 
 
 - **If resolvable** — the question can be answered from spec, plan, or session plan context:
   1. Write the answer to `cortex/lifecycle/{feature}/learnings/orchestrator-note.md` (overwrite the file if it already exists). Use plain prose — the worker will see this in its `{learnings}` slot.
-  2. Append a `resolution` entry to `{session_dir}/escalations.jsonl`:
+  2. Record the resolution:
      ```python
-     resolution_entry = {
-         "type": "resolution",
-         "escalation_id": entry["escalation_id"],
-         "feature": entry["feature"],
-         "answer": "<your answer text>",
-         "resolved_by": "orchestrator",
-         "ts": datetime.datetime.now(datetime.timezone.utc).isoformat()
-     }
-     write_escalation(resolution_entry, escalations_path)
+     write_escalation_outcome(Path("{session_dir}"), kind="resolution", escalation_id=entry["escalation_id"], feature=entry["feature"], answer="<your answer text>")
      ```
   3. Update `{state_path}` to set the feature's status back to `pending` so it is re-queued for execution this or a subsequent round:
      ```python
@@ -107,16 +92,9 @@ Using the content of these files, determine whether the worker's `question` can 
 
 - **If not resolvable** (question requires human judgment, or `spec.md` is absent):
   1. Delete `cortex/lifecycle/{feature}/learnings/orchestrator-note.md` if it exists — this prevents a stale answer from a prior resolution from polluting the next session when the feature is retried.
-  2. Append a `promoted` entry to `{session_dir}/escalations.jsonl`:
+  2. Record the promotion:
      ```python
-     promoted_entry = {
-         "type": "promoted",
-         "escalation_id": entry["escalation_id"],
-         "feature": entry["feature"],
-         "promoted_by": "orchestrator",
-         "ts": datetime.datetime.now(datetime.timezone.utc).isoformat()
-     }
-     write_escalation(promoted_entry, escalations_path)
+     write_escalation_outcome(Path("{session_dir}"), kind="promoted", escalation_id=entry["escalation_id"], feature=entry["feature"])
      ```
   3. Call `write_deferral()` with the original question context to create a `deferred/{feature}-q{N}.md` file for morning review. Do **not** re-queue the feature as `pending`.
 
@@ -237,34 +215,15 @@ from cortex_command.common import reduce_lifecycle_state
 # Repo-root cortex/lifecycle.config.md (fail-closed: missing file -> gate False).
 gate_enabled = read_synthesizer_gate(Path("cortex/lifecycle.config.md"))
 
-# Effective per-feature criticality via the SINGLE shared reducer
-# (cortex_command.common.reduce_lifecycle_state — the same fold that
-# `cortex-lifecycle-state` wraps). One reducer serves both interactive and
-# overnight modes, executed here as an in-process import (not a subprocess),
-# matching this prompt's in-wheel-import execution model. This replaces the
-# former inline block, which read `.criticality` off `criticality_override`
-# events — but overrides carry `from`/`to` only, so overnight had NEVER applied
-# them. Honoring them is a bidirectional routing change gated on
-# `synthesizer_overnight_enabled` (the switch this feature exists to let
-# operators flip): with the gate on, an upgrade override pulls a feature INTO
-# `critical_subset`, and a downgrade override (e.g. critical->medium) now
-# silently drops one OUT of the review-inclusive `critical_subset` into
-# single-agent.
-#
-# Fallback = single-agent, NEVER defer. The "run the critical-review /
-# orchestrator-review gate" rule (project.md, "Critical-review gates at spec
-# only") is the INTERACTIVE-context rule;
-# the overnight analog of "reviewed" is the morning-report surface (the warning
-# line emitted below), and "never defer" is the overriding constraint per the
-# failure-handling philosophy ("surface failures in the morning report; keep
-# working unless blocked"). Routing corrupted->critical_subset was rejected:
-# critical_subset features CAN be deferred (the synthesizer marks unselected
-# variants `deferred` -> write_deferral), which would reintroduce exactly the
-# deferral this fallback forbids. Because `.corrupted` is tier-OR-criticality
-# symmetric, a PRESENT criticality can still be stale (a torn/vocab-rejected
-# `criticality_override` is rejected per-value and never enters `state`, leaving
-# the pre-override value), so the warning fires on ANY corrupted read — not only
-# the unknowable arm.
+# Effective per-feature criticality via the shared reducer
+# (cortex_command.common.reduce_lifecycle_state). A corrupted or unreadable
+# events.log routes the feature to single-agent (never defer) and emits a
+# morning-report warning; a present-but-possibly-stale value is used and warned.
+# Why single-agent and not defer: the review-gate rule
+# (project.md, "Critical-review gates at spec only") is the INTERACTIVE-context rule;
+# overnight's analog of "reviewed" is the morning-report warning, and "never defer"
+# is the overriding constraint — critical_subset features can be deferred, so
+# routing there would reintroduce the deferral this fallback forbids.
 def _effective_criticality(feature_slug: str):
     """Return ``(criticality, warning_or_None)`` via the shared reducer.
 
@@ -290,7 +249,7 @@ def _effective_criticality(feature_slug: str):
         )
     if reduction.corrupted:
         # Corrupted BUT criticality present -> use the value AND still warn
-        # (present value may be stale — see the .corrupted symmetry note above).
+        # (the present value may be stale).
         return crit, (
             f"criticality for '{feature_slug}' read from a corrupted events.log "
             f"(used '{crit}', may be stale)"
@@ -307,11 +266,7 @@ for f in missing:
         continue
     crit, warning = _effective_criticality(f["slug"])
     if warning is not None:
-        # Morning-report surface: emit the dedicated CRITICALITY_READ_CORRUPTED
-        # event to overnight-events.log so the report's post-session triage sees
-        # the corrupted criticality read under its own heading (backlog #377
-        # Item B — this replaced the former SYNTHESIZER_ERROR reuse, whose
-        # details.stage="criticality_read" tag was the only disambiguator).
+        # Surface the corrupted read under its own morning-report heading.
         log_event(
             CRITICALITY_READ_CORRUPTED,
             round={round_number},
@@ -354,7 +309,7 @@ log_event(
 - If **all variants failed**: fall back to the single-agent path — append the feature back to `single_agent_subset` so it goes through the existing dispatch template below.
 - If **≥2 variants succeeded**: proceed to the synthesizer Task sub-agent dispatch in (3) below.
 
-(3) **Synthesizer dispatch**: Dispatch one fresh synthesizer Task sub-agent per critical feature with ≥2 surviving variants. The sub-agent's **system prompt** is the shared fragment loaded from `cortex_command/overnight/prompts/plan-synthesizer.md` via `importlib.resources.files("cortex_command.overnight.prompts").joinpath("plan-synthesizer.md").read_text()` — do not paraphrase or inline. The **user prompt** inlines the surviving variant paths (`cortex/lifecycle/{{feature_slug}}/plan-variant-A.md`, etc.) and the swap-and-require-agreement instruction directing the synthesizer to compare the variants twice with order swapped before assigning `confidence: "high"` or `"medium"`, and to emit a JSON envelope per the schema in the system prompt fragment. The synthesizer is read-only; no worktree isolation is required.
+(3) **Synthesizer dispatch**: Dispatch one fresh synthesizer Task sub-agent per critical feature with ≥2 surviving variants. The sub-agent's **system prompt** is the shared fragment loaded from `cortex_command/overnight/prompts/plan-synthesizer.md` via `importlib.resources.files("cortex_command.overnight.prompts").joinpath("plan-synthesizer.md").read_text()` — do not paraphrase or inline. The **user prompt** inlines the surviving variant paths (`cortex/lifecycle/{{feature_slug}}/plan-variant-A.md`, etc.) and asks for a JSON envelope per the schema in the system prompt fragment. The synthesizer is read-only; no worktree isolation is required.
 
 (4) **Envelope extraction (LAST-occurrence anchor)**: Parse the synthesizer Task sub-agent's output using the same LAST-occurrence anchor pattern as the canonical `skills/build/references/competing-plans.md` §1b:
 
@@ -428,9 +383,7 @@ log_event(
 Each sub-agent receives:
 
 <substitution_contract>
-CRITICAL: YOU MUST substitute the per-feature tokens {{feature_slug}}, {{feature_spec_path}}, and {{feature_plan_path}} in the dispatch template below with concrete values read from state.features[<slug>] before sending the prompt to the sub-agent. These double-brace placeholders are the ONLY tokens YOU substitute.
-
-Session-level single-brace tokens (for example {session_plan_path}, {state_path}, {events_path}, {session_dir}) are already pre-filled by fill_prompt() before you receive this prompt — their values already appear as concrete absolute paths in the text above. YOU MUST NOT re-substitute them, invent replacement values, or copy the absolute-path pattern from earlier in this prompt when filling in per-feature double-brace tokens. Treat {{feature_X}} as distinct placeholders to be filled from state.features[<slug>] at dispatch time; do not carry the session-level path literal into the per-feature slot.
+Two token styles appear in this prompt. Double-brace tokens ({{feature_slug}}, {{feature_spec_path}}, {{feature_plan_path}}) are per-feature and are yours to fill from state.features[<slug>] before sending the template below to a sub-agent. Single-brace tokens ({session_plan_path}, {state_path}, {events_path}, {session_dir}) are session-level and were already filled before you received this prompt — they appear above as concrete absolute paths, so there is nothing left to substitute in them, and a session-level path is never the value of a per-feature token.
 </substitution_contract>
 
 ```
@@ -522,6 +475,6 @@ for ex in excluded:
 
 Features marked failed here are excluded from all subsequent steps in this round.
 
-### 8. Exit
+### 5. Exit
 
-Exit cleanly. runner.sh will invoke `batch_runner.py` (step 5) and `map_results.py` (steps 6–7a) after this agent exits.
+Exit cleanly. The runner executes the batch plan and maps results after this agent exits.

@@ -218,7 +218,10 @@ def main() -> int:
             task=prompt,
             worktree_path=Path(worktree_path),
             complexity="complex",
-            system_prompt=prompt,
+            system_prompt=(
+                "You are repairing the integration branch after its test gate "
+                "failed. The task carries the failing output and the diff."
+            ),
             log_path=Path(events_path) if events_path else None,
             skill="integration-recovery",
         )

@@ -53,7 +53,6 @@ Mark the task as done and continue to the next task. The pipeline proceeds as if
 
 - Use SKIP **only** when the task is genuinely unnecessary — for example, the task duplicates work already done, the feature can clearly succeed without it, or the spec itself indicates the task is optional.
 - Do **not** SKIP a task just because it is difficult or the error is confusing. Difficulty is not a reason to skip.
-- Remember: if `{has_dependents}` is true, SKIP will leave downstream tasks without this task's output.
 
 ### DEFER
 The task cannot proceed because it requires human input. The feature is blocked until a human answers your question.
@@ -72,7 +71,7 @@ The task failed, but the failure looks recoverable in a future overnight round �
 
 ## Output Format
 
-Respond with **exactly one** JSON block. You may optionally wrap it in triple-backtick fencing. Do not include any other text, commentary, or explanation outside the JSON block.
+Your response is read by a parser, not a person: it extracts one JSON object (optionally inside a triple-backtick fence) and substitutes a PAUSE decision if it cannot find one. So respond with a single JSON block and nothing else — put your reasoning in the `reasoning` field, not around the block.
 
 ### JSON Schema
 

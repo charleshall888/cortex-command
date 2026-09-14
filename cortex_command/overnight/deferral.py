@@ -483,6 +483,64 @@ def write_escalation(
         durable_fsync(f.fileno())
 
 
+def write_escalation_outcome(
+    session_dir: Path,
+    *,
+    kind: str,
+    escalation_id: str,
+    feature: str,
+    answer: str | None = None,
+    ts: str | None = None,
+) -> None:
+    """Append an orchestrator ``resolution`` or ``promoted`` record.
+
+    :func:`write_escalation` only writes worker-raised ``type: "escalation"``
+    rows from an :class:`EscalationEntry`. The orchestrator's outcomes need a
+    different shape: :func:`cortex_command.overnight.orchestrator_context
+    .aggregate_round_context` treats an escalation as unresolved until a row
+    of ``type`` ``"resolution"`` or ``"promoted"`` shares its
+    ``escalation_id``, and buckets ``prior_resolutions_by_feature`` from
+    ``"resolution"`` rows only. This is the writer for those two row types.
+
+    Args:
+        session_dir: Session directory; the record is appended to
+            ``session_dir / "escalations.jsonl"``.
+        kind: ``"resolution"`` (answered from spec/plan context; carries
+            ``answer`` and ``resolved_by``) or ``"promoted"`` (handed to the
+            morning deferral surface; carries ``promoted_by``).
+        escalation_id: The ``escalation_id`` of the worker row being closed.
+        feature: Feature slug, so the resolution can be bucketed per feature.
+        answer: The answer text; required when ``kind == "resolution"``.
+        ts: ISO 8601 timestamp; defaults to now (UTC).
+
+    Raises:
+        ValueError: On an unknown ``kind`` or a resolution with no answer.
+    """
+    if kind not in ("resolution", "promoted"):
+        raise ValueError(f"kind must be 'resolution' or 'promoted', got {kind!r}")
+    if kind == "resolution" and not answer:
+        raise ValueError("a resolution record requires an answer")
+
+    record: dict = {
+        "type": kind,
+        "escalation_id": escalation_id,
+        "feature": feature,
+        "ts": ts or datetime.now(timezone.utc).isoformat(),
+    }
+    if kind == "resolution":
+        record["answer"] = answer
+        record["resolved_by"] = "orchestrator"
+    else:
+        record["promoted_by"] = "orchestrator"
+
+    escalations_path = session_dir / "escalations.jsonl"
+    escalations_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(escalations_path, "a", encoding="utf-8") as f:
+        f.write(json.dumps(record) + "\n")
+        f.flush()
+        durable_fsync(f.fileno())
+
+
 def _next_escalation_n(
     feature: str,
     round: int,

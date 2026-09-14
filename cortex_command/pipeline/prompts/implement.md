@@ -29,10 +29,9 @@ Exit reports and other lifecycle artifacts must be written to the integration re
 
 1. Read the task description above carefully. Implement exactly what it specifies — nothing more, nothing less.
 2. Only modify or create the files listed in the task's **Files** field.
-3. After implementation, verify your work matches the task's acceptance criteria.
-4. If the task includes a verification command, run it and confirm it passes.
-5. If verification passes, commit your changes with a well-formed commit message.
-6. After committing, stop. Do not look for additional work or attempt other tasks.
+3. If the task includes a verification command, run it and confirm it passes.
+4. If verification passes, commit your changes with a well-formed commit message.
+5. After committing, write the exit report described below, then stop. Do not look for additional work or attempt other tasks.
 
 ### Single-Task Discipline
 

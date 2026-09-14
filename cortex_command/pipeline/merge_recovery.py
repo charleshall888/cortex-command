@@ -340,7 +340,10 @@ async def recover_test_failure(
                 task=prompt,
                 worktree_path=worktree_path,
                 complexity="simple",
-                system_prompt=prompt,
+                system_prompt=(
+                    "You are repairing a feature branch whose post-merge tests "
+                    "fail. The task carries the failing output and the merged diff."
+                ),
                 log_path=pipeline_log_path,
                 repo_root=repo_path,
                 skill="merge-test-repair",

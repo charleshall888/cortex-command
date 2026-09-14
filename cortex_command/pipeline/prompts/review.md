@@ -50,16 +50,13 @@ Note: requirements drift does NOT influence the verdict. This is an observation 
 
 Write your review to `{review_md_path}` on disk using the format below.
 
-CRITICAL: The Verdict section MUST contain a fenced JSON code block with exactly these fields:
+The verdict is read by a parser, not a person: it takes the first fenced ```json block in the file and returns ERROR on any other field names or values. The Verdict section therefore contains one fenced JSON code block with exactly these fields:
 - `"verdict"`: one of `"APPROVED"`, `"CHANGES_REQUESTED"`, or `"REJECTED"`
-- `"cycle"`: the review cycle number (integer)
+- `"cycle"`: `1` (this brief is used only for cycle 1)
 - `"issues"`: array of issue strings (empty array if none)
 - `"requirements_drift"`: `"none"` or `"detected"`
 
-Do NOT use alternative field names like `"overall"`, `"result"`, or `"status"`.
-Do NOT use alternative values like `"PASS"`, `"FAIL"`, or `"APPROVED_WITH_NOTES"`.
-
-Your `review.md` MUST follow this structure:
+Other field names (`"overall"`, `"result"`, `"status"`) or values (`"PASS"`, `"FAIL"`, `"APPROVED_WITH_NOTES"`) are parsed as ERROR. Use this structure for `review.md`:
 
 ```
 # Review: {feature}
@@ -93,13 +90,11 @@ Your `review.md` MUST follow this structure:
 ## Verdict
 
 ```json
-{"verdict": "APPROVED", "cycle": {cycle number}, "issues": [], "requirements_drift": "none"}
+{"verdict": "APPROVED", "cycle": 1, "issues": [], "requirements_drift": "none"}
 ```
 ```
 
-The `requirements_drift` value in the verdict JSON MUST match: `"none"` when State is none, `"detected"` when State is detected.
-
-Do NOT modify any source files. This is a read-only review.
+The `requirements_drift` value in the verdict JSON matches the Requirements Drift section: `"none"` when State is none, `"detected"` when State is detected.
 
 ## Verdict Criteria
 
@@ -112,4 +107,3 @@ Do NOT modify any source files. This is a read-only review.
 - Review what was built against what was specified. Do not suggest enhancements beyond the spec.
 - Flag scope creep (work done that the spec did not ask for) as an issue.
 - Be specific in issue descriptions -- reference exact files and line ranges.
-- Do not modify any files. This is a read-only review.
