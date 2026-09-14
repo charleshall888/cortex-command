@@ -38,29 +38,10 @@ except ImportError:
 # Repair prompt template
 # ---------------------------------------------------------------------------
 
-INTEGRATION_REPAIR_PROMPT_TEMPLATE = """\
-## Integration Branch Test-Failure Recovery
-
-The integration branch tests are failing. Your job is to fix the code so that
-the tests pass.
-
-### Initial failing test output
-```
-{test_output}
-```
-
-### Diff (main..HEAD)
-```
-{diff}
-```
-
-### Hard constraints
-- Fix the implementation code to make the existing tests pass.
-- Do not modify test files unless the test was introduced by the feature's own
-  commits and you write an explicit deferral with reason in your exit report
-  explaining why the test itself needs changing rather than the implementation.
-- Commit all changes before finishing.
-"""
+from cortex_command.pipeline.merge_recovery import (
+    TEST_FAILURE_REPAIR_PROMPT_TEMPLATE,
+    TEST_FAILURE_REPAIR_ROLE,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -192,9 +173,13 @@ def main() -> int:
     diff = _get_diff(worktree_path)
 
     # --- Build repair prompt ---
-    prompt = INTEGRATION_REPAIR_PROMPT_TEMPLATE.format(
+    prompt = TEST_FAILURE_REPAIR_PROMPT_TEMPLATE.format(
+        title="Integration Branch Test-Failure Recovery",
+        context="",
         test_output=test_output_snippet,
+        diff_range="main..HEAD",
         diff=diff,
+        learnings="(none)",
     )
 
     # --- Dispatch repair agent ---
@@ -218,10 +203,7 @@ def main() -> int:
             task=prompt,
             worktree_path=Path(worktree_path),
             complexity="complex",
-            system_prompt=(
-                "You are repairing the integration branch after its test gate "
-                "failed. The task carries the failing output and the diff."
-            ),
+            system_prompt=TEST_FAILURE_REPAIR_ROLE,
             log_path=Path(events_path) if events_path else None,
             skill="integration-recovery",
         )

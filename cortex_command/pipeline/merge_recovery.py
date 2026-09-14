@@ -47,34 +47,39 @@ class MergeRecoveryResult:
 # Agent prompt template
 # ---------------------------------------------------------------------------
 
-RECOVERY_PROMPT_TEMPLATE = """\
-## Post-Merge Test Failure Recovery
+# One template serves both test-failure repair agents (post-merge feature
+# branch, integration branch); the callers differ only in title, the diff
+# range, and whether prior learnings exist.
+TEST_FAILURE_REPAIR_PROMPT_TEMPLATE = """\
+## {title}
 
-Feature: {feature}
-
-The feature branch was merged into the base branch but tests now fail.
-Your job is to fix the code so that the tests pass.
+{context}The tests fail after the merge. Fix the code so that the tests pass.
 
 ### Test output
 ```
 {test_output}
 ```
 
-### Merged diff (base..HEAD)
+### Diff ({diff_range})
 ```
-{merged_diff}
+{diff}
 ```
 
 ### Previous recovery learnings
 {learnings}
 
 ### Hard constraints
-- You may only modify a test file if the test was introduced by the feature's \
-own commits AND you write an explicit deferral with reason in your exit report \
-explaining why the test itself needs changing rather than the implementation.
-- Focus on fixing the implementation code to make the existing tests pass.
+- Fix the implementation code to make the existing tests pass.
+- Modify a test file only if the feature's own commits introduced the test, \
+and then write an explicit deferral with the reason in your exit report \
+explaining why the test rather than the implementation needs changing.
 - Commit all changes before finishing.
 """
+
+TEST_FAILURE_REPAIR_ROLE = (
+    "You are repairing a branch whose tests fail after a merge. "
+    "The task carries the failing output and the diff."
+)
 
 
 # ---------------------------------------------------------------------------
@@ -327,10 +332,12 @@ async def recover_test_failure(
             if not learnings_text:
                 learnings_text = "(none yet)"
 
-            prompt = RECOVERY_PROMPT_TEMPLATE.format(
-                feature=feature,
+            prompt = TEST_FAILURE_REPAIR_PROMPT_TEMPLATE.format(
+                title="Post-Merge Test Failure Recovery",
+                context=f"Feature: {feature}\n\n",
                 test_output=test_output,
-                merged_diff=merged_diff,
+                diff_range="base..HEAD",
+                diff=merged_diff,
                 learnings=learnings_text,
             )
 
@@ -340,10 +347,7 @@ async def recover_test_failure(
                 task=prompt,
                 worktree_path=worktree_path,
                 complexity="simple",
-                system_prompt=(
-                    "You are repairing a feature branch whose post-merge tests "
-                    "fail. The task carries the failing output and the merged diff."
-                ),
+                system_prompt=TEST_FAILURE_REPAIR_ROLE,
                 log_path=pipeline_log_path,
                 repo_root=repo_path,
                 skill="merge-test-repair",
