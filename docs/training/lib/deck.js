@@ -2,6 +2,7 @@
    → / space  advance one beat (then next scene)
    ←          previous scene
    b          blank screen (for valves and Q&A)
+   m          the map — every section at a glance; m again resumes
    Home/End   first / last scene */
 
 (function () {
@@ -200,7 +201,7 @@
   ]; // → 66% — past the door, into the red
 
   function setRail(sec, n) {
-    [1, 2, 3].forEach((i) => {
+    [1, 2, 3, "b2", "b3"].forEach((i) => {
       const el = sec.querySelector("#pipe-" + i);
       if (el) el.classList.toggle("lit", i === n);
     });
@@ -418,13 +419,14 @@
     },
 
     /* the crossing plays first (b1 plot · b2 run · b3 hand-off), then the
-       scene becomes the familiar rail + interview flow at b4+ */
+       rail forks at the interview: road A (tickets) plays at b4–7, road B (the
+       long run) at b8–10 */
     "sc-prism": (sec, b) => {
       const cloud = sec.querySelector(".cloud");
       const bubbles = [...sec.querySelectorAll(".qbubble")];
       const tickets = [...sec.querySelectorAll(".prism-tickets .ticket")];
       if (b === 0) {
-        sec.classList.remove("plotted", "run", "railed");
+        sec.classList.remove("plotted", "run", "railed", "path-a", "path-b", "run-on", "landed");
         cloud.classList.remove("sharp", "condensed");
         bubbles.forEach((q) => q.classList.remove("on"));
         tickets.forEach((t) => t.classList.remove("on"));
@@ -439,6 +441,7 @@
         sec.classList.add("railed"); // the sea folds; the rail takes the stage
         setRail(sec, 1);
       }
+      if (b === 4) sec.classList.add("path-a"); // road B steps aside while road A plays
       if (b === 5) {
         bubbles.forEach((q, i) => setTimeout(() => q.classList.add("on"), 300 + i * 900));
         setTimeout(() => cloud.classList.add("sharp"), 1400);
@@ -456,6 +459,16 @@
         setRail(sec, 3); // tickets land — the pipeline reaches "one ticket, one fresh window"
         setTimeout(() => sec.querySelector(".ticket.callback").classList.add("lit"), 2200);
       }
+      if (b === 8) {
+        sec.classList.remove("path-a");
+        sec.classList.add("path-b"); // road A folds out, road B unfolds
+        setRail(sec, "b2");
+      }
+      if (b === 9) {
+        sec.classList.add("run-on");
+        setRail(sec, "b3");
+      }
+      if (b === 10) sec.classList.add("landed"); // near the spot, not on it: redirects and rework
     },
 
     /* one state change per keypress: the doc's move to the target stand is
@@ -755,7 +768,7 @@
   }
 
   /* the doc holds all three learned lessons; two ride onto the catch-log
-     tickets they shaped (never-punish-rare → record events, keepsake → the
+     tickets they shaped (never-punish-rare → record events, looking-back → the
      log page). single-player (il-1) stays on the doc — it fixed the biting
      Friday broke, not a catch-log ticket. The empty-state ticket is the cold
      open's own ask, so it stamps in place with no lesson to inherit. */
@@ -1128,6 +1141,8 @@
       const n = parseInt(el.dataset.beat, 10);
       el.classList.toggle("on", n <= beat);
     });
+    const eyebrow = sec.querySelector(".act-eyebrow");
+    if (eyebrow) eyebrow.classList.toggle("settled", beat > 0);
   }
 
   function fireHook(sec) {
@@ -1136,13 +1151,71 @@
   }
 
   /* the moon crosses the sky as the deck advances; dawn on the last scene */
+  function moonAt(i) {
+    const p = sections.length > 1 ? i / (sections.length - 1) : 0;
+    return { left: 6 + p * 86 + "vw", top: 16 - Math.sin(p * Math.PI) * 9 + "vh" };
+  }
+
   function updateSky() {
     const moon = document.querySelector("#sky .sky-moon");
     if (!moon) return;
-    const p = sections.length > 1 ? idx / (sections.length - 1) : 0;
-    moon.style.left = 6 + p * 86 + "vw";
-    moon.style.top = 16 - Math.sin(p * Math.PI) * 9 + "vh";
+    const at = moonAt(idx);
+    moon.style.left = at.left;
+    moon.style.top = at.top;
     document.body.classList.toggle("dawn", idx === sections.length - 1);
+  }
+
+  const map = makeMap({
+    sections,
+    getPos: () => ({ idx, beat }),
+    maxBeats,
+    moonAt,
+    onChange: () => broadcastState(),
+  });
+
+  /* ---------- wayfinding: where we are, at a glance ----------
+     Two pieces, both the map in miniature, both lit by the same rule.
+     The act eyebrow: each act's first scene opens under its post's name,
+     bright as the room arrives, then settles on the next beat so the
+     headline keeps the stage. The corner dock: three posts beside the
+     post's name and the count — hollow until their waypoint card lights
+     them, a ripple under the stretch being built. The shore (title through
+     blueprint) shows the count alone: the room hasn't met the posts yet. */
+
+  const groups = map.groups;
+  const postGroups = groups.filter((g) => g.post >= 0);
+  const finale = sections.findIndex((s) => s.id === "sc-finale");
+
+  groups.forEach((g, a) => {
+    const title = a > 0 && sections[g.items[0]].querySelector(".scene-title");
+    if (!title) return;
+    const p = document.createElement("p");
+    p.className = "act-eyebrow mono";
+    p.dataset.beat = "0";
+    const k = postGroups.indexOf(g);
+    p.innerHTML = k >= 0 ? `<span class="habit-num mono">${k + 1}</span>` : '<span class="act-plank"></span>';
+    p.append(g.label);
+    title.before(p);
+  });
+
+  const HUD_X = [12.5, 29.5, 46.5, 56]; // posts 1–3, then the far end
+  hud.innerHTML = '<svg class="hud-dock" viewBox="0 0 60 16" aria-hidden="true"></svg><span class="hud-where"></span><span class="hud-count"></span>';
+  const hudDock = hud.querySelector(".hud-dock");
+  el("line", { class: "hd-water", x1: 0, y1: 14.5, x2: 60, y2: 14.5 }, hudDock);
+  const hudPlank = el("rect", { class: "hd-plank", x: 7, y: 1.5, width: 46, height: 1.5 }, hudDock);
+  const hudPosts = postGroups.map((g, k) => el("line", { class: "hd-post", x1: HUD_X[k], y1: 4, x2: HUD_X[k], y2: 14.5 }, hudDock));
+  const hudHere = el("ellipse", { class: "hd-here", cx: 0, cy: 15.2, rx: 4.5, ry: 1.3 }, hudDock);
+
+  function updateHud() {
+    const a = groups.findLastIndex((g) => g.items[0] <= idx);
+    const furthest = map.furthest;
+    hud.classList.toggle("docked", a > 0);
+    /* a post lights on its card's beat 1, in step with the card's own dock */
+    postGroups.forEach((g, k) => hudPosts[k].classList.toggle("lit", furthest > g.post || (idx === g.post && beat >= 1)));
+    hudPlank.classList.toggle("drawn", finale >= 0 && (furthest > finale || (idx === finale && beat >= maxBeats(sections[finale]))));
+    if (a > 0) hudHere.style.transform = `translateX(${HUD_X[Math.min(a, HUD_X.length) - 1]}px)`;
+    hud.querySelector(".hud-where").textContent = a > 0 ? groups[a].label : "";
+    hud.querySelector(".hud-count").textContent = `${idx + 1} / ${sections.length}`;
   }
 
   function show(i) {
@@ -1153,7 +1226,8 @@
     applyBeats(sec);
     fireHook(sec);
     updateSky();
-    hud.textContent = `${idx + 1} / ${sections.length} · ${sec.dataset.title || ""}`;
+    map.noteShown(idx);
+    updateHud();
     broadcastState();
   }
 
@@ -1163,6 +1237,7 @@
       beat++;
       applyBeats(sec);
       fireHook(sec);
+      updateHud();
       broadcastState();
     } else {
       show(idx + 1);
@@ -1170,6 +1245,7 @@
   }
 
   function handleKey(key) {
+    if (map.handleKey(key)) return;
     if (key === "ArrowRight" || key === " " || key === "PageDown") advance();
     else if (key === "ArrowLeft" || key === "PageUp") show(idx - 1);
     else if (key === "Home") show(0);
@@ -1177,8 +1253,11 @@
     else if (key === "b" || key === "B") blank.classList.toggle("on");
   }
 
+  /* presenter.html forwards this same list */
+  const DECK_KEYS = ["ArrowRight", "ArrowLeft", " ", "PageDown", "PageUp", "Home", "End", "b", "B", "m", "M", "Escape", "Enter", "ArrowUp", "ArrowDown"];
+
   document.addEventListener("keydown", (e) => {
-    if (["ArrowRight", "ArrowLeft", " ", "PageDown", "PageUp", "Home", "End", "b", "B"].includes(e.key)) {
+    if (DECK_KEYS.includes(e.key)) {
       e.preventDefault();
       handleKey(e.key);
     }
@@ -1201,8 +1280,14 @@
   });
 
   document.addEventListener("pointerup", (e) => {
+    /* the HUD readout opens the map — the one way in without a keyboard */
+    if (e.target.closest && e.target.closest("#hud")) {
+      tapping = false;
+      return map.setOpen(true);
+    }
     if (!tapping) return;
     tapping = false;
+    if (map.open) return; // the map owns its own taps
     if (Math.abs(e.clientX - tapX) > TAP_SLOP || Math.abs(e.clientY - tapY) > TAP_SLOP) return;
     handleKey(e.clientX < window.innerWidth * 0.25 ? "ArrowLeft" : "ArrowRight");
   });
@@ -1229,6 +1314,7 @@
       title: sec.dataset.title || "",
       id: sec.id,
       nextTitle: sections[idx + 1] ? sections[idx + 1].dataset.title : "",
+      map: map.state(),
     });
   }
 
@@ -1240,6 +1326,7 @@
     };
 
   /* deep-link: #<scene>[.<beat>] (1-based scene) — for rehearsal and QA */
+  map.arrive();
   const m = (location.hash || "").match(/^#(\d+)(?:\.(\d+))?$/);
   if (m) {
     show(parseInt(m[1], 10) - 1);

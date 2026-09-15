@@ -57,11 +57,11 @@
 <div id="beats"></div>
 <main id="cues"></main>
 <footer>
-  <span>keys here drive the deck: <kbd>→</kbd> beat · <kbd>←</kbd> back · <kbd>b</kbd> blank</span>
+  <span>keys here drive the deck: <kbd>→</kbd> beat · <kbd>←</kbd> back · <kbd>b</kbd> blank · <kbd>m</kbd> map</span>
   <span>next: <span id="next-scene">—</span></span>
   <span id="conn">●</span>
 </footer>
-<script src="lib/notes.js?v=42"></script>
+<script src="lib/notes.js?v=46"></script>
 <script>
 (function () {
   const supported = "BroadcastChannel" in window;
@@ -73,6 +73,7 @@
   const bc = new BroadcastChannel("nightline-deck");
   let startedAt = null;
   let lastSeen = 0;
+  let mapOpen = false;
 
   /* timer */
   setInterval(() => {
@@ -88,7 +89,10 @@
   function render(s) {
     lastSeen = Date.now();
     if (!startedAt && (s.idx > 0 || s.beat > 0)) startedAt = Date.now();
-    document.getElementById("where").textContent = `${s.idx + 1} / ${s.total} · ${s.title}`;
+    mapOpen = !!s.map;
+    document.getElementById("where").textContent = s.map
+      ? `map open · ${s.map.going ? "going to" : "chosen:"} ${s.map.sel + 1} · ${s.map.title} · beat ${s.map.beat}`
+      : `${s.idx + 1} / ${s.total} · ${s.title}`;
     document.getElementById("next-scene").textContent = s.nextTitle || "— end —";
 
     const dots = document.getElementById("beats");
@@ -129,7 +133,11 @@
   bc.postMessage({ type: "hello" });
 
   document.addEventListener("keydown", (e) => {
-    if (["ArrowRight", "ArrowLeft", " ", "PageDown", "PageUp", "Home", "End", "b", "B"].includes(e.key)) {
+    /* the deck's own key list; the map-only keys forward just while the map
+       is open, so ↑ ↓ still scroll the cues here the rest of the time */
+    const always = ["ArrowRight", "ArrowLeft", " ", "PageDown", "PageUp", "Home", "End", "b", "B", "m", "M"];
+    const mapKeys = ["ArrowUp", "ArrowDown", "Enter", "Escape"];
+    if (always.includes(e.key) || (mapOpen && mapKeys.includes(e.key))) {
       e.preventDefault();
       bc.postMessage({ type: "key", key: e.key });
     }

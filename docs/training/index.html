@@ -6,7 +6,11 @@
 <meta name="robots" content="noindex" />
 <title>Context Is the Game</title>
 <link rel="icon" href="data:," />
-<link rel="stylesheet" href="lib/deck.css?v=45" />
+<link rel="stylesheet" href="lib/deck.css?v=65" />
+<!-- a map jump reloads the page: paint night before the stylesheet does, and
+     mark the arrival so the chosen scene rises out of the water -->
+<style>html, body { background: #0c0f16; }</style>
+<script>try { if (JSON.parse(sessionStorage.getItem("nightline-map") || "{}").jump) document.documentElement.classList.add("jump-in"); } catch (e) {}</script>
 </head>
 <body>
 <div id="sky" aria-hidden="true">
@@ -31,7 +35,7 @@
 <main id="deck">
 
   <!-- ========== ACT 0 · THE MYSTERY ========== -->
-  <section class="scene" id="sc-title" data-title="Context Is the Game" data-beats="0">
+  <section class="scene" id="sc-title" data-nav="Context Is the Game" data-nav-group="the mystery" data-title="Context Is the Game" data-beats="0">
     <div class="title-card" data-beat="0">
       <svg class="dock" viewBox="0 0 640 240" aria-hidden="true">
         <line x1="0" y1="160" x2="640" y2="160" class="water" pathLength="100"/>
@@ -59,7 +63,7 @@
        it fills → the model that reads the window and nothing else. Two of
        the four nouns (window, model) came free from the cold open. The
        caption is ONE swapping slot, so nothing reflows between beats. -->
-  <section class="scene" id="sc-parts" data-title="The Parts" data-beats="6">
+  <section class="scene" id="sc-parts" data-nav="the parts" data-title="The Parts" data-beats="6">
     <h2 class="scene-title" data-beat="0">However good it gets, it only sees what you send</h2>
     <div class="parts-stage">
       <svg id="parts-svg" viewBox="0 0 780 240" aria-hidden="true"></svg>
@@ -74,7 +78,7 @@
   <!-- The mystery, now that the room has the vocabulary: two sessions,
        one request, and the only thing that differs is the bar §2 just
        named. Reads as a payoff rather than a cold puzzle. -->
-  <section class="scene" id="sc-cold-open" data-title="Friday, 4:00 PM" data-beats="3">
+  <section class="scene" id="sc-cold-open" data-nav="Friday, 4:00 PM" data-title="Friday, 4:00 PM" data-beats="3">
     <div class="cold-open-stage" data-beat="0">
       <p class="request mono">› add an empty-state to the catch log</p>
       <div class="twin">
@@ -102,7 +106,7 @@
   </section>
 
 
-  <section class="scene" id="sc-blueprint" data-title="The Whole Game" data-beats="1">
+  <section class="scene" id="sc-blueprint" data-nav="the whole game" data-title="The Whole Game" data-beats="1">
     <h2 class="scene-title" data-beat="0">The whole game is managing context</h2>
     <p class="blueprint-sub mono" data-beat="0">managing it well hangs on these three posts</p>
     <div class="blueprint-block">
@@ -128,7 +132,7 @@
   </section>
 
   <!-- ========== ACT I · KEEP YOUR CONTEXT WINDOW LEAN ========== -->
-  <section class="scene" id="sc-gauge" data-title="The Gauge" data-beats="5">
+  <section class="scene" id="sc-gauge" data-nav="the gauge" data-nav-group="keep your context window lean" data-title="The Gauge" data-beats="5">
     <h2 class="scene-title" data-beat="0">Watch the gauge — plan your exit at 50%</h2>
     <div class="stage-row">
       <div class="gauge-block">
@@ -145,7 +149,7 @@
     </div>
   </section>
 
-  <section class="scene" id="sc-squeeze" data-title="The Squeeze" data-beats="2">
+  <section class="scene" id="sc-squeeze" data-nav="the squeeze" data-title="The Squeeze" data-beats="2">
     <h2 class="scene-title" data-beat="0">Compaction is a gamble — you don’t pick what it keeps</h2>
     <div class="stage-row">
       <div class="gauge-block">
@@ -165,7 +169,7 @@
     </div>
   </section>
 
-  <section class="scene" id="sc-noloop" data-title="The Death Spiral" data-beats="4">
+  <section class="scene" id="sc-noloop" data-nav="the death spiral" data-title="The Death Spiral" data-beats="4">
     <h2 class="scene-title" data-beat="0">The death spiral: you can’t argue your way out</h2>
     <div class="stage-row">
       <div class="pane noloop-pane">
@@ -192,14 +196,14 @@
     <p class="thesis serif" data-beat="4"><em>You can only cut it out.</em></p>
   </section>
 
-  <section class="scene" id="sc-filmstrip" data-title="The Rewind" data-beats="5">
+  <section class="scene" id="sc-filmstrip" data-nav="the rewind" data-title="The Rewind" data-beats="5">
     <h2 class="scene-title" data-beat="0">Don’t argue, don’t push through — rewind</h2>
     <div class="film-stage" data-beat="1">
       <div id="filmstrip"></div>
     </div>
   </section>
 
-  <section class="card proverb" id="pv-1" data-title="—" data-beats="1">
+  <section class="card proverb" id="pv-1" data-nav="You cut it and retie." data-title="—" data-beats="1">
     <div class="wp-dock" id="wp-dock-1"></div>
     <p class="serif">“You don’t untangle a line by pulling harder.<br/>You cut it and retie.”</p>
     <p class="attr mono">— NIGHTLINE loading screen</p>
@@ -208,7 +212,7 @@
   </section>
 
   <!-- ========== ACT II · SPAWN MORE AGENTS ========== -->
-  <section class="scene" id="sc-prism" data-title="Write It Down" data-beats="7">
+  <section class="scene" id="sc-prism" data-nav="write it down" data-nav-group="spawn more agents" data-title="Write It Down" data-beats="10">
     <h2 class="scene-title" data-beat="0">Write the direction down first</h2>
     <!-- the crossing: the first 20% of a session steers all the rest.
          Two boats, same night, same speed — only one plotted its bearing.
@@ -235,12 +239,22 @@
       </svg>
       <p class="stage-cap mono judge-cap plot-payoff">a small angle at the dock — a wide miss at the spot</p>
     </div>
+    <!-- the fork (b3): one interview, then two roads. Road A (tickets) plays
+         at b4–7 while road B folds away; road B (the long run) plays at b8–10. -->
     <div class="pipe-rail mono">
       <span class="pipe-step" id="pipe-1">1 · the interview <em class="pipe-cmd"><!-- volatile -->/requirements</em></span>
-      <span class="pipe-arrow">→</span>
-      <span class="pipe-step" id="pipe-2">2 · break it down <em class="pipe-cmd"><!-- volatile -->/discovery</em></span>
-      <span class="pipe-arrow">→</span>
-      <span class="pipe-step" id="pipe-3">3 · one ticket, one fresh window</span>
+      <svg class="fork-link fl-a" viewBox="0 0 36 22" aria-hidden="true"><circle class="fork-node" cx="3" cy="11" r="2.4"/><path pathLength="100" d="M 3 11 L 36 11"/></svg>
+      <span class="pipe-row pr-a">
+        <span class="pipe-step" id="pipe-2">2 · break it down <em class="pipe-cmd"><!-- volatile -->/discovery</em></span>
+        <span class="pipe-arrow">→</span>
+        <span class="pipe-step" id="pipe-3">3 · one ticket, one fresh window</span>
+      </span>
+      <svg class="fork-link fl-b" viewBox="0 0 36 22" aria-hidden="true"><path pathLength="100" d="M 3 -20 C 3 -2, 12 11, 36 11"/></svg>
+      <span class="pipe-row pr-b">
+        <span class="pipe-step" id="pipe-b2">2 · use <em class="pipe-cmd pipe-cmd-inline"><!-- volatile -->/goal</em> for a long-running task</span>
+        <span class="pipe-arrow">→</span>
+        <span class="pipe-step" id="pipe-b3">3 · runs with subagents</span>
+      </span>
     </div>
     <div class="prism-stage" data-beat="4">
       <div class="prism-top">
@@ -256,7 +270,7 @@
         <div class="qcol" data-beat="5">
           <p class="stage-cap mono">the agent interviews you</p>
           <span class="qbubble mono">should the empty log invite the first cast, or stay blank?</span>
-          <span class="qbubble mono">keepsake, or analytics?</span>
+          <span class="qbubble mono">is the log for looking back, or for stats?</span>
           <span class="qbubble mono">does an escaped fish get a page?</span>
         </div>
       </div>
@@ -264,7 +278,7 @@
         <div class="doc">
           <span class="doc-head mono">catch-log epic · requirements</span>
           <span class="doc-line w9"></span><span class="doc-line w7"></span><span class="doc-line w8"></span><span class="doc-line w5"></span>
-          <span class="doc-intent mono">a keepsake, not analytics</span>
+          <span class="doc-intent mono">for looking back on catches</span>
         </div>
         <p class="stage-cap mono">the requirements, in a doc — it outlives the session</p>
       </div>
@@ -275,16 +289,114 @@
         <p class="stage-cap mono ticket-cap">discovery splits the epic into tickets — each fits one fresh window</p>
       </div>
     </div>
+    <!-- road B, the long run (b8–10): the same doc goes over WITH its check,
+         then one long night of agents — one drifts, you steer it back, and the
+         check closes it. Folds in as the ticket stage folds out. -->
+    <div class="run-stage fold" data-beat="8">
+      <div class="fold-in">
+        <div class="run-handoff">
+          <div class="doc on run-doc">
+            <span class="doc-head mono">catch-log epic · requirements</span>
+            <span class="doc-line w9"></span><span class="doc-line w7"></span><span class="doc-line w5"></span>
+            <span class="doc-intent mono">for looking back on catches</span>
+          </div>
+          <span class="run-plus">+</span>
+          <div class="check-card mono">
+            <span class="doc-head">done when</span>
+            <span class="check-line"><i>✓</i>every catch reaches the log</span>
+            <span class="check-line"><i>✓</i>you can flip back through old catches</span>
+            <span class="check-line"><i>✓</i>the empty log invites the first cast</span>
+          </div>
+        </div>
+        <p class="stage-cap mono run-cap">the same interview — handed over with how to check it’s done</p>
+        <!-- the long run: each piece of work goes to a cheaper subagent with a
+             fresh window and only its result comes back, so the main agent's
+             pricey 1M window fills slower — but a long run still fills it
+             (700k+ is normal), and a longer one auto-compacts mid-run.
+             b10: it lands near, not on — redirects and rework. -->
+        <div class="run-night fold" data-beat="9"><div class="fold-in">
+          <svg viewBox="0 0 900 190" aria-hidden="true">
+            <text class="rn-label" x="0" y="42">main agent</text>
+            <text class="rn-label rn-sub-label" x="0" y="60">1M window · pricey</text>
+            <text class="rn-label" x="0" y="120">subagents</text>
+            <text class="rn-label rn-sub-label" x="0" y="138">fresh · cheaper</text>
+            <rect class="rn-frame" x="200" y="34" width="560" height="18" rx="4"/>
+            <g class="rn-fill">
+              <rect class="rn-chunk rn-goal" x="204" y="34" width="40" height="18"/>
+              <rect class="rn-chunk" style="--t: 0.9s" x="244" y="34" width="110" height="18"/>
+              <rect class="rn-chunk" style="--t: 1.7s" x="354" y="34" width="110" height="18"/>
+              <rect class="rn-chunk" style="--t: 2.5s" x="464" y="34" width="110" height="18"/>
+              <rect class="rn-chunk" style="--t: 3.3s" x="574" y="34" width="110" height="18"/>
+            </g>
+            <rect class="rn-chunk rn-after" style="--t: 4.8s" x="256" y="34" width="110" height="18"/>
+            <text class="rn-label rn-compact" x="752" y="48" text-anchor="end">auto-compacted</text>
+            <g class="rn-sub" style="--t: 0.9s">
+              <line class="rn-spawn" pathLength="100" x1="270" y1="54" x2="270" y2="100"/>
+              <rect class="rn-box" x="230" y="100" width="80" height="46" rx="5"/>
+              <rect class="rn-mini" x="240" y="130" width="60" height="6" rx="2"/>
+              <text class="rn-done" x="296" y="121" text-anchor="middle">✓</text>
+              <circle class="rn-result" cx="270" cy="98" r="3.5"/>
+            </g>
+            <g class="rn-sub" style="--t: 1.7s">
+              <line class="rn-spawn" pathLength="100" x1="380" y1="54" x2="380" y2="100"/>
+              <rect class="rn-box" x="340" y="100" width="80" height="46" rx="5"/>
+              <rect class="rn-mini" x="350" y="130" width="60" height="6" rx="2"/>
+              <text class="rn-done" x="406" y="121" text-anchor="middle">✓</text>
+              <circle class="rn-result" cx="380" cy="98" r="3.5"/>
+            </g>
+            <g class="rn-sub" style="--t: 2.5s">
+              <line class="rn-spawn" pathLength="100" x1="490" y1="54" x2="490" y2="100"/>
+              <rect class="rn-box" x="450" y="100" width="80" height="46" rx="5"/>
+              <rect class="rn-mini" x="460" y="130" width="60" height="6" rx="2"/>
+              <text class="rn-done" x="516" y="121" text-anchor="middle">✓</text>
+              <circle class="rn-result" cx="490" cy="98" r="3.5"/>
+            </g>
+            <g class="rn-sub" style="--t: 3.3s">
+              <line class="rn-spawn" pathLength="100" x1="600" y1="54" x2="600" y2="100"/>
+              <rect class="rn-box" x="560" y="100" width="80" height="46" rx="5"/>
+              <rect class="rn-mini" x="570" y="130" width="60" height="6" rx="2"/>
+              <text class="rn-done" x="626" y="121" text-anchor="middle">✓</text>
+              <circle class="rn-result" cx="600" cy="98" r="3.5"/>
+            </g>
+            <g class="rn-sub" style="--t: 4.8s">
+              <line class="rn-spawn" pathLength="100" x1="710" y1="54" x2="710" y2="100"/>
+              <rect class="rn-box" x="670" y="100" width="80" height="46" rx="5"/>
+              <rect class="rn-mini" x="680" y="130" width="60" height="6" rx="2"/>
+              <text class="rn-done" x="736" y="121" text-anchor="middle">✓</text>
+              <circle class="rn-result" cx="710" cy="98" r="3.5"/>
+            </g>
+            <g class="rn-checkin" style="--t: 2.7s"><line x1="345" y1="16" x2="345" y2="30"/><circle cx="345" cy="12" r="4"/></g>
+            <g class="rn-checkin" style="--t: 4.3s"><line x1="655" y1="16" x2="655" y2="30"/><circle cx="655" cy="12" r="4"/></g>
+            <text class="rn-label rn-checkin-label" x="357" y="17">you can check in anytime</text>
+            <line class="rn-out" pathLength="100" x1="760" y1="43" x2="810" y2="43"/>
+            <circle class="rn-land" cx="836" cy="43" r="12"/>
+            <text class="rn-label rn-land-label" x="836" y="88" text-anchor="middle">result</text>
+            <!-- b10: it lands near, not on: redirects, rework, more tokens -->
+            <rect class="rn-rework" x="366" y="34" width="36" height="18"/>
+            <rect class="rn-rework rn-rework-2" x="402" y="34" width="36" height="18"/>
+            <path class="rn-loop" pathLength="100" d="M 854.8 36.2 A 20 20 0 1 1 846 25.7"/>
+            <path class="rn-loop-head" d="M 838.8 26.2 L 846 25.7 L 842.8 19.2"/>
+            <text class="rn-label rn-rework-label" x="836" y="88" text-anchor="middle">redirect</text>
+            <text class="rn-label rn-rework-label" x="836" y="106" text-anchor="middle">+ rework</text>
+          </svg>
+          <p class="stage-cap mono">subagents slow the fill — a long run still uses 700k+, and can auto-compact</p>
+        </div></div>
+        <div class="run-trade mono" data-beat="10">
+          <span><b>tickets</b> you stay close · fewer tokens · it builds what you meant</span>
+          <span><b>the long run</b> you plan up front · more tokens · it may build what you didn’t want</span>
+        </div>
+      </div>
+    </div>
   </section>
 
-  <section class="scene" id="sc-arrows" data-title="Fresh Eyes" data-beats="7">
+  <section class="scene" id="sc-arrows" data-nav="fresh eyes" data-title="Fresh Eyes" data-beats="7">
     <h2 class="scene-title" data-beat="0">Fresh eyes catch what tired eyes miss</h2>
     <div class="arrows-stage" data-beat="1">
       <div class="prep-doc" data-beat="1">
         <div class="doc on">
           <span class="doc-head mono">catch-log epic · requirements</span>
           <span class="doc-line w9"></span><span class="doc-line w7"></span><span class="doc-line w5"></span>
-          <span class="doc-intent mono">a keepsake, not analytics</span>
+          <span class="doc-intent mono">for looking back on catches</span>
         </div>
       </div>
       <div class="arrows-row">
@@ -300,7 +412,7 @@
           <div class="finding-rail">
           <div class="fcard mono" id="fcard-1">
             <span>“rewrite the log page in Rust — faster flips”</span>
-            <span class="fstamp bounce">no — it’s a keepsake, not a race</span>
+            <span class="fstamp bounce">no — it’s already fast enough</span>
           </div>
           <div class="fcard mono" id="fcard-2">
             <span>“add cloud sync and leaderboards”</span>
@@ -322,7 +434,7 @@
     </div>
   </section>
 
-  <section class="card proverb" id="pv-2" data-title="—" data-beats="1">
+  <section class="card proverb" id="pv-2" data-nav="You set more lines." data-title="—" data-beats="1">
     <div class="wp-dock" id="wp-dock-2"></div>
     <p class="serif">“You don’t catch more by reeling harder.<br/>You set more lines.”</p>
     <p class="attr mono">— NIGHTLINE loading screen</p>
@@ -331,7 +443,7 @@
   </section>
 
   <!-- ========== ACT III · KEEP YOUR WORKSPACE CLEAN ========== -->
-  <section class="scene" id="sc-scroll" data-title="The Scroll and the Core" data-beats="4">
+  <section class="scene" id="sc-scroll" data-nav="lean core" data-nav-group="keep your workspace clean" data-title="The Scroll and the Core" data-beats="4">
     <h2 class="scene-title" data-beat="0">Never let it write its own instructions</h2>
     <div class="scroll-stage" data-beat="1">
       <div class="exhibit-zone">
@@ -377,7 +489,7 @@
     </div>
   </section>
 
-  <section class="scene" id="sc-buoys" data-title="The Marker Buoys" data-beats="5">
+  <section class="scene" id="sc-buoys" data-nav="audit its memory" data-title="The Marker Buoys" data-beats="5">
     <h2 class="scene-title" data-beat="0">Keep its memory honest</h2>
     <p class="buoy-seam mono" data-beat="0">it maintains its own memory — but you should still audit it</p>
     <div class="buoys-stage">
@@ -387,7 +499,7 @@
     <p class="thesis serif buoys-verdict" data-beat="5">A stale note steers you quietly — and you <em>won’t know why.</em> Sift them, <em>now and then.</em></p>
   </section>
 
-  <section class="scene" id="sc-tackle" data-title="The Tackle Box" data-beats="5">
+  <section class="scene" id="sc-tackle" data-nav="prove it, then share" data-title="The Tackle Box" data-beats="5">
     <h2 class="scene-title" data-beat="0">Prove it yourself before it rides in everyone’s window</h2>
     <p class="tackle-state mono" id="tackle-state">rigged on my own line · committed to nothing yet</p>
     <div class="box-stage">
@@ -403,7 +515,7 @@
     <p class="thesis serif tackle-verdict" data-beat="5">Rent is what you <em>force</em> on the crew. Tackle is what they <em>choose.</em></p>
   </section>
 
-  <section class="card proverb" id="pv-3" data-title="—" data-beats="1">
+  <section class="card proverb" id="pv-3" data-nav="Take care of your tackle and it takes care of you." data-title="—" data-beats="1">
     <div class="wp-dock" id="wp-dock-3"></div>
     <p class="serif">“Take care of your tackle<br/>and it takes care of you.”</p>
     <p class="attr mono">— NIGHTLINE loading screen</p>
@@ -412,7 +524,7 @@
   </section>
 
   <!-- ========== FULL CIRCLE ========== -->
-  <section class="scene" id="sc-finale" data-title="Friday, 4:00 PM — again" data-beats="5">
+  <section class="scene" id="sc-finale" data-nav="Friday, 4:00 PM — again" data-nav-group="full circle" data-title="Friday, 4:00 PM — again" data-beats="5">
     <h2 class="scene-title" data-beat="0">Let’s try this again</h2>
     <p class="experiment-tag mono" data-beat="0">one tired window, or a fresh one per ticket</p>
 
@@ -436,7 +548,7 @@
           <span class="doc-head mono">catch-log epic</span>
           <span class="doc-line w9"></span><span class="doc-line w7"></span>
           <span class="doc-intent mono" id="fin-il-1">single-player — cheating’s allowed</span>
-          <span class="doc-intent mono" id="fin-il-2">a keepsake, not analytics</span>
+          <span class="doc-intent mono" id="fin-il-2">for looking back on catches</span>
           <span class="doc-intent mono" id="fin-il-3">never punish a rare catch</span>
         </div>
         <p class="stage-cap mono page-cap">the doc — it keeps what the sessions learned</p>
@@ -453,7 +565,7 @@
         <div class="line-col">
           <div class="ticket on"><span class="fin-t">2</span><span class="badge-clip"></span>
             <span class="tk-body"><span class="mono">flip-through log page</span>
-            <span class="ticket-intent mono" id="fin-ti-2">a keepsake, not analytics</span></span></div>
+            <span class="ticket-intent mono" id="fin-ti-2">for looking back on catches</span></span></div>
           <div class="fterm" data-beat="3"><div id="term-fin-b"></div><div class="cbar-slot" id="cbar-fin-b"></div></div>
           <p class="fold-tag mono" data-beat="4">✓ log page shipped — through the gate</p>
         </div>
@@ -481,7 +593,7 @@
     </div>
   </section>
 
-  <section class="scene" id="sc-dawn" data-title="Tuesday, 9:00 AM" data-beats="3">
+  <section class="scene" id="sc-dawn" data-nav="Tuesday, 9:00 AM" data-title="Tuesday, 9:00 AM" data-beats="3">
     <div class="dawn-stage">
       <!-- the dawn dock carries the blueprint's post geometry (centers at
            1/6 · 1/2 · 5/6 of the 0–640 zone) so the recap columns below —
@@ -531,12 +643,14 @@
 </main>
 
 <div id="hud" class="mono"></div>
+<div id="map" aria-hidden="true"></div>
 <div id="blank"></div>
 
 <script src="lib/contextbar.js?v=11"></script>
 <script src="lib/vessel.js?v=11"></script>
 <script src="lib/terminal.js?v=10"></script>
 <script src="lib/filmstrip.js?v=11"></script>
-<script src="lib/deck.js?v=47"></script>
+<script src="lib/map.js?v=8"></script>
+<script src="lib/deck.js?v=52"></script>
 </body>
 </html>

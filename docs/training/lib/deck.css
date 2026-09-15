@@ -148,13 +148,49 @@ body.dawn #sky .star {
 #hud {
   position: fixed;
   right: 1.1rem;
-  bottom: 0.9rem;
-  font-size: 0.72rem;
-  color: var(--parch-faint);
-  opacity: 0.55;
+  bottom: 0.55rem; /* low enough to clear §10's bottom caption at 1024×768 */
+  display: flex;
+  align-items: center;
+  gap: 0.8em;
+  font-size: clamp(0.78rem, 0.95vw, 1rem);
+  color: var(--parch-faint); /* full strength — 3.70:1 is the floor for anything the room reads */
   letter-spacing: 0.06em;
   user-select: none;
 }
+.hud-where:empty { display: none; }
+.hud-where { color: var(--parch-dim); }
+
+/* the corner dock: the map folded to a glyph */
+.hud-dock { display: none; width: 5.4em; height: 1.4em; overflow: visible; transition: opacity 4.5s ease; }
+#hud.docked .hud-dock { display: block; }
+.hud-dock * { vector-effect: non-scaling-stroke; }
+.hd-water { stroke: var(--blue); stroke-width: 1px; opacity: 0.55; }
+.hd-post { stroke: var(--parch-faint); stroke-width: 1.5px; transition: stroke 1s ease, stroke-width 1s ease; } /* a hollow box this small reads as a missing glyph */
+.hd-post.lit { stroke: var(--ochre); stroke-width: 3px; }
+.hd-plank { fill: var(--ochre); opacity: 0; transition: opacity 1.2s ease; }
+.hd-plank.drawn { opacity: 1; }
+.hd-here { fill: none; stroke: var(--parch-dim); stroke-width: 1px; transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1); }
+body.dawn .hud-dock { opacity: 0; } /* the dawn dock is the picture now */
+
+/* the act eyebrow: rides with the headline rather than taking a slot of its own */
+.act-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 0.7em;
+  margin-bottom: -1.5rem;
+  color: var(--parch-dim);
+  font-size: 0.8rem;
+  letter-spacing: 0.1em;
+  transition: color 0.8s ease;
+}
+.scene.active .act-eyebrow { animation: settle-in 0.6s ease-out both; }
+.act-eyebrow .habit-num { margin-bottom: 0; font-size: 0.72rem; transition: color 0.8s ease, border-color 0.8s ease; }
+.act-plank { width: 1.6em; height: 3px; border-radius: 1px; background: var(--ochre); transition: background 0.8s ease; }
+.act-eyebrow.settled { color: var(--parch-faint); }
+.act-eyebrow.settled .habit-num { color: var(--parch-faint); border-color: var(--parch-faint); }
+.act-eyebrow.settled .act-plank { background: var(--parch-faint); }
+#sc-prism .act-eyebrow { margin-bottom: -0.6rem; }  /* these two scenes run a tighter gap */
+#sc-finale .act-eyebrow { margin-bottom: -0.3rem; }
 
 #blank {
   position: fixed;
@@ -635,7 +671,7 @@ body.dawn #sky .star {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 1.3rem;
+  gap: 1rem;
   width: min(92vw, 1080px);
 }
 /* one stage bright at a time: finished stages dim, so the pipeline reads
@@ -651,7 +687,7 @@ body.dawn #sky .star {
 #sc-prism { gap: 1.2rem; padding-top: 2.5vh; padding-bottom: 2.5vh; }
 #sc-prism .scene-title { font-size: clamp(1.4rem, 2.7vw, 2.1rem); }
 #sc-prism .handoff-block:not(.on), #sc-prism .handoff-cap:not(.on) { height: 0; overflow: hidden; margin: 0; }
-#sc-prism .prism-stage:not(.on) { height: 0; overflow: hidden; margin: 0; }
+#sc-prism .prism-stage:not(.on) { max-height: 0; opacity: 0; overflow: hidden; margin: 0; } /* grows in, so the rail glides up instead of snapping */
 
 /* ---------- the crossing: the first 20% steers the rest ----------
    Presenter-gated: b1 draws the bearing, b2 runs both wakes with IDENTICAL
@@ -729,7 +765,133 @@ path.ps-miss { stroke: var(--zone-red); }
 .pipe-step.lit { border-color: var(--ochre); color: var(--parchment); }
 .pipe-cmd { font-style: normal; color: var(--ochre-deep); margin-left: 0.6em; font-size: 0.9em; }
 .pipe-step.lit .pipe-cmd { color: var(--ochre); }
+.pipe-cmd-inline { margin: 0 0.15em; }
 .pipe-arrow { opacity: 0.6; }
+
+/* the fork (b3): one interview, two roads. A grid so both roads start at the
+   same x; each connector is 36×22 units at 0.1em, rows are 2.2em tall and
+   0.9em apart, so road B's curve starts on road A's node (y = 11 − 22 − 9 = −20).
+   Road B is zero-width in the grid, so the rail centers on road A — the road
+   that stays on screen through b4–7. */
+#sc-prism .pipe-rail { display: grid; grid-template-columns: auto 3.6em auto; align-items: center; justify-content: center; gap: 0; }
+#pipe-1 { grid-row: 1; grid-column: 1; }
+.fork-link { grid-column: 2; width: 3.6em; height: 2.2em; overflow: visible; }
+.fl-a { grid-row: 1; }
+.fl-b { grid-row: 2; }
+.pipe-row { grid-column: 3; display: flex; align-items: center; gap: 1.2vw; height: 2.2em; white-space: nowrap; }
+.pr-a { grid-row: 1; }
+.pr-b { grid-row: 2; width: 0; overflow: visible; }
+.fork-node { fill: var(--ochre); }
+/* keyframes, not transitions: the rail comes out of display:none on this
+   same beat, and a transition has no "before" to start from */
+.fork-link path { fill: none; stroke: var(--parch-faint); stroke-width: 1.5px; vector-effect: non-scaling-stroke; stroke-dasharray: 100; transition: stroke 0.6s ease; }
+#sc-prism.railed .fl-a path { animation: draw-in 0.5s cubic-bezier(0.3, 0, 0.35, 1) 0.9s backwards; }
+#sc-prism.railed .fl-b path { animation: draw-in 0.6s cubic-bezier(0.3, 0, 0.35, 1) 1.1s backwards; }
+@keyframes draw-in { from { stroke-dashoffset: 100; } }
+#sc-prism.railed .pr-a { animation: fork-row-in 0.6s cubic-bezier(0.16, 1, 0.3, 1) 1.2s backwards; }
+#sc-prism.railed .pr-b { animation: fork-row-in 0.6s cubic-bezier(0.16, 1, 0.3, 1) 1.5s backwards; }
+@keyframes fork-row-in { from { opacity: 0; transform: translateX(-10px); } }
+#sc-prism.path-a .fl-a path, #sc-prism.path-b .fl-b path { stroke: var(--ochre); }
+/* road B steps aside while road A plays: fade first, then close the gap */
+.fl-b, .pr-b { margin-top: 0.9em; max-height: 2.2em; transition: max-height 0.55s cubic-bezier(0.6, 0, 0.3, 1), margin-top 0.55s cubic-bezier(0.6, 0, 0.3, 1), opacity 0.45s ease 0.5s; }
+#sc-prism.path-a .fl-b, #sc-prism.path-a .pr-b { max-height: 0; margin-top: 0; opacity: 0; transition: opacity 0.3s ease, max-height 0.55s cubic-bezier(0.6, 0, 0.3, 1) 0.25s, margin-top 0.55s cubic-bezier(0.6, 0, 0.3, 1) 0.25s; }
+
+/* the ticket stage folds out when road B takes the stage */
+.prism-stage { max-height: 40rem; transition: max-height 0.7s cubic-bezier(0.6, 0, 0.3, 1), opacity 0.35s ease; }
+#sc-prism.path-b .prism-stage { max-height: 0; opacity: 0; overflow: hidden; margin-top: -1.2rem; }
+
+/* road B, the long run: a 0fr→1fr grid row grows it to its real height */
+.fold { display: grid; grid-template-rows: 0fr; width: 100%; transition: grid-template-rows 0.7s cubic-bezier(0.6, 0, 0.3, 1); }
+.fold > .fold-in { min-height: 0; overflow: hidden; opacity: 0; transition: opacity 0.3s ease; }
+.fold.on { grid-template-rows: 1fr; }
+.fold.on > .fold-in { opacity: 1; transition: opacity 0.6s ease 0.45s; }
+#sc-prism .run-stage:not(.on) { margin-top: -1.2rem; }
+.run-stage .fold-in { display: flex; flex-direction: column; align-items: center; gap: 0.7rem; }
+.run-handoff { display: flex; align-items: center; gap: 1.4rem; margin-top: 0.3rem; }
+.run-doc { width: clamp(190px, 18vw, 230px); padding: 0.8rem 0.95rem 0.95rem; gap: 0.45rem; }
+.run-plus { color: var(--parch-faint); font-size: 1.3rem; }
+.check-card { display: flex; flex-direction: column; gap: 0.5rem; padding: 0.8rem 1.1rem 0.95rem; background: #1a1e2b; border: 1px solid var(--ochre-deep); border-radius: 8px; }
+.check-line { color: var(--parchment); font-size: 0.8rem; }
+.check-line i { font-style: normal; color: var(--ochre); margin-right: 0.7em; display: inline-block; }
+.run-stage.on .check-line i { animation: tick-in 0.45s cubic-bezier(0.16, 1, 0.3, 1) backwards; }
+.run-stage.on .check-line:nth-child(2) i { animation-delay: 1.1s; }
+.run-stage.on .check-line:nth-child(3) i { animation-delay: 1.35s; }
+.run-stage.on .check-line:nth-child(4) i { animation-delay: 1.6s; }
+@keyframes tick-in { from { opacity: 0; transform: scale(0.3); } }
+/* one stage bright at a time: the hand-off folds away once the night runs */
+.run-handoff, .run-cap { max-height: 16rem; }
+.run-handoff, .run-cap { transition: opacity 0.35s ease, max-height 0.6s cubic-bezier(0.6, 0, 0.3, 1) 0.2s, margin 0.6s cubic-bezier(0.6, 0, 0.3, 1) 0.2s; }
+#sc-prism.run-on .run-handoff, #sc-prism.run-on .run-cap { opacity: 0; max-height: 0; margin: 0 0 -0.7rem; overflow: hidden; }
+
+/* the night grows in as the hand-off folds out (both 0.6–0.7s), so the
+   stage height hands over instead of jumping; its drawing is keyframed and
+   starts once the room can see it (+0.6s) */
+.run-night > .fold-in { display: flex; flex-direction: column; align-items: center; gap: 0.4rem; }
+.run-night svg { width: min(74vw, 800px); display: block; overflow: visible; }
+.rn-label { font-family: var(--mono); font-size: 15px; fill: var(--parch-dim); }
+.rn-sub-label { font-size: 13px; fill: var(--parch-faint); }
+.rn-frame { fill: var(--night-lift); stroke: var(--ochre-deep); stroke-width: 1.5; }
+.rn-chunk { fill: var(--ochre); transform-box: fill-box; transform-origin: 0 50%; }
+.rn-goal { fill: var(--parch-dim); }
+.rn-compact { font-size: 13px; fill: var(--parch-dim); }
+.rn-fill { transform-box: view-box; transform-origin: 204px 0; transform: scaleX(0.108); opacity: 0.55; } /* rests compacted: back to ~10% of the bar */
+@keyframes compact { from { transform: none; opacity: 1; } }
+@keyframes frame-full { 50% { stroke: var(--zone-amber); } }
+.rn-spawn { stroke: var(--blue); stroke-width: 1.5; stroke-dasharray: 100; }
+.rn-box { fill: var(--night-lift); stroke: var(--blue); stroke-width: 1.5; }
+.rn-mini { fill: var(--blue); transform-box: fill-box; transform-origin: 0 50%; transform: scaleX(0.7); }
+.rn-result { fill: var(--ochre); opacity: 0; }
+.rn-sub .rn-box, .rn-sub .rn-mini { opacity: 0.4; } /* done and closed */
+.rn-checkin line { stroke: var(--ochre); stroke-width: 1.5; }
+.rn-checkin circle { fill: var(--ochre); }
+.rn-out { stroke: var(--parch-faint); stroke-width: 1.5; stroke-dasharray: 100; }
+.rn-land { fill: var(--night-lift); stroke: var(--parch-dim); stroke-width: 1.5; }
+.rn-rework { fill: var(--zone-red); opacity: 0; transform-box: fill-box; transform-origin: 0 50%; }
+.rn-loop { fill: none; stroke: var(--zone-red); stroke-width: 2; stroke-linecap: round; stroke-dasharray: 100; opacity: 0; }
+.rn-loop-head { fill: none; stroke: var(--zone-red); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; opacity: 0; }
+.rn-rework-label { fill: #d0735e; opacity: 0; }
+.rn-done { font-family: var(--mono); font-size: 13px; fill: var(--ochre); }
+@keyframes grow-x { from { transform: scaleX(0); } }
+@keyframes box-open { from { opacity: 0; transform: translateY(-6px); } 30% { opacity: 1; transform: none; } 75% { opacity: 1; } to { opacity: 0.4; } }
+@keyframes mini-fill { from { transform: scaleX(0); } }
+@keyframes result-up { from { opacity: 0; transform: none; } 8% { opacity: 1; transform: none; } 85% { opacity: 1; } to { opacity: 0; transform: translateY(-46px); } } /* starts hidden: backwards fill holds it during the delay */
+
+/* one press, ~6s: five subagents open in turn, each fills its own fresh
+   window, sends a dot of result up, and closes; the main window grows by one
+   small chunk per result. You check in twice along the way. Keyframes (with
+   backwards fill), because the night leaves display-collapsed on this beat. */
+.run-night:not(.on) svg * { animation: none !important; }
+.run-night .rn-goal { animation: grow-x 0.4s ease 0.7s backwards; }
+.run-night .rn-spawn { animation: draw-in 0.3s ease var(--t) backwards; }
+.run-night .rn-sub .rn-box { transform-box: fill-box; animation: box-open 1.7s ease calc(var(--t) + 0.25s) backwards; }
+.run-night .rn-mini { animation: mini-fill 0.6s ease-out calc(var(--t) + 0.45s) backwards; }
+.run-night .rn-sub .rn-mini { animation: mini-fill 0.6s ease-out calc(var(--t) + 0.45s) backwards, fade-to-dim 0.4s ease calc(var(--t) + 1.6s) backwards; }
+@keyframes fade-to-dim { from { opacity: 1; } }
+.run-night .rn-result { animation: result-up 0.55s cubic-bezier(0.4, 0, 0.6, 1) calc(var(--t) + 1.1s) backwards; }
+.run-night .rn-fill .rn-chunk:not(.rn-goal), .run-night .rn-after { animation: grow-x 0.3s ease-out calc(var(--t) + 1.6s) backwards; }
+/* the bar nears full after the fourth result, then squeezes to a summary */
+.run-night .rn-frame { animation: fade-from-0 0.5s ease 0.5s backwards, frame-full 0.8s ease 5.1s; }
+.run-night .rn-fill { animation: compact 0.7s cubic-bezier(0.6, 0, 0.3, 1) 5.6s backwards; }
+.run-night .rn-compact { animation: fade-from-0 0.5s ease 6.1s backwards; }
+.run-night .rn-checkin { animation: tick-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) var(--t) backwards; transform-box: fill-box; transform-origin: 50% 100%; }
+.run-night .rn-checkin-label { animation: fade-from-0 0.5s ease 2.9s backwards; }
+.run-night .rn-out { animation: draw-in 0.4s ease 6.6s backwards; }
+.run-night .rn-land { animation: fade-from-0 0.4s ease 6.9s backwards; }
+.run-night .rn-land-label { animation: fade-from-0 0.4s ease 7s backwards; transition: opacity 0.3s ease; }
+.run-night .rn-done { animation: fade-from-0 0.3s ease calc(var(--t) + 1.65s) backwards; }
+#sc-prism.landed .rn-land-label { opacity: 0; }
+/* b10: it lands near the spot, not on it */
+#sc-prism.landed .rn-rework { opacity: 1; animation: grow-x 0.5s ease-out 0.9s backwards; }
+#sc-prism.landed .rn-rework-2 { animation-delay: 1.9s; }
+#sc-prism.landed .rn-loop { opacity: 1; animation: draw-in 0.8s ease 0.3s backwards; }
+#sc-prism.landed .rn-loop-head { opacity: 1; animation: fade-from-0 0.2s ease 1.05s backwards; }
+#sc-prism.landed .rn-rework-label { opacity: 1; animation: fade-from-0 0.5s ease 1.1s backwards; }
+#sc-prism.landed .rn-land { stroke: var(--zone-red); transition: stroke 0.5s ease 0.3s; }
+
+.run-trade { display: flex; flex-direction: column; gap: 0.35rem; font-size: 0.82rem; color: var(--parch-dim); }
+#sc-prism .run-trade:not(.on) { display: none; }
+.run-trade.on { animation: settle-in 0.6s ease-out both; }
+.run-trade b { display: inline-block; min-width: 8.5em; margin-right: 0.8em; text-align: right; font-weight: 500; color: var(--parchment); }
 
 /* the handoff payoff: a ticket is all a fresh window needs */
 .handoff-block { display: flex; align-items: center; gap: 2.5vw; }
@@ -1535,6 +1697,218 @@ path.ps-miss { stroke: var(--zone-red); }
   margin-top: 1.4rem;
   color: var(--ochre-deep);
   letter-spacing: 0.12em;
+}
+
+/* ---------- the map: NIGHTLINE's pause screen ----------
+   m opens it anywhere. The slide sinks under the water and the dock rises
+   out of it, every section standing in a column over the post it builds.
+   Transform is translate-only on #deck, never scale: hooks still running
+   under the map measure with getBoundingClientRect, and a scaled deck
+   hands them shrunken pixels (vessel chips pin at a seventh of their x). */
+
+#deck { transition: opacity 0.42s ease, transform 0.6s cubic-bezier(0.16, 1, 0.3, 1); }
+body.map-open #deck { opacity: 0; transform: translateY(7vh); }
+body:not(.map-open) #deck { transition-duration: 0.36s, 0.46s; }
+
+/* arrival after a jump: the chosen scene rises out of the water */
+html.jump-in #deck { animation: map-rise 0.8s cubic-bezier(0.16, 1, 0.3, 1); }
+@keyframes map-rise { from { opacity: 0; transform: translateY(7vh); } }
+
+#map {
+  position: fixed;
+  inset: 0;
+  z-index: 80; /* over the flying intent ghosts (60), under the blank (99) */
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  gap: 2.4vh;
+  padding-block: 6vh 5vh;
+  padding-inline: max(2rem, 4.5vw);
+  /* everything inside is in em off this one size, so the map reads the same
+     on a 720p share, a 4:3 projector, and a 1080p screen */
+  font-size: clamp(13px, min(1.25vw, 2.2vh), 28px);
+  /* the sky stays visible above the menu — the night keeps going behind the pause */
+  background: linear-gradient(to bottom, rgba(12, 15, 22, 0.35) 0, rgba(12, 15, 22, 0.9) 24vh, rgba(12, 15, 22, 0.94) 100%);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.28s ease, visibility 0s linear 0.36s;
+}
+body.map-open #map { opacity: 1; visibility: visible; pointer-events: auto; transition: opacity 0.3s ease; }
+body.map-going #map { opacity: 0; transition: opacity 0.35s ease 0.55s; }
+
+.map-head { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; flex-wrap: wrap; }
+.map-tag { color: var(--ochre); font-size: 0.8em; letter-spacing: 0.22em; }
+.map-keys { color: var(--parch-faint); font-size: 0.74em; letter-spacing: 0.06em; }
+.map-resume { all: unset; display: none; cursor: pointer; color: var(--parch-dim); font-size: 0.9em; letter-spacing: 0.1em; padding: 0.4rem 0.7rem; border: 1px solid var(--parch-faint); border-radius: 6px; }
+
+.map-body {
+  display: grid;
+  grid-template-columns: repeat(var(--cols, 5), minmax(0, 1fr));
+  grid-template-rows: 1fr 3.9em auto;
+  column-gap: 1.2em;
+  min-height: 0;
+}
+.map-col {
+  grid-row: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 0.38em;
+  padding-bottom: 0.9em;
+  min-height: 0;
+}
+
+.map-tile {
+  all: unset;
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: 1.8em minmax(0, 1fr);
+  align-items: baseline;
+  row-gap: 0.32em;
+  padding: 0.45em 0.62em 0.38em;
+  border-radius: 7px;
+  cursor: pointer;
+  color: var(--parch-dim);
+  -webkit-tap-highlight-color: transparent;
+}
+.mt-num { color: var(--parch-faint); font-size: 0.76em; position: relative; }
+.mt-label { font-family: var(--serif); font-size: 1.3em; font-weight: 460; line-height: 1.22; text-wrap: balance; }
+.map-tile.proverb .mt-label { font-style: italic; font-weight: 400; }
+.map-tile.here .mt-label { color: var(--parchment); }
+
+/* you are here: the moon, on the tile */
+.map-tile.here .mt-num { color: transparent; }
+.map-tile.here .mt-num::before {
+  content: "";
+  position: absolute;
+  left: 0.1em;
+  top: 50%;
+  width: 0.9em; height: 0.9em;
+  margin-top: -0.45em;
+  border-radius: 50%;
+  background: var(--parchment);
+  box-shadow: 0 0 10px 2px rgba(247, 244, 236, 0.35);
+}
+
+/* past the furthest point reached: the shape of the talk, not its titles */
+.map-tile.fog:not(.sel) .mt-label { white-space: nowrap; overflow: hidden; } /* one row each, so the dashes line up */
+.map-tile.fog .mt-label {
+  color: transparent;
+  background: repeating-linear-gradient(90deg, var(--parch-faint) 0 6px, transparent 6px 11px) left center / 62% 1.5px no-repeat;
+}
+.map-tile.fog.sel .mt-label { color: var(--parch-faint); background: none; }
+
+/* beat pips — the space is always reserved, so moving the cursor never reflows a column */
+.mt-pips { grid-column: 2; display: flex; gap: 0.32em; height: 0.4em; opacity: 0; transition: opacity 0.2s ease; }
+.map-tile.sel .mt-pips, .map-tile.here .mt-pips { opacity: 1; }
+.mt-pips i { width: 0.4em; height: 0.4em; border-radius: 50%; border: 1px solid var(--parch-faint); }
+.mt-pips i.done { background: var(--parch-dim); border-color: var(--parch-dim); }
+.mt-pips i.now { background: var(--ochre); border-color: var(--ochre); box-shadow: 0 0 6px rgba(232, 168, 101, 0.6); }
+
+.map-cursor {
+  position: absolute;
+  left: 0; top: 0;
+  border: 1.5px solid var(--ochre);
+  border-radius: 9px;
+  box-shadow: 0 0 16px rgba(232, 168, 101, 0.22), inset 0 0 12px rgba(232, 168, 101, 0.08);
+  pointer-events: none;
+  opacity: 0;
+  transition:
+    transform 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+    width 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+    height 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 0.2s ease;
+}
+body.map-open .map-cursor { opacity: 1; transition-delay: 0s, 0s, 0s, 0.5s; }
+body.map-going .map-cursor { opacity: 0; transition-delay: 0s; }
+
+/* the dock, in the talk's own grammar: dashed = not built yet, ochre = set */
+.map-water { grid-row: 2; grid-column: 1 / -1; align-self: end; height: 1.5px; background: var(--blue); opacity: 0.45; }
+.map-plank {
+  grid-row: 2;
+  align-self: start;
+  height: 0.56em;
+  margin-inline: -0.6em;
+  border: 1.2px dashed var(--parch-faint);
+  border-radius: 1px;
+  transition: background-color 1.2s ease, border-color 1.2s ease, box-shadow 1.2s ease;
+}
+.map-plank.drawn { background: var(--ochre-deep); border: 1.2px solid var(--ochre); box-shadow: 0 0 6px rgba(232, 168, 101, 0.4); }
+.map-post {
+  grid-row: 2;
+  justify-self: center;
+  align-self: stretch;
+  width: 0.62em;
+  margin-top: 0.56em;
+  border: 1.5px dashed var(--parch-faint);
+  border-bottom: none;
+}
+.map-post.lit { background: var(--ochre-deep); border: 1.5px solid var(--ochre); border-bottom: none; box-shadow: 0 0 8px rgba(232, 168, 101, 0.5); }
+
+.map-group {
+  grid-row: 3;
+  padding-top: 0.8em;
+  text-align: center;
+  text-wrap: balance;
+  color: var(--parch-faint);
+  font-size: 0.76em;
+  letter-spacing: 0.04em;
+  line-height: 1.5;
+}
+/* numbered above the name, the way the blueprint numbers its posts */
+.map-group > span { display: block; }
+.map-group .habit-num { display: grid; width: 1.7em; height: 1.7em; margin: 0 auto 0.4em; font-size: 0.88em; border-color: var(--parch-faint); color: var(--parch-faint); }
+.map-group.lit { color: var(--parch-dim); }
+.map-group.lit .habit-num { border-color: var(--ochre-deep); color: var(--ochre); }
+
+.map-cap {
+  text-align: center;
+  font-style: italic;
+  font-size: 1.36em;
+  color: var(--parch-dim);
+  min-height: 1.6em; /* one fixed slot — the headline swaps, nothing moves */
+  transition: opacity 0.2s ease;
+}
+
+/* ---- the choreography: open rises out of the water, resume sinks back ---- */
+.map-water { transform: scaleX(0); transition: transform 0.7s cubic-bezier(0.16, 1, 0.3, 1); }
+.map-post { transform: scaleY(0); transform-origin: 50% 100%; transition: transform 0.55s cubic-bezier(0.16, 1, 0.3, 1), background-color 1s ease, border-color 1s ease, box-shadow 1s ease; }
+.map-plank { transform: scaleX(0); transform-origin: 0 50%; }
+.map-plank { transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), background-color 1.2s ease, border-color 1.2s ease, box-shadow 1.2s ease; }
+.map-tile { opacity: 0; transform: translateY(16px); transition: opacity 0.4s ease, transform 0.5s cubic-bezier(0.16, 1, 0.3, 1), color 0.3s ease, box-shadow 0.3s ease; }
+.map-head, .map-group, .map-cap { opacity: 0; transition: opacity 0.3s ease; }
+
+body.map-open .map-water { transform: none; transition-delay: 0.05s; }
+body.map-open .map-post { transform: none; transition-delay: calc(0.2s + var(--k, 0) * 0.09s), 0s, 0s, 0s; }
+body.map-open .map-plank { transform: none; transition-delay: 0.46s, 0s, 0s, 0s; }
+/* tiles surface outward from where you are, like a ripple from the here-tile */
+body.map-open .map-tile { opacity: 1; transform: none; transition-delay: calc(0.22s + var(--d, 0) * 30ms), calc(0.22s + var(--d, 0) * 30ms), 0s, 0s; }
+body.map-open .map-head, body.map-open .map-cap { opacity: 1; transition-delay: 0.3s; }
+body.map-open .map-group { opacity: 1; transition-delay: 0.55s; }
+
+/* a jump: the chosen tile holds the light, everything else goes back under */
+body.map-going .map-tile.sel { color: var(--parchment); box-shadow: 0 0 0 1.5px var(--ochre), 0 0 28px rgba(232, 168, 101, 0.45); }
+body.map-going .map-tile.sel .mt-label { color: var(--parchment); }
+body.map-going .map-tile:not(.sel) { opacity: 0; transform: translateY(18px); transition-delay: calc(var(--d, 0) * 26ms), calc(var(--d, 0) * 26ms), 0s, 0s; }
+body.map-going .map-post { transform: scaleY(0); transition-delay: 0.3s, 0s, 0s, 0s; }
+body.map-going .map-plank { transform: scaleX(0); transition-delay: 0.22s, 0s, 0s, 0s; }
+body.map-going .map-group, body.map-going .map-head, body.map-going .map-cap { opacity: 0; transition-delay: 0s; }
+
+#hud { z-index: 2; cursor: pointer; padding: 0.5rem 0.6rem; margin: -0.5rem -0.6rem; } /* above #deck (z 1), or a tap lands on the slide */
+
+/* phones: no room for five columns — one list, each group under its name, no dock */
+@media (max-width: 760px) {
+  #map { display: block; overflow-y: auto; padding-block: 4vh; padding-inline: 1rem; font-size: 15px; }
+  .map-keys { display: none; }
+  .map-head { position: sticky; top: -4vh; z-index: 1; padding-block: 0.6rem; background: var(--night); }
+  .map-resume { display: inline-block; }
+  .map-body { display: flex; flex-direction: column; margin-top: 1rem; }
+  .map-col { order: calc(var(--c) * 2 + 1); padding-bottom: 0.6rem; }
+  .map-group { order: calc(var(--c) * 2); text-align: left; padding-top: 1rem; }
+  .map-group .habit-num { display: none; }
+  .map-post, .map-plank, .map-water { display: none; }
+  .hud-where { display: none; }
+  .map-cap { margin-top: 1rem; }
 }
 
 /* ---------- quality floor ---------- */
