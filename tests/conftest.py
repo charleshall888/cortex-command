@@ -147,6 +147,9 @@ def pytest_configure(config):
     """
     config.stash[_OPERATOR_SESSION_KEY] = os.environ.get("LIFECYCLE_SESSION_ID", "")
     os.environ["LIFECYCLE_SESSION_ID"] = PYTEST_SESSION_ID
+    # Every `cortex init` a test runs would otherwise compile the macOS
+    # dashboard app (~0.5s of osacompile each). Tests of the app unset this.
+    os.environ["CORTEX_DASHBOARD_APP"] = "0"
 
 
 def pytest_terminal_summary(terminalreporter, exitstatus, config):

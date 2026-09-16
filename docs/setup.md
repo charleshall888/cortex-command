@@ -244,7 +244,7 @@ cortex overnight schedule        # Schedule a future overnight run
 cortex auth bootstrap            # One-shot OAuth token bootstrap (Pro/Max subscription)
 cortex auth status               # Show resolved auth vector and shadowed alternatives
 cortex mcp-server                # DEPRECATED — stub retained for backward compatibility
-cortex dashboard                 # Launch the web dashboard for monitoring sessions
+cortex dashboard                 # Launch the web dashboard for all your projects (also: the Cortex Dashboard app on macOS)
 cortex upgrade                   # Reinstall the cortex CLI at the latest published tag
 cortex init                      # Scaffold a repo for cortex (run once per project)
 cortex --print-root              # Verify install (prints {version, root, package_root, ...})

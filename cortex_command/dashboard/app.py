@@ -407,8 +407,25 @@ app = FastAPI(lifespan=lifespan)
 
 @app.get("/health")
 async def health() -> JSONResponse:
-    """Return a simple health-check response."""
-    return JSONResponse({"status": "ok"})
+    """Report liveness, plus what this server is.
+
+    ``version`` and ``roots`` let ``cortex dashboard`` tell a current server
+    from one started by an older install or before a project was registered,
+    and replace it instead of reporting the stale one as already running.
+    """
+    from importlib.metadata import PackageNotFoundError, version
+
+    try:
+        installed = version("cortex-command")
+    except PackageNotFoundError:
+        installed = "0.0.0+source"
+    return JSONResponse(
+        {
+            "status": "ok",
+            "version": installed,
+            "roots": [str(repo.root) for repo in registry.repos],
+        }
+    )
 
 
 @app.get("/overnight")

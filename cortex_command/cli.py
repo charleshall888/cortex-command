@@ -504,9 +504,16 @@ def _dispatch_dashboard(args: argparse.Namespace) -> int:
     # honored the env var before the ``--port`` flag existed).
     os.environ["DASHBOARD_PORT"] = str(port)
 
-    if args.root is not None:
-        from pathlib import Path
+    from pathlib import Path
 
+    from cortex_command.common import (
+        CortexProjectRootError,
+        _resolve_user_project_root,
+    )
+    from cortex_command.dashboard import macapp, projects
+    from cortex_command.dashboard.repos import ROOTS_ENV
+
+    if args.root is not None:
         # In-process only: scoped to this server, never the operator's shell.
         os.environ["CORTEX_REPO_ROOT"] = str(
             Path(args.root).expanduser().resolve()
@@ -517,7 +524,6 @@ def _dispatch_dashboard(args: argparse.Namespace) -> int:
     # them through. Appended to whatever the environment already carried, so an
     # exported CORTEX_DASHBOARD_ROOTS and repeated --also-root compose rather
     # than one silently winning.
-    from cortex_command.dashboard.repos import ROOTS_ENV
 
     also_root = getattr(args, "also_root", None)
     if also_root:
@@ -526,13 +532,37 @@ def _dispatch_dashboard(args: argparse.Namespace) -> int:
         parts.extend(also_root)
         os.environ[ROOTS_ENV] = os.pathsep.join(parts)
 
+    # With no --root the dashboard tracks every registered project, led by the
+    # one the command ran inside. --root keeps its narrow meaning — exactly the
+    # tree named — because that is how a seeded fixture root is viewed without
+    # real projects polling beside it.
+    primary = os.environ.get("CORTEX_REPO_ROOT", "")
+    if args.root is None:
+        try:
+            primary = str(_resolve_user_project_root().resolve())
+            projects.register_project(Path(primary))
+        except CortexProjectRootError:
+            primary = ""
+        registered = [str(p) for p in projects.load_projects()]
+        if registered:
+            existing = os.environ.get(ROOTS_ENV, "")
+            parts = [p for p in existing.split(os.pathsep) if p.strip()]
+            os.environ[ROOTS_ENV] = os.pathsep.join(parts + registered)
+
+    as_json = args.format == "json"
+    if macapp.ensure_app() == "created" and not as_json:
+        print(
+            "Added the %s app to ~/Applications." % macapp.APP_NAME,
+            file=sys.stderr,
+        )
+
     url = "http://127.0.0.1:%d" % port
     # Every root the server will actually track, not just the flag-derived
     # ones. ``CORTEX_DASHBOARD_ROOTS`` reaches the detached child by
     # environment inheritance either way, so omitting it here never changed
     # what got served — it only under-reported the tracked set to a machine
     # caller reading the JSON envelope's ``roots``.
-    roots = [os.environ.get("CORTEX_REPO_ROOT", "")] + list(also_root or [])
+    roots = [primary] + list(also_root or [])
     roots += [
         part
         for part in os.environ.get(ROOTS_ENV, "").split(os.pathsep)
@@ -541,7 +571,14 @@ def _dispatch_dashboard(args: argparse.Namespace) -> int:
     seen: set[str] = set()
     roots = [r for r in roots if r and not (r in seen or seen.add(r))]
 
-    as_json = args.format == "json"
+    if not roots:
+        print(
+            "No cortex projects found. Run `cortex init` inside a project, "
+            "then open the dashboard again.",
+            file=sys.stderr,
+        )
+        return 1
+
     # Detached is the default: a dashboard is a thing you glance at beside the
     # work, so holding the terminal that launched it is the wrong trade. The
     # blocking form stays one flag away for recipes that serve until killed.
@@ -601,6 +638,8 @@ def _should_open_browser(args: argparse.Namespace) -> bool:
     non-TTY stdout covers headless, CI, and piped invocations that pass
     neither flag. Interactivity-detection precedent: ``auth/bootstrap.py``.
     """
+    if getattr(args, "open", False):
+        return True
     if getattr(args, "no_open", False):
         return False
     if getattr(args, "format", None) == "json":
@@ -646,6 +685,88 @@ def _port_is_serving(port: int, timeout: float = 0.4) -> bool:
         return probe.connect_ex(("127.0.0.1", port)) == 0
 
 
+def _installed_version() -> str:
+    from importlib.metadata import PackageNotFoundError, version
+
+    try:
+        return version("cortex-command")
+    except PackageNotFoundError:
+        return "0.0.0+source"
+
+
+def _running_dashboard_identity(port: int) -> dict | None:
+    """Return the ``/health`` body of the server on *port*, or None.
+
+    None means the port answers but not as a dashboard this code can read.
+    """
+    import json as _json
+    import urllib.request
+
+    try:
+        with urllib.request.urlopen(
+            "http://127.0.0.1:%d/health" % port, timeout=2
+        ) as response:
+            body = _json.loads(response.read().decode("utf-8"))
+    except (OSError, ValueError):
+        return None
+    return body if isinstance(body, dict) else None
+
+
+def _serves_what_was_asked(running: dict, roots: list[str]) -> bool:
+    """Whether a running server is this install's and tracks every root asked.
+
+    A superset is enough. Asking from inside one project must not tear down a
+    server already showing that project among others — the switcher order is
+    the only difference, and it is not worth the operator's open tabs.
+    """
+    from pathlib import Path
+
+    if running.get("version") != _installed_version():
+        return False
+    served = {str(Path(r).resolve()) for r in running.get("roots") or []}
+    wanted = {str(Path(r).resolve()) for r in roots if Path(r).is_dir()}
+    return wanted <= served
+
+
+def _stop_running_dashboard(port: int) -> bool:
+    """Stop the dashboard serving *port*; return whether the port is now free.
+
+    Only a process the PID file names *and* whose command line is a cortex
+    dashboard is signalled. A PID file can outlive its process and the pid be
+    reused, and the port can belong to an unrelated program, so either check
+    alone could kill something that is not ours.
+    """
+    import time
+
+    import psutil
+
+    from cortex_command.dashboard.app import _resolve_pid_path
+
+    try:
+        pid = int(_resolve_pid_path().read_text(encoding="utf-8").strip())
+        proc = psutil.Process(pid)
+        cmdline = " ".join(proc.cmdline())
+    except (OSError, ValueError, psutil.Error):
+        return False
+    if "cortex" not in cmdline or "dashboard" not in cmdline:
+        return False
+
+    try:
+        proc.terminate()
+        proc.wait(timeout=5)
+    except psutil.TimeoutExpired:
+        proc.kill()
+    except psutil.Error:
+        pass
+
+    deadline = time.monotonic() + 5.0
+    while time.monotonic() < deadline:
+        if not _port_is_serving(port):
+            return True
+        time.sleep(0.1)
+    return False
+
+
 def _dispatch_dashboard_background(
     *,
     port: int,
@@ -675,6 +796,8 @@ def _dispatch_dashboard_background(
     def emit(payload: dict) -> int:
         if as_json:
             print(_json.dumps(payload))
+        elif payload["status"] == "failed":
+            print("failed  %s" % payload.get("error", ""), file=sys.stderr)
         else:
             print("%s  %s" % (payload["status"], payload.get("url", "")))
         return 0 if payload["status"] != "failed" else 1
@@ -685,16 +808,33 @@ def _dispatch_dashboard_background(
     # a second piece of persistent state that can go stale. Asking the port
     # the caller actually named answers the only question that has a caller.
     if _port_is_serving(port):
-        if open_browser:
-            _open_browser(url)
-        return emit(
-            {
-                "schema_version": _JSON_SCHEMA_VERSION,
-                "status": "already_running",
-                "port": port,
-                "url": url,
-            }
-        )
+        running = _running_dashboard_identity(port)
+        if running is not None and _serves_what_was_asked(running, roots):
+            if open_browser:
+                _open_browser(url)
+            return emit(
+                {
+                    "schema_version": _JSON_SCHEMA_VERSION,
+                    "status": "already_running",
+                    "port": port,
+                    "url": url,
+                }
+            )
+        # A server from an older install, or one missing a project registered
+        # since it started, is replaced rather than reported: "already
+        # running" would hand the operator the stale board they cannot fix
+        # without finding and killing a process by hand.
+        if not _stop_running_dashboard(port):
+            return emit(
+                {
+                    "schema_version": _JSON_SCHEMA_VERSION,
+                    "status": "failed",
+                    "error": "port %d is in use by a program that is not a "
+                    "current cortex dashboard; pass --port to use another"
+                    % port,
+                    "port": port,
+                }
+            )
 
     # ``--foreground`` on the child is load-bearing, not decoration: detached
     # is now the default, so a child launched without it would background
@@ -1528,7 +1668,16 @@ def _build_parser() -> argparse.ArgumentParser:
             "interrupted. Ctrl-C cleanly terminates the server."
         ),
     )
-    dashboard.add_argument(
+    open_group = dashboard.add_mutually_exclusive_group()
+    open_group.add_argument(
+        "--open",
+        action="store_true",
+        help=(
+            "Always open a browser, even from a non-TTY caller such as the "
+            "Cortex Dashboard app."
+        ),
+    )
+    open_group.add_argument(
         "--no-open",
         action="store_true",
         dest="no_open",
