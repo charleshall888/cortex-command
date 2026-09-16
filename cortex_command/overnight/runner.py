@@ -1586,8 +1586,8 @@ def _spawn_orchestrator(
     if soft_fail:
         sandbox_settings.record_soft_fail_event(session_dir)
 
-    # #313: spawn the resolved best-available CLI (newer of system-vs-bundled)
-    # so the orchestrator and SDK workers run an identical claude; `or "claude"`
+    # Spawn the operator's resolved claude (PATH, then known install locations)
+    # so the orchestrator and dispatched workers run the same binary; `or "claude"`
     # preserves today's bare-literal behavior when resolution returns None.
     from cortex_command.cli_resolver import resolve_claude_cli
     claude_path = resolve_claude_cli() or "claude"
