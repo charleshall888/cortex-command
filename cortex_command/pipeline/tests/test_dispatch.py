@@ -1,23 +1,25 @@
-"""Unit tests for dispatch.py classify_error() and ERROR_RECOVERY.
+"""Unit tests for dispatch.py classify_failure() and ERROR_RECOVERY.
 
 Tests cover every classification subtype introduced by the failure
-classification feature:
+classification feature, driven through ``classify_failure``'s structured
+inputs (exit code, last result frame, last rate-limit frame, keyword corpus)
+or through ``dispatch_task`` with the frame-level ``claude`` double:
 
-  - asyncio.TimeoutError  -> agent_timeout
-  - CLIConnectionError    -> infrastructure_failure
-  - ProcessError + timeout keyword in message     -> agent_timeout
-  - ProcessError + timeout keyword in output      -> agent_timeout
-  - ProcessError + test-failure keyword           -> agent_test_failure
-  - ProcessError + refusal keyword                -> agent_refusal
-  - ProcessError + confusion keyword              -> agent_confused
-  - ProcessError with no matching keyword         -> task_failure
-  - Generic Exception                             -> unknown
+  - spawn failure (ClaudeSpawnError)              -> infrastructure_failure
+  - non-spawn exception during the run            -> unknown
+  - non-zero exit + timeout keyword in stderr     -> agent_timeout
+  - non-zero exit + timeout keyword in output     -> agent_timeout
+  - non-zero exit + test-failure keyword          -> agent_test_failure
+  - non-zero exit + refusal keyword               -> agent_refusal
+  - non-zero exit + confusion keyword             -> agent_confused
+  - non-zero exit with no matching keyword        -> task_failure
   - ERROR_RECOVERY maps each subtype to the correct recovery path
 """
 
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import os
 import sys
@@ -34,178 +36,232 @@ from cortex_command.pipeline.tests.conftest import _install_sdk_stub
 _install_sdk_stub()
 
 import cortex_command.pipeline.dispatch as _dispatch_module
+from cortex_command.claude_stream import ClaudeSpawnError
 from cortex_command.pipeline.parser import parse_feature_plan
+from cortex_command.tests._claude_double import fake_run_claude, result_frame
 
-# Pull stub exception types so isinstance checks match exactly.
 _sdk = sys.modules["claude_agent_sdk"]
-CLIConnectionError = _sdk.CLIConnectionError
-ProcessError = _sdk.ProcessError
 
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _process_error(msg: str) -> ProcessError:
-    return ProcessError(msg)
+_FAKE_CLI = "/fake/bin/claude"
 
 
-def _cli_error(msg: str) -> CLIConnectionError:
-    return CLIConnectionError(msg)
+def _classify(corpus: str, output: str = "", *, exit_code: int = 1) -> str | None:
+    """Classify a non-zero exit with no result frame over ``corpus`` + ``output``.
+
+    ``corpus`` stands in for captured child stderr and ``output`` for the
+    assistant text; dispatch_task joins both into the keyword corpus.
+    """
+    text = corpus if not output else f"{output}\n{corpus}"
+    return _dispatch_module.classify_failure(exit_code, None, None, text, 30)
+
+
+@contextlib.contextmanager
+def _patched_claude(frames=(), **double_kwargs):
+    """Patch dispatch.py's bound ``run_claude`` with the frame double and pin
+    ``resolve_claude_cli`` to a fake path, yielding a capture dict.
+
+    The capture dict receives the double's ``argv``/``prompt``/``cwd``/``env``
+    plus the ``on_stderr`` callback dispatch_task handed to the seam.
+    """
+    capture: dict = {}
+    inner = fake_run_claude(frames, capture=capture, **double_kwargs)
+
+    def _recording_run_claude(argv, **kwargs):
+        capture["on_stderr"] = kwargs.get("on_stderr")
+        return inner(argv, **kwargs)
+
+    with patch.object(_dispatch_module, "run_claude", _recording_run_claude), \
+            patch.object(_dispatch_module, "resolve_claude_cli", return_value=_FAKE_CLI):
+        yield capture
+
+
+def _settings_from_capture(capture: dict) -> dict:
+    """Load the sandbox settings JSON named by ``--settings <path>`` in argv."""
+    argv = capture.get("argv")
+    assert argv is not None, "run_claude was not called"
+    assert "--settings" in argv, f"--settings missing from argv: {argv!r}"
+    path = argv[argv.index("--settings") + 1]
+    return json.loads(Path(path).read_text(encoding="utf-8"))
+
+
+def _stored_stderr_lines(capture: dict) -> list[str] | None:
+    """Return the ``_stderr_lines`` closure cell of the captured on_stderr."""
+    on_stderr = capture["on_stderr"]
+    for name, cell in zip(on_stderr.__code__.co_freevars, on_stderr.__closure__ or ()):
+        if name == "_stderr_lines":
+            return cell.cell_contents
+    return None
+
+
+async def _dispatch_simple(worktree: Path, **kwargs) -> "_dispatch_module.DispatchResult":
+    return await _dispatch_module.dispatch_task(
+        feature=kwargs.pop("feature", "classify-test"),
+        task="do something",
+        worktree_path=worktree,
+        complexity="simple",
+        system_prompt="",
+        skill="implement",
+        **kwargs,
+    )
 
 
 # ---------------------------------------------------------------------------
-# Tests: classify_error()
+# Tests: classify_failure()
 # ---------------------------------------------------------------------------
 
 class TestClassifyError(unittest.TestCase):
-    """Tests for classify_error() covering all subtypes."""
+    """Tests for classify_failure() covering all subtypes."""
 
-    # --- Hard-typed exception branches ---
+    # --- Run-level failure branches (formerly hard-typed SDK exceptions) ---
 
-    def test_asyncio_timeout_error_returns_agent_timeout(self):
-        err = asyncio.TimeoutError()
-        self.assertEqual(_dispatch_module.classify_error(err), "agent_timeout")
+    def test_timeout_keyword_returns_agent_timeout(self):
+        """Spec R10: the SDK's ``asyncio.TimeoutError`` arm is gone with the
+        SDK; ``agent_timeout`` stays reachable through the timeout keywords."""
+        self.assertEqual(_classify("operation timed out"), "agent_timeout")
 
-    def test_asyncio_timeout_error_ignores_output(self):
-        """Output is irrelevant when error is a hard asyncio.TimeoutError."""
-        err = asyncio.TimeoutError()
+    def test_timeout_keyword_wins_over_refusal_in_output(self):
+        """Spec R10: with no typed timeout exception left, a timeout signal
+        still outranks refusal text in the assistant output."""
         self.assertEqual(
-            _dispatch_module.classify_error(err, "i cannot help you"),
+            _classify("timed out", output="i cannot help you"),
             "agent_timeout",
         )
 
-    def test_cli_connection_error_returns_infrastructure_failure(self):
-        err = _cli_error("Claude CLI not found")
-        self.assertEqual(
-            _dispatch_module.classify_error(err), "infrastructure_failure"
-        )
+    def test_spawn_error_returns_infrastructure_failure(self):
+        """Spec R11: an unspawnable ``claude`` (formerly CLIConnectionError)
+        classifies as infrastructure_failure."""
+        spawn_error = ClaudeSpawnError(_FAKE_CLI, FileNotFoundError("Claude CLI not found"))
+
+        async def _run():
+            with tempfile.TemporaryDirectory() as tmp:
+                with _patched_claude(spawn_error=spawn_error):
+                    return await _dispatch_simple(Path(tmp))
+
+        self.assertEqual(asyncio.run(_run()).error_type, "infrastructure_failure")
+
+    def _dispatch_with_run_exception(self, exc: Exception) -> str | None:
+        async def _run():
+            with tempfile.TemporaryDirectory() as tmp:
+                with _patched_claude(spawn_error=exc):
+                    return await _dispatch_simple(Path(tmp))
+
+        return asyncio.run(_run()).error_type
 
     def test_generic_exception_returns_unknown(self):
-        err = ValueError("something unexpected")
-        self.assertEqual(_dispatch_module.classify_error(err), "unknown")
+        self.assertEqual(
+            self._dispatch_with_run_exception(ValueError("something unexpected")),
+            "unknown",
+        )
 
     def test_generic_exception_with_timeout_in_message_returns_unknown(self):
         """Generic exceptions are not inspected for keywords; must stay 'unknown'."""
-        err = RuntimeError("timeout occurred")
-        self.assertEqual(_dispatch_module.classify_error(err), "unknown")
+        self.assertEqual(
+            self._dispatch_with_run_exception(RuntimeError("timeout occurred")),
+            "unknown",
+        )
 
-    # --- ProcessError: timeout keyword in exception message ---
+    # --- Non-zero exit: timeout keyword in captured stderr ---
 
     def test_process_error_timeout_keyword_returns_agent_timeout(self):
-        err = _process_error("operation timed out after 30 s")
-        self.assertEqual(_dispatch_module.classify_error(err), "agent_timeout")
+        self.assertEqual(_classify("operation timed out after 30 s"), "agent_timeout")
 
     def test_process_error_timeout_literal_keyword(self):
-        err = _process_error("timeout reached")
-        self.assertEqual(_dispatch_module.classify_error(err), "agent_timeout")
+        self.assertEqual(_classify("timeout reached"), "agent_timeout")
 
     def test_process_error_time_out_two_words(self):
-        err = _process_error("session will time out shortly")
-        self.assertEqual(_dispatch_module.classify_error(err), "agent_timeout")
+        self.assertEqual(_classify("session will time out shortly"), "agent_timeout")
 
-    # --- ProcessError: timeout keyword detected via output ---
+    # --- Non-zero exit: timeout keyword detected via output ---
 
     def test_process_error_timeout_in_output_returns_agent_timeout(self):
-        err = _process_error("task failed")
         self.assertEqual(
-            _dispatch_module.classify_error(err, output="process timed out"),
+            _classify("task failed", output="process timed out"),
             "agent_timeout",
         )
 
-    # --- ProcessError: test-failure keywords ---
+    # --- Non-zero exit: test-failure keywords ---
 
     def test_process_error_test_failed_returns_agent_test_failure(self):
-        err = _process_error("test failed: test_foo")
-        self.assertEqual(_dispatch_module.classify_error(err), "agent_test_failure")
+        self.assertEqual(_classify("test failed: test_foo"), "agent_test_failure")
 
     def test_process_error_pytest_keyword_returns_agent_test_failure(self):
-        err = _process_error("pytest exited with status 1")
-        self.assertEqual(_dispatch_module.classify_error(err), "agent_test_failure")
+        self.assertEqual(_classify("pytest exited with status 1"), "agent_test_failure")
 
     def test_process_error_assertion_error_keyword_returns_agent_test_failure(self):
-        err = _process_error("AssertionError: expected True")
-        self.assertEqual(_dispatch_module.classify_error(err), "agent_test_failure")
+        self.assertEqual(_classify("AssertionError: expected True"), "agent_test_failure")
 
     def test_process_error_test_failure_in_output(self):
-        err = _process_error("agent exited non-zero")
         self.assertEqual(
-            _dispatch_module.classify_error(err, output="failing tests detected"),
+            _classify("agent exited non-zero", output="failing tests detected"),
             "agent_test_failure",
         )
 
-    # --- ProcessError: refusal keywords ---
+    # --- Non-zero exit: refusal keywords ---
 
     def test_process_error_i_cannot_returns_agent_refusal(self):
-        err = _process_error("I cannot complete this task")
-        self.assertEqual(_dispatch_module.classify_error(err), "agent_refusal")
+        self.assertEqual(_classify("I cannot complete this task"), "agent_refusal")
 
     def test_process_error_i_will_not_returns_agent_refusal(self):
-        err = _process_error("I will not do that")
-        self.assertEqual(_dispatch_module.classify_error(err), "agent_refusal")
+        self.assertEqual(_classify("I will not do that"), "agent_refusal")
 
     def test_process_error_cannot_help_in_output(self):
-        err = _process_error("agent stopped")
         self.assertEqual(
-            _dispatch_module.classify_error(err, output="I cannot help with this request"),
+            _classify("agent stopped", output="I cannot help with this request"),
             "agent_refusal",
         )
 
     def test_process_error_i_must_refuse_returns_agent_refusal(self):
-        err = _process_error("I must refuse this operation")
-        self.assertEqual(_dispatch_module.classify_error(err), "agent_refusal")
+        self.assertEqual(_classify("I must refuse this operation"), "agent_refusal")
 
-    # --- ProcessError: confusion keywords ---
+    # --- Non-zero exit: confusion keywords ---
 
     def test_process_error_im_not_sure_returns_agent_confused(self):
-        err = _process_error("I'm not sure what to do here")
-        self.assertEqual(_dispatch_module.classify_error(err), "agent_confused")
+        self.assertEqual(_classify("I'm not sure what to do here"), "agent_confused")
 
     def test_process_error_i_dont_understand_returns_agent_confused(self):
-        err = _process_error("I don't understand the requirements")
-        self.assertEqual(_dispatch_module.classify_error(err), "agent_confused")
+        self.assertEqual(_classify("I don't understand the requirements"), "agent_confused")
 
     def test_process_error_unclear_to_me_returns_agent_confused(self):
-        err = _process_error("This is unclear to me")
-        self.assertEqual(_dispatch_module.classify_error(err), "agent_confused")
+        self.assertEqual(_classify("This is unclear to me"), "agent_confused")
 
     def test_process_error_im_lost_in_output_returns_agent_confused(self):
-        err = _process_error("agent exited unexpectedly")
         self.assertEqual(
-            _dispatch_module.classify_error(err, output="I am lost and don't know how to proceed"),
+            _classify(
+                "agent exited unexpectedly",
+                output="I am lost and don't know how to proceed",
+            ),
             "agent_confused",
         )
 
-    # --- ProcessError: no keyword match ---
+    # --- Non-zero exit: no keyword match ---
 
     def test_process_error_no_matching_keyword_returns_task_failure(self):
-        err = _process_error("exit code 1")
-        self.assertEqual(_dispatch_module.classify_error(err), "task_failure")
+        self.assertEqual(_classify("exit code 1"), "task_failure")
 
     def test_process_error_empty_message_returns_task_failure(self):
-        err = _process_error("")
-        self.assertEqual(_dispatch_module.classify_error(err), "task_failure")
+        self.assertEqual(_classify(""), "task_failure")
 
     def test_process_error_empty_message_empty_output_returns_task_failure(self):
-        err = _process_error("")
-        self.assertEqual(_dispatch_module.classify_error(err, output=""), "task_failure")
+        self.assertEqual(_classify("", output=""), "task_failure")
 
     # --- Priority ordering: timeout > test_failure ---
 
     def test_timeout_takes_priority_over_test_failure_in_corpus(self):
         """When both timeout and test-failure patterns present, timeout wins."""
-        err = _process_error("timed out while running pytest")
-        self.assertEqual(_dispatch_module.classify_error(err), "agent_timeout")
+        self.assertEqual(_classify("timed out while running pytest"), "agent_timeout")
 
     # --- Case insensitivity ---
 
     def test_refusal_pattern_case_insensitive(self):
-        err = _process_error("I CANNOT do that")
-        self.assertEqual(_dispatch_module.classify_error(err), "agent_refusal")
+        self.assertEqual(_classify("I CANNOT do that"), "agent_refusal")
 
     def test_test_failure_pattern_case_insensitive(self):
-        err = _process_error("TESTS FAILED")
-        self.assertEqual(_dispatch_module.classify_error(err), "agent_test_failure")
+        self.assertEqual(_classify("TESTS FAILED"), "agent_test_failure")
 
 
 # ---------------------------------------------------------------------------
@@ -259,39 +315,17 @@ class TestErrorRecovery(unittest.TestCase):
 # ---------------------------------------------------------------------------
 
 _sdk = sys.modules["claude_agent_sdk"]
-ResultMessage = _sdk.ResultMessage
-
-
-async def _async_gen(*items):
-    for item in items:
-        yield item
 
 
 class TestDispatchTaskSandboxSettings(unittest.IsolatedAsyncioTestCase):
-    """Tests that dispatch_task passes the correct sandbox settings to ClaudeAgentOptions."""
+    """Tests that dispatch_task passes the correct sandbox settings to ``claude --settings``."""
 
     async def test_worktree_path_in_write_allowlist(self):
         with tempfile.TemporaryDirectory() as tmp:
             worktree = Path(tmp) / "feature-worktree"
             worktree.mkdir()
 
-            captured: dict = {}
-
-            async def mock_query(**kwargs):
-                captured["options"] = kwargs.get("options")
-                result_msg = ResultMessage(
-                    subtype="success",
-                    duration_ms=100,
-                    duration_api_ms=80,
-                    is_error=False,
-                    num_turns=1,
-                    session_id="sess-sandbox",
-                    total_cost_usd=0.0,
-                )
-                async for m in _async_gen(result_msg):
-                    yield m
-
-            with patch.object(_dispatch_module, "query", mock_query):
+            with _patched_claude([result_frame(total_cost_usd=0.0)]) as capture:
                 await _dispatch_module.dispatch_task(
                     feature="sandbox-test",
                     task="do something",
@@ -301,13 +335,12 @@ class TestDispatchTaskSandboxSettings(unittest.IsolatedAsyncioTestCase):
                     skill="implement",
                 )
 
-            options = captured.get("options")
-            self.assertIsNotNone(options, "ClaudeAgentOptions was not captured from query call")
-            self.assertIsNotNone(options.settings, "settings= was not passed to ClaudeAgentOptions")
+            self.assertIsNotNone(capture.get("argv"), "argv was not captured from run_claude call")
+            self.assertIn("--settings", capture["argv"], "--settings was not passed to claude")
 
-            # Per spec Req 5 (REVISED 2026-05-05), options.settings is a filepath
+            # Per spec Req 5 (REVISED 2026-05-05), --settings names a filepath
             # to a per-dispatch tempfile containing the sandbox JSON.
-            settings = json.loads(Path(options.settings).read_text(encoding="utf-8"))
+            settings = _settings_from_capture(capture)
             allowlist = settings["sandbox"]["filesystem"]["allowWrite"]
             self.assertIn(
                 str(worktree),
@@ -320,23 +353,7 @@ class TestDispatchTaskSandboxSettings(unittest.IsolatedAsyncioTestCase):
             worktree = Path(tmp) / "feature-worktree"
             worktree.mkdir()
 
-            captured: dict = {}
-
-            async def mock_query(**kwargs):
-                captured["options"] = kwargs.get("options")
-                result_msg = ResultMessage(
-                    subtype="success",
-                    duration_ms=100,
-                    duration_api_ms=80,
-                    is_error=False,
-                    num_turns=1,
-                    session_id="sess-tmpdir-absent",
-                    total_cost_usd=0.0,
-                )
-                async for m in _async_gen(result_msg):
-                    yield m
-
-            with patch.object(_dispatch_module, "query", mock_query):
+            with _patched_claude([result_frame(total_cost_usd=0.0)]) as capture:
                 await _dispatch_module.dispatch_task(
                     feature="tmpdir-absent-test",
                     task="do something",
@@ -346,8 +363,7 @@ class TestDispatchTaskSandboxSettings(unittest.IsolatedAsyncioTestCase):
                     skill="implement",
                 )
 
-            options = captured.get("options")
-            settings = json.loads(Path(options.settings).read_text(encoding="utf-8"))
+            settings = _settings_from_capture(capture)
             allowlist = settings["sandbox"]["filesystem"]["allowWrite"]
             self.assertNotIn("/tmp/claude", allowlist)
             self.assertNotIn("/private/tmp/claude", allowlist)
@@ -357,23 +373,7 @@ class TestDispatchTaskSandboxSettings(unittest.IsolatedAsyncioTestCase):
             worktree = Path(tmp) / "feature-worktree"
             worktree.mkdir()
 
-            captured: dict = {}
-
-            async def mock_query(**kwargs):
-                captured["options"] = kwargs.get("options")
-                result_msg = ResultMessage(
-                    subtype="success",
-                    duration_ms=100,
-                    duration_api_ms=80,
-                    is_error=False,
-                    num_turns=1,
-                    session_id="sess-only-worktree",
-                    total_cost_usd=0.0,
-                )
-                async for m in _async_gen(result_msg):
-                    yield m
-
-            with patch.object(_dispatch_module, "query", mock_query):
+            with _patched_claude([result_frame(total_cost_usd=0.0)]) as capture:
                 await _dispatch_module.dispatch_task(
                     feature="only-worktree-test",
                     task="do something",
@@ -383,8 +383,7 @@ class TestDispatchTaskSandboxSettings(unittest.IsolatedAsyncioTestCase):
                     skill="implement",
                 )
 
-            options = captured.get("options")
-            settings = json.loads(Path(options.settings).read_text(encoding="utf-8"))
+            settings = _settings_from_capture(capture)
             allowlist = settings["sandbox"]["filesystem"]["allowWrite"]
             worktree_str = str(worktree)
             worktree_real = os.path.realpath(worktree_str)
@@ -402,23 +401,7 @@ class TestDispatchTaskSandboxSettings(unittest.IsolatedAsyncioTestCase):
             worktree.mkdir()
             integration_base = Path("/some/integration/path")
 
-            captured: dict = {}
-
-            async def mock_query(**kwargs):
-                captured["options"] = kwargs.get("options")
-                result_msg = ResultMessage(
-                    subtype="success",
-                    duration_ms=100,
-                    duration_api_ms=80,
-                    is_error=False,
-                    num_turns=1,
-                    session_id="sess-integration-base",
-                    total_cost_usd=0.0,
-                )
-                async for m in _async_gen(result_msg):
-                    yield m
-
-            with patch.object(_dispatch_module, "query", mock_query):
+            with _patched_claude([result_frame(total_cost_usd=0.0)]) as capture:
                 await _dispatch_module.dispatch_task(
                     feature="integration-base-test",
                     task="do something",
@@ -429,8 +412,7 @@ class TestDispatchTaskSandboxSettings(unittest.IsolatedAsyncioTestCase):
                     skill="implement",
                 )
 
-            options = captured.get("options")
-            settings = json.loads(Path(options.settings).read_text(encoding="utf-8"))
+            settings = _settings_from_capture(capture)
             allowlist = settings["sandbox"]["filesystem"]["allowWrite"]
             integration_str = str(integration_base)
             integration_real = os.path.realpath(integration_str)
@@ -446,23 +428,7 @@ class TestDispatchTaskSandboxSettings(unittest.IsolatedAsyncioTestCase):
             worktree.mkdir()
             integration_base = Path("/tmp/claude/overnight-worktrees/abc")
 
-            captured: dict = {}
-
-            async def mock_query(**kwargs):
-                captured["options"] = kwargs.get("options")
-                result_msg = ResultMessage(
-                    subtype="success",
-                    duration_ms=100,
-                    duration_api_ms=80,
-                    is_error=False,
-                    num_turns=1,
-                    session_id="sess-tmpdir-integration",
-                    total_cost_usd=0.0,
-                )
-                async for m in _async_gen(result_msg):
-                    yield m
-
-            with patch.object(_dispatch_module, "query", mock_query):
+            with _patched_claude([result_frame(total_cost_usd=0.0)]) as capture:
                 await _dispatch_module.dispatch_task(
                     feature="tmpdir-integration-test",
                     task="do something",
@@ -473,8 +439,7 @@ class TestDispatchTaskSandboxSettings(unittest.IsolatedAsyncioTestCase):
                     skill="implement",
                 )
 
-            options = captured.get("options")
-            settings = json.loads(Path(options.settings).read_text(encoding="utf-8"))
+            settings = _settings_from_capture(capture)
             allowlist = settings["sandbox"]["filesystem"]["allowWrite"]
             # The specific integration path must be present (it was explicitly added)
             integration_str = str(integration_base)
@@ -508,33 +473,25 @@ class TestDispatchTaskSandboxSettings(unittest.IsolatedAsyncioTestCase):
 
 
 # ---------------------------------------------------------------------------
-# Tests: dispatch_task budget exhaustion (ResultMessage.is_error=True)
+# Tests: dispatch_task budget exhaustion (result frame subtype=error_max_budget_usd)
 # ---------------------------------------------------------------------------
 
 class TestDispatchTaskBudgetExhausted(unittest.IsolatedAsyncioTestCase):
-    """Tests that dispatch_task correctly detects ResultMessage.is_error=True."""
+    """Tests that dispatch_task detects a budget-exhausted result frame."""
 
     async def test_budget_exhausted_returns_failure(self):
         """dispatch_task returns DispatchResult(success=False, error_type=budget_exhausted)
-        when ResultMessage.is_error is True."""
+        when the result frame reports ``subtype="error_max_budget_usd"``.
+
+        Spec R1: the SDK's ``ResultMessage`` type is gone with the SDK, so the
+        detail reports the result frame's ``is_error`` and ``subtype`` fields.
+        """
         with tempfile.TemporaryDirectory() as tmp:
             worktree = Path(tmp) / "feature-worktree"
             worktree.mkdir()
 
-            async def mock_query(**kwargs):
-                result_msg = ResultMessage(
-                    subtype="error_max_budget_usd",
-                    duration_ms=100,
-                    duration_api_ms=80,
-                    is_error=True,
-                    num_turns=1,
-                    session_id="sess-budget-exhausted",
-                    total_cost_usd=0.5,
-                )
-                async for m in _async_gen(result_msg):
-                    yield m
-
-            with patch.object(_dispatch_module, "query", mock_query):
+            frames = [result_frame(is_error=True, subtype="error_max_budget_usd", total_cost_usd=0.5)]
+            with _patched_claude(frames, exit_code=1):
                 result = await _dispatch_module.dispatch_task(
                     feature="budget-test",
                     task="do something",
@@ -546,32 +503,19 @@ class TestDispatchTaskBudgetExhausted(unittest.IsolatedAsyncioTestCase):
 
             self.assertFalse(result.success)
             self.assertEqual(result.error_type, "budget_exhausted")
-            self.assertIn("ResultMessage.is_error=True", result.error_detail)
+            self.assertIn("is_error=True", result.error_detail)
             self.assertIn("error_max_budget_usd", result.error_detail)
             self.assertIn("[budget_exhausted: subtype=error_max_budget_usd]", result.output)
             self.assertEqual(result.cost_usd, 0.5)
 
     async def test_no_budget_exhausted_on_success_result(self):
-        """dispatch_task returns DispatchResult(success=True) when ResultMessage.is_error
-        is False — no regression for the normal path."""
+        """dispatch_task returns DispatchResult(success=True) when the result frame's
+        is_error is False — no regression for the normal path."""
         with tempfile.TemporaryDirectory() as tmp:
             worktree = Path(tmp) / "feature-worktree"
             worktree.mkdir()
 
-            async def mock_query(**kwargs):
-                result_msg = ResultMessage(
-                    subtype="success",
-                    duration_ms=100,
-                    duration_api_ms=80,
-                    is_error=False,
-                    num_turns=1,
-                    session_id="sess-budget-ok",
-                    total_cost_usd=0.1,
-                )
-                async for m in _async_gen(result_msg):
-                    yield m
-
-            with patch.object(_dispatch_module, "query", mock_query):
+            with _patched_claude([result_frame(total_cost_usd=0.1)]):
                 result = await _dispatch_module.dispatch_task(
                     feature="budget-ok-test",
                     task="do something",
@@ -591,20 +535,8 @@ class TestDispatchTaskBudgetExhausted(unittest.IsolatedAsyncioTestCase):
             worktree.mkdir()
             log_file = Path(tmp) / "events.jsonl"
 
-            async def mock_query(**kwargs):
-                result_msg = ResultMessage(
-                    subtype="error_max_budget_usd",
-                    duration_ms=100,
-                    duration_api_ms=80,
-                    is_error=True,
-                    num_turns=1,
-                    session_id="sess-budget-log",
-                    total_cost_usd=0.5,
-                )
-                async for m in _async_gen(result_msg):
-                    yield m
-
-            with patch.object(_dispatch_module, "query", mock_query):
+            frames = [result_frame(is_error=True, subtype="error_max_budget_usd", total_cost_usd=0.5)]
+            with _patched_claude(frames, exit_code=1):
                 await _dispatch_module.dispatch_task(
                     feature="budget-log-test",
                     task="do something",
@@ -629,26 +561,18 @@ class TestDispatchTaskBudgetExhausted(unittest.IsolatedAsyncioTestCase):
 
 class TestDispatchTaskDiagnostics(unittest.IsolatedAsyncioTestCase):
     """DispatchResult.diagnostics carries captured stderr/exit_code/cwd on the
-    exception error paths, and is None on the success path."""
+    failure paths, and is None on the success path."""
 
     async def test_diagnostics_populated_on_process_error(self):
-        """A ProcessError dispatch carries the captured stderr, exit_code, and
+        """A non-zero-exit dispatch carries the captured stderr, exit_code, and
         cwd in DispatchResult.diagnostics."""
         with tempfile.TemporaryDirectory() as tmp:
             worktree = Path(tmp) / "feature-worktree"
             worktree.mkdir()
 
-            async def mock_query(**kwargs):
-                options = kwargs.get("options")
-                # Drive a known stderr line through the real _on_stderr capture.
-                if options is not None and options.stderr is not None:
-                    options.stderr("child process failed: boom")
-                exc = ProcessError("child exited non-zero")
-                exc.exit_code = 42
-                raise exc
-                yield  # pragma: no cover — makes this an async generator
-
-            with patch.object(_dispatch_module, "query", mock_query):
+            # Drive a known stderr line through the real _on_stderr capture,
+            # then exit non-zero with no result frame.
+            with _patched_claude([], exit_code=42, stderr_lines=["child process failed: boom"]):
                 result = await _dispatch_module.dispatch_task(
                     feature="diagnostics-test",
                     task="do something",
@@ -670,20 +594,7 @@ class TestDispatchTaskDiagnostics(unittest.IsolatedAsyncioTestCase):
             worktree = Path(tmp) / "feature-worktree"
             worktree.mkdir()
 
-            async def mock_query(**kwargs):
-                result_msg = ResultMessage(
-                    subtype="success",
-                    duration_ms=100,
-                    duration_api_ms=80,
-                    is_error=False,
-                    num_turns=1,
-                    session_id="sess-diagnostics-ok",
-                    total_cost_usd=0.1,
-                )
-                async for m in _async_gen(result_msg):
-                    yield m
-
-            with patch.object(_dispatch_module, "query", mock_query):
+            with _patched_claude([result_frame(total_cost_usd=0.1)]):
                 result = await _dispatch_module.dispatch_task(
                     feature="diagnostics-ok-test",
                     task="do something",
@@ -711,27 +622,11 @@ class TestDispatchTaskStderrRedaction(unittest.IsolatedAsyncioTestCase):
             worktree = Path(tmp) / "feature-worktree"
             worktree.mkdir()
 
-            captured: dict = {}
-
-            async def mock_query(**kwargs):
-                options = kwargs.get("options")
-                captured["options"] = options
-                # Emit a synthetic stderr line containing a sk-ant-* token.
-                if options is not None and options.stderr is not None:
-                    options.stderr("error: leaked key sk-ant-abc123def trailing text")
-                result_msg = ResultMessage(
-                    subtype="success",
-                    duration_ms=100,
-                    duration_api_ms=80,
-                    is_error=False,
-                    num_turns=1,
-                    session_id="sess-stderr-redact",
-                    total_cost_usd=0.0,
-                )
-                async for m in _async_gen(result_msg):
-                    yield m
-
-            with patch.object(_dispatch_module, "query", mock_query):
+            # Emit a synthetic stderr line containing a sk-ant-* token.
+            with _patched_claude(
+                [result_frame(total_cost_usd=0.0)],
+                stderr_lines=["error: leaked key sk-ant-abc123def trailing text"],
+            ) as capture:
                 await _dispatch_module.dispatch_task(
                     feature="stderr-redact-test",
                     task="do something",
@@ -742,12 +637,7 @@ class TestDispatchTaskStderrRedaction(unittest.IsolatedAsyncioTestCase):
                 )
 
             # _stderr_lines is a closure cell on the _on_stderr callback.
-            on_stderr = captured["options"].stderr
-            stderr_lines = None
-            for name, cell in zip(on_stderr.__code__.co_freevars, on_stderr.__closure__ or ()):
-                if name == "_stderr_lines":
-                    stderr_lines = cell.cell_contents
-                    break
+            stderr_lines = _stored_stderr_lines(capture)
 
             self.assertIsNotNone(stderr_lines, "_stderr_lines closure cell not found")
             self.assertEqual(len(stderr_lines), 1)
@@ -765,32 +655,13 @@ def _capture_stderr_via_dispatch(emitted_line: str) -> str:
     """Drive `emitted_line` through dispatch_task's real `_on_stderr` capture
     path and return the single stored (post-redaction) stderr line."""
 
-    import asyncio
-
-    captured: dict = {}
-
-    async def mock_query(**kwargs):
-        options = kwargs.get("options")
-        captured["options"] = options
-        if options is not None and options.stderr is not None:
-            options.stderr(emitted_line)
-        result_msg = ResultMessage(
-            subtype="success",
-            duration_ms=100,
-            duration_api_ms=80,
-            is_error=False,
-            num_turns=1,
-            session_id="sess-redact",
-            total_cost_usd=0.0,
-        )
-        async for m in _async_gen(result_msg):
-            yield m
-
     async def _run() -> str:
         with tempfile.TemporaryDirectory() as tmp:
             worktree = Path(tmp) / "feature-worktree"
             worktree.mkdir()
-            with patch.object(_dispatch_module, "query", mock_query):
+            with _patched_claude(
+                [result_frame(total_cost_usd=0.0)], stderr_lines=[emitted_line],
+            ) as capture:
                 await _dispatch_module.dispatch_task(
                     feature="redact-test",
                     task="do something",
@@ -799,14 +670,10 @@ def _capture_stderr_via_dispatch(emitted_line: str) -> str:
                     system_prompt="",
                     skill="implement",
                 )
-        on_stderr = captured["options"].stderr
-        for name, cell in zip(
-            on_stderr.__code__.co_freevars, on_stderr.__closure__ or ()
-        ):
-            if name == "_stderr_lines":
-                lines = cell.cell_contents
-                return lines[-1] if lines else ""
-        raise AssertionError("_stderr_lines closure cell not found")
+        lines = _stored_stderr_lines(capture)
+        if lines is None:
+            raise AssertionError("_stderr_lines closure cell not found")
+        return lines[-1] if lines else ""
 
     return asyncio.run(_run())
 
@@ -1265,9 +1132,8 @@ _EFFORT_REJECT_STDERR = (
 def test_classify_effort_rejection_returns_effort_unsupported():
     """A captured `--effort ... is invalid` stderr classifies distinctly so the
     retry loop clamps rather than blind-retrying the permanently-invalid flag."""
-    err = _process_error("Command failed with exit code 1")
     assert (
-        _dispatch_module.classify_error(err, output=_EFFORT_REJECT_STDERR)
+        _classify(_EFFORT_REJECT_STDERR, output="Command failed with exit code 1")
         == "effort_unsupported"
     )
 
@@ -1277,10 +1143,9 @@ def test_effort_unsupported_recovery_is_clamp_effort():
 
 
 def test_non_effort_process_error_still_task_failure():
-    """A ProcessError without the effort-rejection text is unchanged."""
-    err = _process_error("Command failed with exit code 1")
+    """A non-zero exit without the effort-rejection text is unchanged."""
     assert (
-        _dispatch_module.classify_error(err, output="some other failure")
+        _classify("some other failure", output="Command failed with exit code 1")
         == "task_failure"
     )
 
@@ -1296,30 +1161,19 @@ class TestEffortWarnIgnore(unittest.IsolatedAsyncioTestCase):
     async def test_warn_ignore_recorded_and_success_preserved(self):
         import json as _json
 
-        ResultMessage = _sdk.ResultMessage
         warn = (
             "Warning: Unknown --effort value 'xhigh' — ignoring it and using "
             "the default effort. Valid values: low, medium, high, xhigh, max."
         )
-        result_msg = ResultMessage(
-            subtype="success",
-            duration_ms=1,
-            duration_api_ms=1,
-            is_error=False,
-            num_turns=1,
-            session_id="s",
-            total_cost_usd=0.01,
-        )
-
-        async def mock_query(**kwargs):
-            # Drive the stderr callback so _stderr_lines is populated, then
-            # yield a successful result.
-            kwargs["options"].stderr(warn)
-            yield result_msg
 
         with tempfile.TemporaryDirectory() as tmp:
             log_path = Path(tmp) / "events.log"
-            with patch.object(_dispatch_module, "query", mock_query):
+            # Drive the stderr callback so _stderr_lines is populated, then
+            # yield a successful result.
+            with _patched_claude(
+                [result_frame(duration_ms=1, total_cost_usd=0.01)],
+                stderr_lines=[warn],
+            ):
                 result = await _dispatch_module.dispatch_task(
                     feature="feat",
                     task="t",
