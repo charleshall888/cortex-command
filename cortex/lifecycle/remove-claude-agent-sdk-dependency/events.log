@@ -3,3 +3,5 @@
 {"ts": "2026-09-16T18:59:52Z", "event": "complexity_override", "feature": "remove-claude-agent-sdk-dependency", "from": "simple", "to": "complex", "reason": "other: replaces a vendored protocol client with a hand-rolled parser; error taxonomy, stream framing, and test doubles all need design", "gate": "clarify_reconcile", "from_seeded": true}
 {"ts": "2026-09-16T18:59:52Z", "event": "criticality_override", "feature": "remove-claude-agent-sdk-dependency", "from": "medium", "to": "high", "reason": "exposure: every overnight/pipeline dispatch and the per-spawn sandbox settings path run through it", "gate": "clarify_reconcile", "from_seeded": true}
 {"ts": "2026-09-16T19:22:31Z", "event": "spec_approved", "feature": "remove-claude-agent-sdk-dependency", "decision": "approved"}
+{"ts": "2026-09-16T19:56:52Z", "event": "plan_approved", "feature": "remove-claude-agent-sdk-dependency", "dispatch_choice": "trunk"}
+{"ts": "2026-09-16T19:56:52Z", "event": "phase_transition", "feature": "remove-claude-agent-sdk-dependency", "from": "plan", "to": "implement"}
