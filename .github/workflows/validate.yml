@@ -93,9 +93,10 @@ jobs:
           # discriminating — the route test must exercise the real
           # TemplateResponse render path on a >=1.0 resolve, where the
           # pre-rewrite name-first form 500s.
-          # Dashboard deps now live in the [dashboard] extra; install it so the
-          # web stack (fastapi/starlette/uvicorn/jinja2/markdown) resolves.
-          pip install ".[dashboard]" httpx packaging
+          # This step proves the base install carries the web stack
+          # (fastapi/starlette/uvicorn/jinja2/markdown) with no extras — the
+          # structural anti-revert guard named at cortex/requirements/project.md:54.
+          pip install . httpx packaging
           # Assert the freshly-resolved Starlette is >=1.0. The <2.0 cap
           # permits but does not require >=1.0, so fail loudly if the
           # resolve ever lands <1.0 (a non-discriminating run).
