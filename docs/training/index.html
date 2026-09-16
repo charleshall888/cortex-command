@@ -5,12 +5,35 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <meta name="robots" content="noindex" />
 <title>Context Is the Game</title>
-<link rel="icon" href="data:," />
-<link rel="stylesheet" href="lib/deck.css?v=65" />
-<!-- a map jump reloads the page: paint night before the stylesheet does, and
-     mark the arrival so the chosen scene rises out of the water -->
+<meta name="description" content="Working well with coding agents: keep your context window lean, spawn more agents, keep your workspace clean. A step-through workshop deck." />
+<meta name="theme-color" content="#0c0f16" />
+<link rel="icon" type="image/svg+xml" href="favicon.svg" />
+<!-- link previews (Slack, iMessage, Teams, LinkedIn…): these need absolute URLs.
+     noindex above keeps search out; it does not stop a pasted link from unfurling -->
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="Cortex Command" />
+<meta property="og:title" content="Context Is the Game" />
+<meta property="og:description" content="Working well with coding agents: keep your context window lean, spawn more agents, keep your workspace clean." />
+<meta property="og:url" content="https://charleshall888.github.io/cortex-command/training/" />
+<meta property="og:image" content="https://charleshall888.github.io/cortex-command/training/og-image.png" />
+<meta property="og:image:type" content="image/png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="Context Is the Game: working well with coding agents. A fishing rod over night water above the three habits: keep your context window lean, spawn more agents, keep your workspace clean." />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Context Is the Game" />
+<meta name="twitter:description" content="Working well with coding agents: keep your context window lean, spawn more agents, keep your workspace clean." />
+<meta name="twitter:image" content="https://charleshall888.github.io/cortex-command/training/og-image.png" />
+<meta name="twitter:image:alt" content="Context Is the Game: working well with coding agents." />
+<link rel="stylesheet" href="lib/deck.css?v=67" />
+<!-- a map jump or a step back reloads the page: paint night before the
+     stylesheet does, mark a map jump so the chosen scene rises out of the
+     water, and hide a mid-scene landing while its beats replay (lib/warp.js) -->
 <style>html, body { background: #0c0f16; }</style>
-<script>try { if (JSON.parse(sessionStorage.getItem("nightline-map") || "{}").jump) document.documentElement.classList.add("jump-in"); } catch (e) {}</script>
+<script>
+if (/^#\d+\.[1-9]/.test(location.hash)) document.documentElement.classList.add("ff");
+try { if (JSON.parse(sessionStorage.getItem("nightline-map") || "{}").jump) document.documentElement.classList.add("jump-in"); } catch (e) {}
+</script>
 </head>
 <body>
 <div id="sky" aria-hidden="true">
@@ -635,7 +658,11 @@
           <span class="mono log-note">rare · small · kept</span>
         </div>
       </div>
-      <p class="mono linkline" data-beat="2">charleshall888.github.io/cortex-command</p>
+      <a class="take-home" data-beat="2" href="https://charleshall888.github.io/cortex-command/" target="_blank" rel="noopener">
+        <span class="serif th-name">Cortex Command</span>
+        <span class="mono th-what">these three habits, built into Claude Code</span>
+        <span class="mono th-url">charleshall888.github.io/cortex-command&nbsp;↗</span>
+      </a>
       <p class="closer serif" data-beat="3">Send your agents home before Friday afternoon.</p>
     </div>
   </section>
@@ -646,11 +673,12 @@
 <div id="map" aria-hidden="true"></div>
 <div id="blank"></div>
 
+<script src="lib/warp.js?v=3"></script>
 <script src="lib/contextbar.js?v=11"></script>
 <script src="lib/vessel.js?v=11"></script>
 <script src="lib/terminal.js?v=10"></script>
 <script src="lib/filmstrip.js?v=11"></script>
-<script src="lib/map.js?v=8"></script>
-<script src="lib/deck.js?v=52"></script>
+<script src="lib/map.js?v=9"></script>
+<script src="lib/deck.js?v=54"></script>
 </body>
 </html>

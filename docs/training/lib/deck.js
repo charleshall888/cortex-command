@@ -1,6 +1,7 @@
 /* Deck engine: keyboard-driven present mode.
    → / space  advance one beat (then next scene)
-   ←          previous scene
+   ←          back one beat (from a scene's first beat: the previous
+              scene's last) — lands on a fresh page, see warp.js
    b          blank screen (for valves and Q&A)
    m          the map — every section at a glance; m again resumes
    Home/End   first / last scene */
@@ -739,6 +740,12 @@
   /* one intent line flies from a source chip to a target — the visual verb
      for "the page carries the lesson forward" */
   function flyIntent(fromEl, toEl, onLand) {
+    /* a late timer from a scene already left: its pieces are hidden, and a
+       hidden element measures at 0,0 — the ghost would fly in the corner */
+    if (!fromEl.getClientRects().length || !toEl.getClientRects().length) {
+      if (onLand) onLand();
+      return;
+    }
     const from = fromEl.getBoundingClientRect();
     const to = toEl.getBoundingClientRect();
     const ghost = fromEl.cloneNode(true);
@@ -1239,15 +1246,32 @@
       fireHook(sec);
       updateHud();
       broadcastState();
-    } else {
+    } else if (idx < sections.length - 1) {
       show(idx + 1);
-    }
+    } // the last beat of the last scene is the end: nothing to restart
+  }
+
+  /* back undoes one beat. It can't be done in place — a beat's async chain
+     can't be cancelled, so its late steps would land on the beat before — so
+     the deck sinks and comes back on a fresh page at the beat before. Presses
+     during the sink stack up: three quick presses go back three beats. */
+  let stepTo = null;
+  function back() {
+    const from = stepTo || { i: idx, b: beat };
+    const to = from.b > 0 ? { i: from.i, b: from.b - 1 } : from.i > 0 ? { i: from.i - 1, b: maxBeats(sections[from.i - 1]) } : null;
+    if (!to) return;
+    const first = !stepTo;
+    stepTo = to;
+    if (!first) return;
+    document.body.classList.add("stepping");
+    setTimeout(() => map.reloadAt(stepTo.i, stepTo.b), REDUCED ? 0 : 160);
   }
 
   function handleKey(key) {
+    if (stepTo && key !== "ArrowLeft" && key !== "PageUp") return;
     if (map.handleKey(key)) return;
     if (key === "ArrowRight" || key === " " || key === "PageDown") advance();
-    else if (key === "ArrowLeft" || key === "PageUp") show(idx - 1);
+    else if (key === "ArrowLeft" || key === "PageUp") back();
     else if (key === "Home") show(0);
     else if (key === "End") show(sections.length - 1);
     else if (key === "b" || key === "B") blank.classList.toggle("on");
@@ -1287,6 +1311,7 @@
     }
     if (!tapping) return;
     tapping = false;
+    if (e.target.closest && e.target.closest("a")) return; // a link is a link, not a page turn
     if (map.open) return; // the map owns its own taps
     if (Math.abs(e.clientX - tapX) > TAP_SLOP || Math.abs(e.clientY - tapY) > TAP_SLOP) return;
     handleKey(e.clientX < window.innerWidth * 0.25 ? "ArrowLeft" : "ArrowRight");
@@ -1329,9 +1354,16 @@
   map.arrive();
   const m = (location.hash || "").match(/^#(\d+)(?:\.(\d+))?$/);
   if (m) {
-    show(parseInt(m[1], 10) - 1);
     const targetBeat = parseInt(m[2] || "0", 10);
+    const root = document.documentElement;
+    if (root.classList.contains("ff")) warp.start();
+    show(parseInt(m[1], 10) - 1);
     for (let i = 0; i < targetBeat; i++) advance();
+    if (root.classList.contains("ff"))
+      warp.settle(chains).then(() => {
+        root.classList.remove("ff");
+        if (root.classList.contains("jump-in")) replay(root, "jump-in"); // rise once there is something to see
+      });
   } else {
     show(0);
   }

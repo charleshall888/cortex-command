@@ -1666,7 +1666,17 @@ path.ps-miss { stroke: var(--zone-red); }
   -webkit-text-fill-color: transparent;
   animation: glint-sweep 2.8s cubic-bezier(0.65, 0, 0.35, 1) 1s both;
 }
-.linkline { color: var(--parch-faint); font-size: 0.78rem; letter-spacing: 0.08em; }
+.take-home {
+  display: flex; flex-wrap: wrap; align-items: baseline; justify-content: center; column-gap: 1.1em; row-gap: 0.3em;
+  padding: 0.55em 1.3em;
+  border: 1px solid rgba(232, 168, 101, 0.4); border-radius: 999px;
+  color: var(--parch-dim); text-decoration: none;
+  transition: opacity 0.6s ease, transform 0.6s ease, border-color 0.3s ease, background-color 0.3s ease;
+}
+.take-home:hover, .take-home:focus-visible { border-color: var(--ochre); background-color: rgba(232, 168, 101, 0.08); outline: none; }
+.th-name { color: var(--parchment); font-size: clamp(1rem, 1.6vw, 1.25rem); font-weight: 520; }
+.th-what { font-size: clamp(0.78rem, 1vw, 0.9rem); letter-spacing: 0.04em; }
+.th-url { color: var(--ochre); font-size: clamp(0.78rem, 1vw, 0.9rem); letter-spacing: 0.04em; }
 
 /* ---------- proverb cards ---------- */
 
@@ -1713,6 +1723,11 @@ body:not(.map-open) #deck { transition-duration: 0.36s, 0.46s; }
 /* arrival after a jump: the chosen scene rises out of the water */
 html.jump-in #deck { animation: map-rise 0.8s cubic-bezier(0.16, 1, 0.3, 1); }
 @keyframes map-rise { from { opacity: 0; transform: translateY(7vh); } }
+
+/* a step back: the slide sinks, the page reloads at the beat before, and
+   the replay runs out of sight (lib/warp.js) until the deck surfaces */
+body.stepping #deck { opacity: 0; transition-duration: 0.16s; }
+html.ff #deck { opacity: 0 !important; transition: none; }
 
 #map {
   position: fixed;

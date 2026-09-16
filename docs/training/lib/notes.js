@@ -179,7 +179,7 @@ const NOTES = {
     beats: [
       "(dawn; dock complete) only if the beat needs filling: “fish were biting again by sunset — the only reason there's anything to see.”",
       "(log card) “First page of the log: the Brass Minnow. Rare, small, kept.”",
-      "(recap) SILENT — let “keep your context window lean · spawn more agents · keep your workspace clean” land. Then: “that study from the start? My bet — the 19% were carrying full windows.”",
+      "(recap + the Cortex Command link) SILENT — let “keep your context window lean · spawn more agents · keep your workspace clean” land. Then: “that study from the start? My bet — the 19% were carrying full windows.” Then point at the link: “that's my Claude Code setup, built on these three habits — grab the link.”",
       "CLOSER (say it): “everyone in this room rents the same models. The habits are what you own. Send your agents home before Friday afternoon.”",
     ],
   },

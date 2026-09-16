@@ -231,17 +231,23 @@ function makeMap({ sections, getPos, maxBeats, moonAt, onChange }) {
     tiles.forEach((t, i) => t.style.setProperty("--d", Math.min(Math.abs(i - sel), 10)));
     document.body.classList.add("map-going");
     onChange();
-    const r = moon ? moon.getBoundingClientRect() : null;
-    persist({ jump: true, moon: moon ? { left: moonAt(sel).left, top: moonAt(sel).top } : null, from: r ? { x: r.left, y: r.top } : null });
-    setTimeout(() => {
-      history.replaceState(null, "", `#${sel + 1}.${selBeat}`);
-      location.reload();
-    }, REDUCED ? 0 : 900);
+    reloadAt(sel, selBeat, { jump: true, wait: REDUCED ? 0 : 900 });
   }
 
-  /* on arrival after a jump: the moon starts where it was left, then glides */
+  /* leave for #N.b on a fresh page. A map jump rises out of the water on
+     arrival (the head script reads `jump`); a step back just surfaces. */
+  function reloadAt(i, b, { jump = false, wait = 0 } = {}) {
+    const r = moon ? moon.getBoundingClientRect() : null;
+    persist({ jump, step: !jump, from: r ? { x: r.left, y: r.top } : null });
+    setTimeout(() => {
+      history.replaceState(null, "", `#${i + 1}.${b}`);
+      location.reload();
+    }, wait);
+  }
+
+  /* on arrival after a jump or a step: the moon starts where it was left, then glides */
   function arrive() {
-    if (!saved.jump) return false;
+    if (!saved.jump && !saved.step) return false;
     persist();
     if (moon && saved.from) {
       moon.style.transition = "none";
@@ -279,6 +285,7 @@ function makeMap({ sections, getPos, maxBeats, moonAt, onChange }) {
     handleKey,
     noteShown,
     arrive,
+    reloadAt,
     setOpen,
     get open() {
       return open;

@@ -18,9 +18,11 @@ cd docs/training && python3 -m http.server 8000
 - `localhost:8000` — the deck (SHARE this window on a call).
 - `localhost:8000/presenter.html` — private notes view (KEEP FOCUS here; its arrow keys remote-control the deck over a BroadcastChannel, which is why `http://` is required — `file://` windows can't share a channel).
 
-Controls: **→/space** one beat · **←** previous scene · **b** blank (valves/Q&A) · **Home/End** · URL hash `#8.4` deep-links to section 8, beat 4 (rehearsal/QA).
+Controls: **→/space** one beat · **←** back one beat (from a scene's first beat, the previous scene's last) · **b** blank (valves/Q&A) · **Home/End** · URL hash `#8.4` deep-links to section 8, beat 4 (rehearsal/QA).
 
-On a touch screen, **tap** anywhere to advance a beat and tap the **left quarter** to go back. Mouse clicks are not bound on purpose — clicking the deck window to focus or share it must never skip a beat.
+On a touch screen, **tap** anywhere to advance a beat and tap the **left quarter** to go back one.
+
+Going back reloads the page at the beat before, the same way a map jump does: a beat's animations can't be stopped part-way, so undoing one in place leaves its late steps landing on the wrong beat. The replay runs about 40× fast and out of sight (`lib/warp.js`), so the slide dips and comes back on the finished beat. Deep links to a mid-scene beat land the same way. Mouse clicks are not bound on purpose — clicking the deck window to focus or share it must never skip a beat.
 
 ### The map
 
@@ -54,6 +56,10 @@ Two things to keep in mind:
   absent from `docs/sitemap.xml` and unlinked from the landing page — reachable by URL, invisible to search.
   Leave `docs/robots.txt` alone: a `Disallow` would stop crawlers reading the `noindex` that does the real
   work. Note that `presenter.html` publishes the teleprompter cues along with the deck.
+- **A pasted link unfurls.** `index.html` carries Open Graph and Twitter tags pointing at `og-image.png` (1200×630,
+  the title card with the three habits), so Slack, Teams and iMessage show a card instead of a bare URL. The tags use
+  absolute URLs, as unfurlers require. If the title or the habits change, re-shoot the image to match. Unfurlers cache
+  a card for days, so an old card can outlive the change.
 - **A push to `main` redeploys mid-talk.** If you present from the hosted copy, freeze pushes for the hour.
   Otherwise run `just training` locally and keep the hosted URL as the share-afterwards link.
 
