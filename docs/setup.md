@@ -46,12 +46,11 @@ The rest of this guide is reference material — the section titles below stay v
 <details>
 <summary>The full plugin roster, per-plugin prerequisites, and installing the <code>cortex</code> CLI directly.</summary>
 
-The five available plugins are:
+The four available plugins are:
 
 | Plugin | Description |
 |--------|-------------|
 | android-dev-extras | Android development skills vendored from Google's Android Skills (Apache 2.0): R8 analyzer, edge-to-edge migration, and Android CLI orchestration |
-| cortex-dev-extras | Devil's advocate inline challenge for solo deliberation |
 | cortex-core | Interactive Claude Code skills, hooks, and CLI utilities from cortex-command for day-to-day development workflows |
 | cortex-backlog | Interactive backlog management skill — local `cortex/backlog/` ticket files with YAML frontmatter, extracted from cortex-core so repos that track work in an external tracker can omit it |
 | cortex-overnight | Integrates the cortex MCP server and overnight skill runner hooks to drive autonomous lifecycle execution |

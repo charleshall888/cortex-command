@@ -44,7 +44,6 @@ Full setup guide: [docs/setup.md](docs/setup.md).
 | cortex-backlog | RECOMMENDED - Plain-markdown backlog tickets the cortex CLI reads and writes directly; the default backlog backend and a prerequisite for cortex-overnight. A repo can point its config at another backend (e.g. GitHub Issues), but markdown is the token-cheapest, fastest default |
 | cortex-overnight | OPTIONAL - Integrates the cortex MCP server and overnight skill runner hooks to drive autonomous lifecycle execution; requires cortex-backlog (or another configured backlog backend) |
 | android-dev-extras | Android development skills vendored from Google's Android Skills (Apache 2.0): R8 analyzer, edge-to-edge migration, and Android CLI orchestration |
-| cortex-dev-extras | Devil's advocate inline challenge for solo deliberation |
 
 ## Documentation
 

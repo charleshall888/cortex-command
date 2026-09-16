@@ -14,7 +14,7 @@ Every `plugins/*/` directory is classified as one of two kinds:
   `hooks/cortex-*.sh`, `claude/hooks/cortex-*.sh`) by `just build-plugin`.
   The assembled tree is committed; never edit it by hand.
 
-- **Hand-maintained plugins** (`android-dev-extras`, `cortex-dev-extras`)
+- **Hand-maintained plugins** (`android-dev-extras`)
   — edited in place inside `plugins/*/`; `just build-plugin` leaves them
   untouched.
 

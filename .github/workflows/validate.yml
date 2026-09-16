@@ -39,7 +39,6 @@ jobs:
         if: ${{ !cancelled() }}
         run: |
           python3 scripts/validate-callgraph.py \
-            plugins/cortex-dev-extras/skills \
             plugins/cortex-core/skills \
             plugins/cortex-overnight/skills \
             plugins/android-dev-extras/skills
