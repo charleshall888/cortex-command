@@ -23,3 +23,7 @@ Run 2026-09-16 against `claude` 2.1.273 (Claude Code), through `cortex_command.c
 - `classify_failure(1, result, None, "", 3)` → `budget_exhausted` — confirms Task 3's step 2 against the real CLI (research Open Question 3).
 
 Total cost of both runs ≈ $0.63.
+
+## Opt-in live test (spec R25)
+
+`tests/test_claude_stream_live.py` on 2026-09-16 with `claude` 2.1.273 on an authenticated machine: without `--run-slow` → `1 skipped` (`opt-in via --run-slow`); with `--run-slow` → `1 passed in 4.14s`.
