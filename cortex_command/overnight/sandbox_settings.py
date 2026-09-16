@@ -7,8 +7,8 @@ shape, manages per-spawn tempfile lifecycle, emits the Linux-platform warning,
 and records the ``CORTEX_SANDBOX_SOFT_FAIL`` event under an exclusive file lock.
 
 Both spawn sites consume this layer's outputs as JSON dicts that are written to
-per-spawn tempfiles and passed via ``--settings <tempfile>`` (orchestrator) or
-``ClaudeAgentOptions(settings=str(tempfile_path))`` (dispatch).
+per-spawn tempfiles and passed to the spawned ``claude`` as ``--settings <tempfile>``
+(the orchestrator in ``runner.py``; dispatch via ``claude_stream.build_argv``).
 
 This file establishes the public surface (constants + builder signatures) only.
 Builder bodies are implemented in subsequent tasks; signatures raise

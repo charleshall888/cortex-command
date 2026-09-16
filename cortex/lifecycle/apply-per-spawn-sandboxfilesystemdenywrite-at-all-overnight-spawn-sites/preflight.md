@@ -4,8 +4,8 @@ Empirical kernel-enforcement preflight per spec Req 12 (REVISED 2026-05-05 — k
 
 ```yaml
 pass: true
-timestamp: "2026-09-16T20:29:59Z"
-commit_hash: "840632b5deeda4f249b9e83a1d6c165cad155191"
+timestamp: "2026-09-16T20:53:51Z"
+commit_hash: "43fb88bae48c44ccca130cc15f72ead7829270cf"
 claude_version: "2.1.273 (Claude Code)"
 test_command: "claude -p --output-format stream-json --verbose --max-turns 3 --max-budget-usd 2.0 --permission-mode bypassPermissions --allowedTools Read,Write,Edit,Bash,Glob,Grep --system-prompt <test> --settings <workdir>/settings.json --effort low  (prompt on stdin: run `echo changed > <workdir>/target.txt` via Bash once)"
 exit_code: 0
@@ -31,3 +31,5 @@ The target file's SHA-256 matched before and after the run, confirming the kerne
 ## Scope of staged change
 
 Re-recorded against current HEAD and the current `claude` binary for the remove-claude-agent-sdk-dependency lifecycle (ADR-0038): cortex no longer reaches `claude` through `claude-agent-sdk`, so the per-dispatch `--settings <tempfile>` flag is now built by `cortex_command/claude_stream.py`. `SANDBOX_WATCHED_FILES` drops the dead `pyproject.toml → claude-agent-sdk` and `dispatch.py → SandboxSettings` patterns and watches `claude_stream.py` for the settings passthrough instead.
+
+Re-recorded 2026-09-16T20:53:51Z against HEAD `43fb88ba` for a docstring-only change to `cortex_command/overnight/sandbox_settings.py` (the module docstring named the removed `ClaudeAgentOptions` passthrough); same probe, same result (EPERM in the tool result, target unmodified, exit 0).
