@@ -16,14 +16,8 @@ real session id) on the schedule path.
 Two checkable halves, mirroring the spec's R11 acceptance:
 
   TestSkillFlowGating
-      (a) The skill-flow prose gates the step-5 prep-time ``session_start``
-      log to the run-now branch only — the schedule branch reaches the
-      launch without it. Asserted against ``new-session-flow.md``, the sole
-      file carrying the launch sub-steps (SKILL.md's New Session Flow
-      section is a pointer into it, not a duplicate step list, so it's
-      asserted only to confirm it doesn't reintroduce an unconditional
-      ``session_start`` call). Canonical ``skills/overnight/`` files; the
-      plugin mirror is byte-identical via ``just build-plugin``.
+      (a) No skill-flow prose logs ``session_start`` at all (absence guards
+      over ``new-session-flow.md`` and ``SKILL.md``).
 
   TestRunnerSessionStartSingle
       (b) After a (simulated) fire, the session's ``events.log`` contains
@@ -70,7 +64,13 @@ def _repo_root() -> Path:
 
 
 class TestSkillFlowGating(unittest.TestCase):
-    """The prep-time ``session_start`` log is gated to the run-now branch."""
+    """No prose path logs ``session_start``; the runner is its sole author.
+
+    The prep-time ``log_event(... session_start)`` directive was removed from
+    the run-now branch on 2026-09-16 — the runner already logs the fire-time
+    row, so the prep row was a duplicate costing one Python turn. These are
+    absence guards: they pass by keeping the directive gone.
+    """
 
     def setUp(self) -> None:
         root = _repo_root()
@@ -81,90 +81,20 @@ class TestSkillFlowGating(unittest.TestCase):
             root / "skills" / "overnight" / "SKILL.md"
         ).read_text(encoding="utf-8")
 
-    def _runnow_block(self) -> str:
-        """Return the run-now (option 1) block text from ``new-session-flow.md``."""
-        m = re.search(
-            r"\*\*Run now \(option 1\)\*\*.*?(?=\*\*Schedule for specific time)",
+    def test_flow_has_no_prep_session_start_log(self) -> None:
+        self.assertNotRegex(
             self._flow,
-            flags=re.DOTALL,
-        )
-        self.assertIsNotNone(m, "could not locate run-now block in new-session-flow.md")
-        return m.group(0)
-
-    def _schedule_block(self) -> str:
-        """Return the schedule (option 2) block from ``new-session-flow.md``."""
-        m = re.search(
-            r"\*\*Schedule for specific time \(option 2\)\*\*.*?(?=\n\d+\.\s\*\*)",
-            self._flow,
-            flags=re.DOTALL,
-        )
-        self.assertIsNotNone(m, "could not locate schedule block in new-session-flow.md")
-        return m.group(0)
-
-    def test_no_prep_session_start_log_outside_runnow_branch(self) -> None:
-        """Only the run-now branch may issue the prep-time ``session_start`` log.
-
-        Absence guard over the whole flow minus the run-now block: a
-        ``log_event(... session_start)`` directive anywhere else (an earlier
-        sub-step, the schedule branch, the post-launch report) re-creates the
-        duplicate-row bug the run-now gating exists to prevent. Located by
-        block heading, not sub-step number, so renumbering cannot break it.
-        """
-        runnow = self._runnow_block()
-        rest = self._flow.replace(runnow, "", 1)
-        self.assertNotRegex(
-            rest,
             r"log_event\([^\n]*session_start",
-            "a prep-time session_start log directive exists outside the run-now "
-            "branch; it must be gated to that branch only",
+            "new-session-flow.md must not pre-log session_start; the runner "
+            "is the sole fire-time author",
         )
 
-    def test_runnow_branch_invokes_prep_session_start_log(self) -> None:
-        """The run-now branch carries the gated prep-time ``session_start`` log."""
-        block = self._runnow_block()
-        self.assertRegex(
-            block,
-            r"log_event\(\)`?[^\n]*session_start|session_start[^\n]*log_event",
-            "run-now branch must issue the gated prep-time session_start log",
-        )
-
-    def test_schedule_branch_has_no_prep_session_start_log(self) -> None:
-        """The schedule branch reaches the launch WITHOUT pre-logging."""
-        block = self._schedule_block()
+    def test_skill_has_no_prep_session_start_log(self) -> None:
         self.assertNotRegex(
-            block,
+            self._skill,
             r"log_event\([^\n]*session_start",
-            "schedule branch must not pre-log session_start; the runner is "
-            "the sole fire-time author",
-        )
-
-    def test_skill_new_session_flow_does_not_duplicate_prep_session_start_log(
-        self,
-    ) -> None:
-        """SKILL.md's New Session Flow section must not reintroduce the bug.
-
-        The launch sub-steps (formerly duplicated in SKILL.md as 7.1-7.8)
-        now live solely in new-session-flow.md, which the section above
-        asserts is gated correctly. This guards against a regression where
-        SKILL.md's pointer text grows back into a step list carrying its own
-        unconditional ``session_start`` log call.
-        """
-        m = re.search(r"## New Session Flow.*?(?=\n## )", self._skill, flags=re.DOTALL)
-        self.assertIsNotNone(
-            m, "could not locate New Session Flow section in SKILL.md"
-        )
-        section = m.group(0)
-        self.assertNotRegex(
-            section,
-            r"log_event\([^\n]*session_start",
-            "SKILL.md must not duplicate the session_start log directive; "
-            "gating lives solely in new-session-flow.md",
-        )
-        self.assertRegex(
-            section.lower(),
-            r"run-now|run now",
-            "SKILL.md's New Session Flow pointer should still note the "
-            "run-now gating for a reader who doesn't open the reference",
+            "SKILL.md must not pre-log session_start; the runner is the sole "
+            "fire-time author",
         )
 
 

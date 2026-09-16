@@ -1,29 +1,24 @@
-"""Marker-set parity + freshness + per-kind semantic checks for kept pauses.
+"""Marker-set parity checks for kept pauses.
 
 The kept-pause taxonomy has a single durable source of truth,
 ``skills/build/references/kept-pauses-data.toml`` — one ``[[pause]]`` row per
 ``<!-- pause: <slug> <kind> -->`` marker across ``skills/lifecycle`` and
-``skills/refine``. The human-readable inventory
-``skills/build/references/kept-pauses.md`` is GENERATED from that data file by
-the ``cortex-generate-kept-pauses`` generator (``generate_md``); never hand-edit
-it. This test replaces the retired line-anchored inventory-bullet scheme
-(``LINE_TOLERANCE`` / rough ``file:line`` anchors).
+``skills/refine``. This test replaces the retired line-anchored
+inventory-bullet scheme (``LINE_TOLERANCE`` / rough ``file:line`` anchors).
 
-Three invariants:
+One invariant:
 
 (a) **Set-equality** — the set of marker slugs parsed from prose equals the set
     of ``id`` values in the data file. An orphan marker (no data row) and a data
     row with no marker both fail. Each marker's kind must also match its data row.
 
-(b) **Freshness** — regenerating the inventory in-memory from the data file (via
-    the generator's pure ``generate_md``) must byte-match the committed
-    ``kept-pauses.md``. A stale committed doc fails.
 
 The per-kind semantic proximity sub-checks that used to ride along here were
 removed on 2026-08-28: they asserted that an interaction token sat within
 ``±8`` lines of each marker, which is the prose-layout pin ``docs/policies.md``
-§ "No tests on skill prose" forbids. Set-equality and freshness are structural
-and stay.
+§ "No tests on skill prose" forbids. Set-equality is structural
+and stays. The freshness check against a committed ``kept-pauses.md`` went
+with that file on 2026-09-16 — nothing loaded it.
 """
 
 from __future__ import annotations
@@ -32,10 +27,7 @@ import re
 import tomllib
 from pathlib import Path
 
-from cortex_command.lifecycle.generate_kept_pauses import generate_md
-
 REPO_ROOT = Path(__file__).resolve().parent.parent
-KEPT_PAUSES_MD = REPO_ROOT / "skills" / "build" / "references" / "kept-pauses.md"
 KEPT_PAUSES_DATA = (
     REPO_ROOT / "skills" / "build" / "references" / "kept-pauses-data.toml"
 )
@@ -43,7 +35,7 @@ SKILL_DIRS = ("skills/build", "skills/refine")
 
 # `<!-- pause: <slug> <kind> -->` marker. Strict slug (kebab) + kind classes so
 # the literal `<!-- pause: <slug> <kind> -->` placeholder text inside
-# kept-pauses.md / kept-pauses-data.toml prose never matches.
+# kept-pauses-data.toml prose never matches.
 _MARKER_RE = re.compile(r"<!--\s*pause:\s+([a-z][a-z0-9-]*)\s+([a-z][a-z-]*[a-z])\s+-->")
 
 _KINDS = {"question", "phase-exit-wait", "config-conditional", "relayed-consent"}
@@ -57,15 +49,11 @@ _KINDS = {"question", "phase-exit-wait", "config-conditional", "relayed-consent"
 def _iter_markers() -> list[tuple[str, str, Path, int]]:
     """Return (slug, kind, path, line_num) for every prose pause marker.
 
-    Scans ``*.md`` under skills/lifecycle and skills/refine, excluding the
-    generated inventory (which echoes the marker syntax in prose).
+    Scans ``*.md`` under skills/build and skills/refine.
     """
     out: list[tuple[str, str, Path, int]] = []
-    kept_pauses_md = KEPT_PAUSES_MD.resolve()
     for skill_dir in SKILL_DIRS:
         for md_path in sorted((REPO_ROOT / skill_dir).rglob("*.md")):
-            if md_path.resolve() == kept_pauses_md:
-                continue
             text = md_path.read_text(encoding="utf-8")
             for idx, line in enumerate(text.splitlines(), start=1):
                 m = _MARKER_RE.search(line)
@@ -135,29 +123,6 @@ def test_marker_kinds_valid_and_match_data() -> None:
 
 
 # ---------------------------------------------------------------------------
-# (b) Freshness
-# ---------------------------------------------------------------------------
-
-
-def test_committed_inventory_is_fresh() -> None:
-    """The committed kept-pauses.md byte-matches a fresh regeneration."""
-    expected = generate_md(_load_data())
-    actual = KEPT_PAUSES_MD.read_text(encoding="utf-8")
-    assert actual == expected, (
-        "kept-pauses.md is stale — regenerate with "
-        "`CORTEX_COMMAND_FORCE_SOURCE=1 cortex-generate-kept-pauses --write` "
-        "(or `just kept-pauses`) and commit the result."
-    )
-
-
-# ---------------------------------------------------------------------------
-# (c) Per-kind semantic sub-checks
-# ---------------------------------------------------------------------------
-
-
-
-
-# ---------------------------------------------------------------------------
 # Negative controls — assert each check actually fails on bad input.
 # These use synthetic in-memory corpora / id sets; they never touch the tree.
 # ---------------------------------------------------------------------------
@@ -173,17 +138,4 @@ def test_negative_data_row_without_marker() -> None:
     """A data row with no marker is reported as missing."""
     orphan, missing = _parity_diff({"real-pause"}, {"real-pause", "ghost-row"})
     assert missing == {"ghost-row"} and not orphan
-
-
-def test_negative_stale_committed_doc() -> None:
-    """A hand-edited (drifted) inventory does not match a fresh regeneration."""
-    fresh = generate_md(_load_data())
-    stale = fresh.replace("`plan-approval`", "`plan-approval-TAMPERED`", 1)
-    assert stale != fresh, "sentinel replacement did not apply"
-    assert fresh != stale  # the freshness comparison would fail on this drift
-
-
-
-
-
 

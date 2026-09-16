@@ -12,7 +12,7 @@ Read only the flow you are in.
 
 ## New Session Flow (`/overnight`)
 
-Follow [new-session-flow.md](${CLAUDE_SKILL_DIR}/references/new-session-flow.md): guard, prepare, curate and approve, launch (run-now or schedule; the runner logs `session_start` at fire time).
+Follow [new-session-flow.md](${CLAUDE_SKILL_DIR}/references/new-session-flow.md): guard, prepare, curate and approve, launch (run now or schedule; the runner alone logs `session_start`, at fire time).
 
 ## Resume Flow (`/overnight resume`)
 

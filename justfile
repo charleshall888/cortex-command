@@ -197,9 +197,9 @@ training:
 backlog-index:
     cortex-generate-backlog-index
 
-# Regenerate skills/build/references/kept-pauses.md from kept-pauses-data.toml
+# Print the kept-pause inventory rendered from kept-pauses-data.toml
 kept-pauses:
-    cortex-generate-kept-pauses --write
+    cortex-generate-kept-pauses
 
 # Seed missing reference-size pins and lower stale ones — down-only; growth needs an annotated '# raised:' exception in size-pin.txt
 ratchet-refs:
@@ -627,7 +627,7 @@ dangerous:
 # --- Plugin ---
 
 BUILD_OUTPUT_PLUGINS := "cortex-core cortex-overnight cortex-backlog"
-HAND_MAINTAINED_PLUGINS := "android-dev-extras cortex-dev-extras"
+HAND_MAINTAINED_PLUGINS := "android-dev-extras"
 
 _list-build-output-plugins:
     #!/usr/bin/env bash

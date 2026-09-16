@@ -67,7 +67,7 @@ UTILITY = REPO_ROOT / "bin" / "cortex-measure-l1-surface"
 _BASELINES: dict[str, int] = {
     "backlog": 50,
     "backlog-author": 103,
-    "critical-review": 144,
+    "critical-review": 140,
     "dev": 162,
     "discovery": 154,
     "hmm": 69,
@@ -87,7 +87,7 @@ _BASELINES: dict[str, int] = {
     "refine": 149,
     "requirements": 172,
     "research": 157,
-    "total": 1961,
+    "total": 1957,
 }
 
 

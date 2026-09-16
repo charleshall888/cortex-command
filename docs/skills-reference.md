@@ -91,7 +91,7 @@ Guide the user through the morning report after an overnight session. Displays t
 ## Thinking Tools
 
 ### critical-review
-Derives challenge angles from the artifact and project context (1-2 reviewers, weighted toward 2 on high/critical criticality or novel claims), then dispatches one reviewer agent per angle in parallel for deep, unanchored criticism. A synthesis agent merges the parallel findings into a single coherent challenge. Also auto-triggers during refine for Complex + medium/high/critical features before spec approval.
+Derives challenge angles from the artifact and project context (1-2 reviewers, weighted toward 2 on high/critical criticality or novel claims), then dispatches one reviewer agent per angle in parallel for deep, unanchored criticism, and consolidates the findings itself into a single coherent challenge. Also auto-triggers during refine for Complex + medium/high/critical features before spec approval.
 
 [skills/critical-review/SKILL.md](../skills/critical-review/SKILL.md)
 
@@ -120,7 +120,6 @@ Several skills ship as optional plugins in the `cortex-command` marketplace:
 | Plugin | Skills |
 |--------|--------|
 | `cortex-backlog` | `backlog` |
-| `cortex-dev-extras` | `devils-advocate` |
 | `android-dev-extras` | `android-cli`, `edge-to-edge`, `r8-analyzer` |
 
 Install via Claude Code's plugin system (see [docs/setup.md](setup.md) for the full walkthrough):

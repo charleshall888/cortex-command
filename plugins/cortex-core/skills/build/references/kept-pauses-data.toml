@@ -2,10 +2,10 @@
 #
 # One [[pause]] row per `<!-- pause: <slug> <kind> -->` marker across
 # skills/lifecycle and skills/refine (18 markers as of Phase B, epic 371).
-# The `cortex-generate-kept-pauses` console script renders
-# skills/build/references/kept-pauses.md from this file. Task 5 flips the
-# parity test to exact marker-set equality against these `id` values, so every
-# id here MUST match a marker slug byte-for-byte — never invent, rename, or drop.
+# `cortex-generate-kept-pauses` (`just kept-pauses`) prints a rendered
+# inventory from this file; nothing else reads the rendering. The parity test
+# asserts exact marker-set equality against these `id` values, so every id
+# here MUST match a marker slug byte-for-byte — never invent, rename, or drop.
 #
 # This file is ALSO the served pause-spec registry (spec R17, epic 371 Phase C):
 # a row carrying `served_from_state` declares that the served `cortex-lifecycle-next`

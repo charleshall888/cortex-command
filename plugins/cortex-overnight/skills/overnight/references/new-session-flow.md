@@ -59,22 +59,13 @@ Approve this plan and specs?
 
 4. **Dashboard.** Not running → mention `cortex dashboard` (or `just dashboard` from a clone) is optional and can start anytime.
 
-5. **Run or schedule.** Ask `[1] Run now` / `[2] Schedule for specific time`. Both run via Bash with `dangerouslyDisableSandbox: true`, using the captured `state_path`, and return immediately.
-
-   **Run now (option 1)**: first log the prep-time `session_start` (this branch only) — `log_event()` from `cortex_command.overnight.events` with `event='session_start'`, `round=1`, `details` covering session id, feature count, and time limit, `log_path=state_dir / "overnight-events.log"`; a failure is non-fatal, report and continue. Then:
+5. **Run or schedule.** Ask `[1] Run now` / `[2] Schedule for specific time` (`HH:MM` 24-hour local, or `YYYY-MM-DDTHH:MM`). Both run via Bash with `dangerouslyDisableSandbox: true`, use the captured `state_path`, and return immediately; the runner logs `session_start` itself at fire time.
 
    ```
    cortex overnight start --state {state_path} --time-limit 21600
-   ```
-
-   `--time-limit` is seconds (`21600` = 6h; mirror any adjusted limit).
-
-   **Schedule for specific time (option 2)**: prompt for `HH:MM` (24-hour local) or `YYYY-MM-DDTHH:MM`, then:
-
-   ```
    cortex overnight schedule <target-time> --state {state_path}
    ```
 
-   Registers a one-shot LaunchAgent; the runner logs `session_start` itself at fire time.
+   `--time-limit` is seconds (`21600` = 6h; mirror any adjusted limit). Schedule registers a one-shot LaunchAgent.
 
 6. **Report.** Run now: "Overnight session launched. Inspect progress with `cortex overnight status` and `cortex overnight logs <session-id>`." Scheduled: the fire time and session id from the output. Resume anytime with `/overnight resume`.

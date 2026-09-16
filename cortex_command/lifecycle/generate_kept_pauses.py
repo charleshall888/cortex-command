@@ -1,18 +1,14 @@
 #!/usr/bin/env python3
-"""Render skills/build/references/kept-pauses.md from the declarative
-kept-pause taxonomy data file (kept-pauses-data.toml).
+"""Render the kept-pause inventory to stdout from the declarative taxonomy
+data file (skills/build/references/kept-pauses-data.toml).
 
 The TOML data file is the durable source of truth: one ``[[pause]]`` row per
 ``<!-- pause: <slug> <kind> -->`` marker across ``skills/build`` and
-``skills/refine``. This module renders a human-readable inventory from it. It is
-a source-tree tool (like the parity test it feeds), so it resolves both the data
-file and the output relative to this file's position in the repo, not to any
-user project root.
-
-Usage:
-    python3 -m cortex_command.lifecycle.generate_kept_pauses           # print to stdout
-    python3 -m cortex_command.lifecycle.generate_kept_pauses --write   # write kept-pauses.md
-    CORTEX_COMMAND_FORCE_SOURCE=1 cortex-generate-kept-pauses
+``skills/refine``. Nothing loads the rendered inventory (the committed
+``kept-pauses.md`` was deleted on 2026-09-16 — it shipped in the plugin mirror
+but no skill read it), so this is a read-only viewer: ``just kept-pauses``.
+It is a source-tree tool, so it resolves the data file relative to this file's
+position in the repo, not to any user project root.
 """
 
 from __future__ import annotations
@@ -25,9 +21,7 @@ from pathlib import Path
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _REFERENCES = _REPO_ROOT / "skills" / "build" / "references"
 _DATA_FILE = _REFERENCES / "kept-pauses-data.toml"
-_OUTPUT_FILE = _REFERENCES / "kept-pauses.md"
-
-_HEADER = "<!-- generated — do not hand-edit; re-run `cortex-generate-kept-pauses` -->"
+_HEADER = "<!-- rendered by `cortex-generate-kept-pauses`; source of truth is kept-pauses-data.toml -->"
 
 _EMDASH = "—"
 
@@ -75,16 +69,7 @@ def _load(data_file: Path = _DATA_FILE) -> list[dict]:
 
 
 def main(argv: list[str] | None = None) -> int:
-    argv = sys.argv[1:] if argv is None else argv
-    write = "--write" in argv
-    entries = _load()
-    md = generate_md(entries)
-    if write:
-        _OUTPUT_FILE.write_text(md, encoding="utf-8")
-        rel = _OUTPUT_FILE.relative_to(_REPO_ROOT)
-        print(f"Wrote {rel} ({len(entries)} pauses)", file=sys.stderr)
-    else:
-        sys.stdout.write(md)
+    sys.stdout.write(generate_md(_load()))
     return 0
 
 
