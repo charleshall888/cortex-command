@@ -1235,3 +1235,69 @@ def test_brief_word_overage(filler_words: int, expect_positive: bool) -> None:
         assert overage == 0, (
             f"Expected 0 overage for a within-ceiling brief, got {overage}."
         )
+
+
+# ---------------------------------------------------------------------------
+# Test: _run_brief_query on the claude_stream seam (frame-level double)
+# ---------------------------------------------------------------------------
+
+
+def test_run_brief_query_joins_assistant_text_on_success(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A successful run joins ``text`` blocks from ``assistant`` frames only.
+
+    Patches ``discovery.run_claude`` with the frame-level test double
+    (``cortex_command.tests._claude_double.fake_run_claude``) instead of
+    stubbing ``_run_brief_query`` wholesale, so this test exercises the real
+    seam-consuming logic added in Task 5. A non-assistant frame (a bare
+    ``result`` frame) is included to confirm it contributes no text.
+    """
+    import asyncio
+
+    from cortex_command import discovery
+    from cortex_command.tests._claude_double import assistant_frame, fake_run_claude, result_frame
+
+    monkeypatch.setattr(discovery, "resolve_claude_cli", lambda: "/usr/bin/claude")
+    monkeypatch.setattr(
+        discovery,
+        "run_claude",
+        fake_run_claude(
+            frames=[
+                assistant_frame("first part."),
+                result_frame(),
+                assistant_frame("second part."),
+            ],
+            exit_code=0,
+        ),
+    )
+
+    brief = asyncio.run(discovery._run_brief_query("some research.md content"))
+    assert brief == "first part.\nsecond part.", (
+        f"Expected assistant text blocks joined with newlines; got {brief!r}"
+    )
+
+
+def test_run_brief_query_raises_on_nonzero_exit(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A non-zero ``claude`` exit raises rather than returning a partial brief.
+
+    So a dead CLI is reported as a dispatch failure by the caller
+    (``_cmd_generate_brief``) rather than an empty/partial brief silently
+    posting (research.md Adversarial 20).
+    """
+    import asyncio
+
+    from cortex_command import discovery
+    from cortex_command.tests._claude_double import assistant_frame, fake_run_claude
+
+    monkeypatch.setattr(discovery, "resolve_claude_cli", lambda: "/usr/bin/claude")
+    monkeypatch.setattr(
+        discovery,
+        "run_claude",
+        fake_run_claude(frames=[assistant_frame("partial")], exit_code=1),
+    )
+
+    with pytest.raises(RuntimeError):
+        asyncio.run(discovery._run_brief_query("some research.md content"))

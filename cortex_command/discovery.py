@@ -582,17 +582,7 @@ def brief_word_overage(brief: str) -> int:
 # generate-brief: fresh-context sub-dispatch
 # ---------------------------------------------------------------------------
 
-try:
-    from claude_agent_sdk import (  # type: ignore[import]
-        query as _sdk_query,
-        ClaudeAgentOptions as _ClaudeAgentOptions,
-        AssistantMessage as _AssistantMessage,
-        TextBlock as _TextBlock,
-    )
-    _BRIEF_SDK_AVAILABLE = True
-except ImportError:
-    _BRIEF_SDK_AVAILABLE = False
-
+from cortex_command.claude_stream import ClaudeSpawnError, build_argv, build_env, run_claude
 from cortex_command.cli_resolver import resolve_claude_cli
 
 
@@ -618,8 +608,9 @@ async def _run_brief_query(
 ) -> str:
     """Dispatch a fresh-context sub-agent to generate a gate brief.
 
-    Uses ``claude_agent_sdk.query()`` directly — not ``dispatch_task`` — to
-    avoid the full pipeline overhead (worktrees, sandbox settings, session
+    Spawns the operator's ``claude`` CLI directly through
+    :func:`cortex_command.claude_stream.run_claude` — not ``dispatch_task`` —
+    to avoid the full pipeline overhead (worktrees, sandbox settings, session
     dirs) that is unsuitable for a single-shot brief generation.  The fresh
     context is load-bearing: it resets the attention-decay window that drove
     Phase 1 drift (per research.md §"Mechanisms that BIND prose-output
@@ -634,15 +625,19 @@ async def _run_brief_query(
             ``retry_feedback`` is the only signal carried across attempts.
 
     Returns:
-        The brief text collected from the agent's assistant messages.
+        The brief text collected from the agent's ``assistant`` frames.
 
     Raises:
-        RuntimeError: If ``claude_agent_sdk`` is not installed.
+        RuntimeError: If no ``claude`` CLI can be resolved, or the CLI
+            exits non-zero.
+        ClaudeSpawnError: If the resolved ``claude`` binary could not be
+            started.
     """
-    if not _BRIEF_SDK_AVAILABLE:
+    cli = resolve_claude_cli()
+    if cli is None:
         raise RuntimeError(
-            "claude_agent_sdk is not installed. "
-            "Install it with: pip install claude-agent-sdk"
+            "claude CLI not found; install Claude Code so `claude` is "
+            "available to cortex"
         )
 
     # Clear CLAUDECODE so the sub-agent does not hit the nested-session guard.
@@ -655,14 +650,12 @@ async def _run_brief_query(
     if _oauth_token := os.environ.get("CLAUDE_CODE_OAUTH_TOKEN"):
         _env["CLAUDE_CODE_OAUTH_TOKEN"] = _oauth_token
 
-    options = _ClaudeAgentOptions(
+    argv = build_argv(
+        cli,
         # No model pinned — the gate-brief agent runs on the CLI default.
         max_turns=3,
-        system_prompt=GATE_BRIEF_RUBRIC,
-        env=_env,
         permission_mode="bypassPermissions",
-        # Pin the best-available CLI (#313); None ≡ today's bundled-first.
-        cli_path=resolve_claude_cli(),
+        system_prompt=GATE_BRIEF_RUBRIC,
     )
 
     if retry_feedback:
@@ -674,13 +667,31 @@ async def _run_brief_query(
         prompt = research_md_content
 
     output_parts: list[str] = []
-    async for message in _sdk_query(
-        prompt=prompt, options=options
-    ):
-        if isinstance(message, _AssistantMessage):
-            for block in message.content:
-                if isinstance(block, _TextBlock):
-                    output_parts.append(block.text)
+    async with run_claude(
+        argv,
+        prompt=prompt,
+        cwd=None,
+        env=build_env(_env),
+    ) as run:
+        async for frame in run.frames():
+            if frame.get("type") != "assistant":
+                continue
+            message = frame.get("message")
+            content = message.get("content") if isinstance(message, dict) else None
+            if not isinstance(content, list):
+                continue
+            for block in content:
+                if (
+                    isinstance(block, dict)
+                    and block.get("type") == "text"
+                    and isinstance(block.get("text"), str)
+                ):
+                    output_parts.append(block["text"])
+
+    if run.exit_code != 0:
+        raise RuntimeError(
+            f"claude exited {run.exit_code} while generating the gate brief"
+        )
 
     return "\n".join(output_parts).strip()
 
@@ -771,7 +782,7 @@ def _cmd_generate_brief(args: argparse.Namespace) -> int:
     try:
         brief = asyncio.run(_run_brief_query(research_content))
     except RuntimeError as e:
-        print(f"generate-brief: SDK not available: {e}", file=sys.stderr)
+        print(f"generate-brief: claude unavailable: {e}", file=sys.stderr)
         _emit_event("validation_failed", 0)
         return 1
     except Exception as e:
@@ -801,7 +812,7 @@ def _cmd_generate_brief(args: argparse.Namespace) -> int:
                 _run_brief_query(research_content, retry_feedback=retry_feedback)
             )
         except RuntimeError as e:
-            print(f"generate-brief: retry SDK not available: {e}", file=sys.stderr)
+            print(f"generate-brief: retry claude unavailable: {e}", file=sys.stderr)
             _emit_event("validation_failed", brief_word_count, brief_text=brief)
             return 1
         except Exception as e:
