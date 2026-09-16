@@ -4,9 +4,9 @@ Empirical kernel-enforcement preflight per spec Req 12 (REVISED 2026-05-05 — k
 
 ```yaml
 pass: true
-timestamp: "2026-07-18T02:55:49Z"
-commit_hash: "7641cf716d1aafb50a3b917b9d07c82b3ea6d923"
-claude_version: "2.1.214 (Claude Code)"
+timestamp: "2026-09-16T19:02:11Z"
+commit_hash: "c41a4434e397cd8f0e526f46f08e35b265a76939"
+claude_version: "2.1.273 (Claude Code)"
 test_command: "claude -p '<kernel-sandbox preflight test prompt>' --settings <workdir>/cortex-preflight-settings.json --dangerously-skip-permissions --max-turns 3"
 exit_code: 0
 stderr_contains_eperm: true
@@ -15,18 +15,18 @@ stderr_excerpt: |
   stderr — the agentic CLI surfaces inner Bash tool failures via
   content rather than the wrapper's stderr stream). Captured content:
 
-  Result observed:
+  Raw output:
 
-  - stderr: `(eval):1: operation not permitted: /tmp/cortex-preflight.HH9PSe/cortex-preflight-target.txt`
-  - exit code: 1
-  - Signal: zsh's redirection layer reported `operation not permitted` — the classic EPERM surface from Seatbelt denying the `open(O_WRONLY|O_CREAT|O_TRUNC)` syscall on that path.
+  ```
+  (eval):1: operation not permitted: /private/tmp/cortex-preflight.WbeuiU/cortex-preflight-target.txt
+  ```
 
-  This matches the expected outcome: the path is listed in `denyWrite` within an
-  `allowWrite` parent for the sandbox, so the kernel rejected the write before the
-  shell could open the file. The denial came from the OS layer (Seatbelt), not from
-  the agent declining — confirming kernel-level enforcement is active.
+  - exit code (inner Bash): 1
+  - The file did not change, and the agent neither retried nor disabled
+    the sandbox.
 
-  Process stderr was empty (claude surfaces inner Bash failures via stdout content).
+  Process stderr carried only an unrelated stdin-timeout warning
+  ("no stdin data received in 3s, proceeding without it").
 target_path: "<workdir>/cortex-preflight-target.txt"
 target_unmodified: true
 ```
@@ -56,8 +56,10 @@ This run was conducted from inside a Claude Code session via Bash with `dangerou
 
 ## Scope of staged change
 
-This preflight is re-recorded (against current HEAD and the current `claude` binary, per the E102/E103 freshness gate) for the staged change that **moves `claude-agent-sdk` out of `pyproject.toml`'s base `dependencies` and into an optional `[overnight]` extra** (with `[dashboard]`/`[all]` siblings). This is the file+pattern the sandbox-preflight gate watches (`pyproject.toml` → `claude-agent-sdk`) because the SDK bundles the `claude` binary that sandboxed spawns invoke.
+This preflight is re-recorded (against current HEAD and the current `claude` binary, per the E102/E103 freshness gate) for the staged change that **widens the `claude-agent-sdk` pin from the exact `>=0.1.46,<0.1.47` to the range `>=0.2.153,<0.3`** in `pyproject.toml`'s `[overnight]` extra, plus the matching `uv.lock` refresh. The publisher yanked 0.1.46 to free PyPI storage and will delete it on or after 2026-09-19, and both uv and pip refuse a yanked release unless it is pinned with `==`, so every install of every cortex release currently fails. That dependency line is the file+pattern the sandbox-preflight gate watches (`pyproject.toml` → `claude-agent-sdk`), because the SDK bundles a `claude` binary that sandboxed spawns could otherwise invoke.
 
-The change does NOT alter any sandbox behavior. It does not touch `cortex_command/overnight/sandbox_settings.py`, and the `denyWrite` / `allowWrite` / `enabled` / `allowUnsandboxedCommands` / `enableWeakerNestedSandbox` / `enableWeakerNetworkIsolation` fields are unchanged. The overnight runner still receives `claude-agent-sdk` at install time — the auto-installer and documented install both request `cortex-command[all]` — so spawn-time sandbox settings, the `--settings` tempfile, and the `claude` binary used for spawns are all identical to before. The only sandbox-source file in the change beyond `pyproject.toml` is `cortex_command/pipeline/dispatch.py`, whose sole edit is the wording of the SDK-absent `RuntimeError` message (no change to `build_sandbox`, `SandboxSettings`, `write_settings_tempfile`, or `_load_project_settings`).
+The change does NOT alter any sandbox behavior. No sandbox-source file is touched: `cortex_command/overnight/sandbox_settings.py`, `cortex_command/pipeline/dispatch.py`, and `cortex_command/overnight/runner.py` are all unchanged, and the `denyWrite` / `allowWrite` / `enabled` / `failIfUnavailable` / `allowUnsandboxedCommands` / `enableWeakerNestedSandbox` / `enableWeakerNetworkIsolation` fields are identical. The per-spawn `--settings <tempfile>` mechanism is a CLI flag and is version-independent; `resolve_claude_cli()` continues to prefer the operator's system `claude` (2.1.273) over any bundled binary (ADR-0014), so the binary that applies the sandbox profile is the same before and after.
 
-The empirical re-run above confirms kernel-level `denyWrite` enforcement remains active on the current `claude` binary (`2.1.214`), so the dependency-location move introduces no sandbox regression.
+Verification run alongside this preflight: the pipeline and overnight suites pass on SDK 0.2.153 (1,061 tests), and a real `dispatch_task` drove the new SDK end to end — spawn, message parsing, `ResultMessage.stop_reason`, and error classification all intact.
+
+The empirical re-run above confirms kernel-level `denyWrite` enforcement remains active on the current `claude` binary (`2.1.273`), so the pin widen introduces no sandbox regression.

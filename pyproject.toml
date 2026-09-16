@@ -41,7 +41,9 @@ dashboard = [
 # a bare install is not dominated by a binary the runner routes around
 # (cli_resolver prefers the system `claude`).
 overnight = [
-    "claude-agent-sdk>=0.1.46,<0.1.47",
+    # A range, not an exact pin: the publisher deletes old ~100 MB releases to
+    # free storage, and the 0.1.46 exact pin broke every install when it went.
+    "claude-agent-sdk>=0.2.153,<0.3",
     # Same starlette cap governs the mcp/sse-starlette paths the SDK pulls in.
     "starlette>=0.49.1,<2.0",
 ]
