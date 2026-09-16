@@ -5234,6 +5234,175 @@
     .cli-section .dive-inner { padding: 20px 16px 24px; }
     .cli-section .dive-head h3 { font-size: 26px; }
   }
+  /* ─────────────────────────────────────────────────────────────────
+     §4.4 · /dashboard · backlog and docs (epic map + docs map, the app)
+     ───────────────────────────────────────────────────────────────── */
+  .db-section { position: relative; z-index: 2; padding: 56px 0 64px; border-top: 1px solid var(--rule-soft); margin-top: 24px; }
+  .db-section code {
+    font-family: var(--mono); font-size: 0.84em; color: var(--ink);
+    background: var(--grid-tint-strong); padding: 1px 5px; border-radius: 2px;
+  }
+  .db-head { display: grid; grid-template-columns: minmax(0, 1fr) 290px; gap: 20px 40px; align-items: end; margin: 0 0 24px; }
+  .db-marker { font-family: var(--mono); font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.18em; color: var(--ink-faint); margin: 0 0 12px; }
+  .db-marker em { font-style: normal; color: var(--ochre); }
+  .db-kicker {
+    font-family: var(--serif); font-weight: 300; font-size: clamp(28px, 3.4vw, 46px); line-height: 1.04;
+    letter-spacing: -0.028em; margin: 0 0 14px; text-wrap: balance; max-width: 24ch; color: var(--ink);
+  }
+  .db-kicker em { font-style: italic; color: var(--ochre); font-weight: 400; }
+  .db-lede { font-family: var(--serif); font-size: 18px; line-height: 1.5; color: var(--ink-2); max-width: 62ch; text-wrap: pretty; margin: 0; font-weight: 300; }
+  .db-lede em { font-style: italic; color: var(--ochre); }
+
+  /* the app */
+  .db-app { display: grid; grid-template-columns: 76px minmax(0, 1fr); gap: 4px 14px; align-items: center;
+    border: 1px solid var(--rule-soft); background: var(--parchment-2); padding: 14px; }
+  .db-app-icon { width: 76px; height: 76px; grid-row: span 2; filter: drop-shadow(0 4px 8px rgba(0,0,0,.28)); }
+  .db-app-name { margin: 0; white-space: nowrap; font-family: var(--serif); font-size: 19px; line-height: 1.15; color: var(--ink); align-self: end; }
+  .db-app-kind { margin: 0; font-family: var(--mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-faint); align-self: start; }
+  .db-app-how { grid-column: 1 / -1; margin: 8px 0 0; font-family: var(--serif); font-weight: 300; font-size: 14.5px; line-height: 1.45; color: var(--ink-2); }
+
+  /* sheet */
+  .db-sheet {
+    border: 1px solid var(--rule-soft);
+    background:
+      linear-gradient(var(--grid-tint) 1px, transparent 1px) 0 0 / 20px 20px,
+      linear-gradient(90deg, var(--grid-tint) 1px, transparent 1px) 0 0 / 20px 20px,
+      var(--parchment-2);
+  }
+
+  /* tabs (JS only; without JS both plates stack) */
+  .db-tabs { display: flex; gap: 0; border-bottom: 1px solid var(--rule-soft); padding: 0 14px; }
+  .db-tabs[hidden] { display: none; }
+  .db-tab {
+    appearance: none; background: none; border: 0; border-bottom: 2px solid transparent; margin-bottom: -1px;
+    padding: 11px 14px 9px; cursor: pointer; text-align: left; color: var(--ink-mute);
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;
+  }
+  .db-tab b { font-family: var(--serif); font-weight: 400; font-size: 16px; letter-spacing: -0.01em; text-transform: none; color: var(--ink-2); margin-left: 8px; }
+  .db-tab[aria-selected="true"] { color: var(--ochre); border-bottom-color: var(--ochre); }
+  .db-tab[aria-selected="true"] b { color: var(--ink); }
+  .db-tab:hover b { color: var(--ochre); }
+  .db-tab:focus-visible { outline: 1px dashed var(--ochre); outline-offset: -4px; }
+
+  .db-plate { padding: 14px 14px 0; }
+  .db-plate + .db-plate { border-top: 1px solid var(--rule-soft); }
+  .db-js .db-plate + .db-plate { border-top: 0; }
+  .db-plate[hidden] { display: none; }
+  .db-plate-h { font-family: var(--mono); font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-faint); margin: 0 0 10px; }
+  .db-plate-h em { font-style: normal; color: var(--ink); }
+  .db-js .db-plate-h { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+  /* the dashboard's epic header, redrawn small */
+  .db-ehead {
+    display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px;
+    border-left: 3px solid var(--blue); background: var(--parchment); padding: 7px 12px; margin: 0 0 6px;
+  }
+  .db-eid { font-family: var(--mono); font-size: 12px; color: var(--ochre); }
+  .db-etitle { font-family: var(--serif); font-size: 16px; color: var(--ink); }
+  .db-ecount { font-family: var(--mono); font-size: 11px; color: var(--ink-mute); margin-left: auto; }
+
+  .db-pan { overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; padding-bottom: 4px; }
+  .db-svg { display: block; width: 100%; height: auto; }
+  .db-pan-hint { display: none; font-family: var(--mono); font-size: 10px; color: var(--ink-faint); margin: 0 0 6px; }
+
+  /* nodes */
+  .db-n { cursor: default; outline: none; transition: opacity .2s; }
+  .db-n rect { fill: var(--parchment-3); stroke: var(--rule-soft); stroke-width: 2.2; transition: stroke .15s, fill .15s; }
+  .db-n-solid rect  { stroke: var(--blue); }
+  .db-n-dashed rect { stroke: var(--ink-50); stroke-dasharray: 8 6; }
+  .db-nhead { font-family: var(--mono); font-size: 15px; fill: var(--ochre); }
+  .db-nstate { font-family: var(--mono); font-size: 11px; letter-spacing: 0.06em; fill: var(--ink-faint); }
+  .db-ntitle { font-family: var(--ui); font-size: 16px; fill: var(--ink-2); }
+  .db-n:hover rect, .db-n.db-cur rect, .db-n:focus-visible rect { stroke: var(--ochre); fill: color-mix(in srgb, var(--blue) 12%, var(--parchment-3)); }
+  .db-n:focus-visible rect { stroke-width: 3.4; }
+
+  .db-pool { fill: none; stroke: var(--ink-50); stroke-width: 1.5; stroke-dasharray: 10 7; }
+  .db-plabel { font-family: var(--mono); font-size: 13px; letter-spacing: 0.1em; fill: var(--ink-faint); }
+
+  /* edges */
+  .db-e { fill: none; stroke-width: 2.2; transition: opacity .2s, stroke-width .2s; }
+  .db-e-live { stroke: var(--ochre); }
+  .db-e-external { stroke: var(--ink-50); stroke-dasharray: 8 6; }
+  .db-arrow { fill: var(--ochre); }
+
+  /* the page's callouts: italic, so they never read as part of the product */
+  .db-anno path { fill: none; stroke: var(--ochre-soft); stroke-width: 1.2; opacity: .7; }
+  .db-anno text { font-family: var(--serif); font-style: italic; font-weight: 300; font-size: 17px; fill: var(--ochre-soft); }
+
+  /* docs map */
+  .db-dn rect { stroke: var(--rule-soft); }
+  .db-dn-constitution rect { stroke: var(--ink-70); }
+  .db-dn-constitution .db-dhead { fill: var(--ink); }
+  .db-dn-root rect, .db-dn-area rect { stroke: var(--blue); }
+  .db-dn-root .db-dhead, .db-dn-area .db-dhead { fill: var(--blue-soft); }
+  .db-dn-adr rect { stroke: var(--ochre); }
+  .db-dn-adr .db-dhead { fill: var(--ochre); }
+  .db-dn-superseded rect { stroke: var(--ink-faint); stroke-dasharray: 8 6; fill: none; }
+  .db-dn-superseded .db-dhead { fill: var(--ink-faint); }
+  .db-dn-superseded { opacity: .62; }
+  .db-dhead { font-family: var(--mono); font-size: 13px; }
+  .db-dtitle { font-family: var(--ui); font-size: 14.5px; fill: var(--ink-2); }
+  .db-ddeg { font-family: var(--mono); font-size: 11px; letter-spacing: 0.04em; fill: var(--ink-faint); }
+  .db-dlabel { font-family: var(--mono); font-size: 12px; letter-spacing: 0.08em; fill: var(--ink-faint); }
+  .db-dlabel-column { font-size: 13px; letter-spacing: 0.12em; }
+  .db-de-parent, .db-de-maps-area, .db-de-global { stroke: var(--blue); }
+  .db-de-cites { stroke: var(--ochre); stroke-width: 1.9; }
+  .db-de-supersedes { stroke: var(--ink-faint); stroke-dasharray: 8 6; }
+  .db-darrow-blue { fill: var(--blue); }
+  .db-darrow-ochre { fill: var(--ochre); }
+  .db-darrow-faint { fill: var(--ink-faint); }
+
+  /* selection: what is one hop away stays lit, the rest recedes */
+  .db-svg.db-sel .db-n, .db-svg.db-sel .db-e { opacity: .22; }
+  .db-svg.db-sel .db-n.db-on { opacity: 1; }
+  .db-svg.db-sel .db-dn-superseded.db-on { opacity: .8; }
+  .db-svg.db-sel .db-e.db-on { opacity: 1; stroke-width: 3.4; }
+
+  /* legend */
+  .db-legend { list-style: none; margin: 6px 0 0; padding: 9px 0; display: flex; flex-wrap: wrap; gap: 8px 18px;
+    border-top: 1px dotted var(--rule-soft); font-family: var(--mono); font-size: 10px; color: var(--ink-mute); }
+  .db-legend li { display: inline-flex; align-items: center; gap: 7px; }
+  .db-legend svg { width: 28px; height: 12px; flex-shrink: 0; overflow: visible; }
+
+  /* the card: fields from the dashboard's hover card */
+  .db-board[data-board="docs"] { min-height: 114px; }
+  .db-board { margin: 0 -14px; border-top: 1px solid var(--rule-soft); background: var(--parchment); padding: 12px 18px; min-height: 104px; box-sizing: border-box; }
+  .db-idle { font-family: var(--serif); font-weight: 300; font-size: 15.5px; color: var(--ink-2); max-width: 72ch; margin: 0; line-height: 1.45; }
+  .db-only-js { display: none; }
+  .db-js .db-only-js { display: inline; }
+  .db-card { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px 28px; align-items: start; }
+  .db-card-title { margin: 0 0 6px; font-family: var(--serif); font-size: 18px; color: var(--ink); line-height: 1.3; }
+  .db-card-id { font-family: var(--mono); font-size: 13px; color: var(--ochre); margin-right: 8px; }
+  .db-chips { display: flex; flex-wrap: wrap; gap: 5px; margin: 0; padding: 0; list-style: none; }
+  .db-chips li { font-family: var(--mono); font-size: 10.5px; color: var(--ink-mute); border: 1px solid var(--rule-soft); padding: 2px 7px; }
+  .db-chips li.db-lev { color: var(--blue-soft); border-color: var(--blue-faint); }
+  .db-sum { grid-column: 1 / -1; margin: 2px 0 0; font-family: var(--serif); font-weight: 300; font-size: 15.5px; line-height: 1.45; color: var(--ink-2); max-width: 90ch; }
+  .db-rel { margin: 0; font-family: var(--mono); font-size: 11px; color: var(--ink-mute); line-height: 1.7; }
+  .db-rel span { color: var(--ink-faint); }
+  .db-rel b { font-weight: 400; color: var(--ink); }
+  .db-file { margin: 0; padding: 6px 10px; border-left: 2px solid var(--ochre-soft); background: var(--grid-tint-strong);
+    font-family: var(--mono); font-size: 11.5px; line-height: 1.6; color: var(--ink-2); }
+  .db-file span { display: block; font-size: 9.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-faint); }
+  .db-file i { font-style: normal; color: var(--ink-faint); }
+
+  @media (max-width: 899px) {
+    .db-head { grid-template-columns: minmax(0, 1fr); }
+    .db-app { max-width: 420px; }
+  }
+  @media (max-width: 719px) {
+    .db-pan-hint { display: block; }
+    .db-svg-backlog { width: 900px; max-width: none; }
+    .db-svg-docs { width: 800px; max-width: none; }
+    .db-tab { padding: 10px 10px 8px; }
+    .db-tab b { display: block; font-size: 15px; margin: 2px 0 0; }
+    .db-ecount { margin-left: 0; }
+    .db-card { grid-template-columns: minmax(0, 1fr); }
+    .db-app { grid-template-columns: 56px minmax(0, 1fr); }
+    .db-app-icon { width: 56px; height: 56px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .db-n, .db-n rect, .db-e { transition: none; }
+  }
   /* ════════════════════════════════════════════════════════════════
      Part dividers — top-level grouping of the page into four Parts.
      Styled as lightweight spec page-breaks (a hairline + ochre tab +
@@ -5746,7 +5915,7 @@
       <li data-section="part-4">
         <span class="ms-tick" aria-hidden="true"></span>
         <span class="ms-name">the toolkit</span>
-        <span class="ms-desc">the skills &middot; the CLI &middot; why we built it &middot; install</span>
+        <span class="ms-desc">the skills &middot; the CLI &middot; why we built it &middot; the dashboard &middot; install</span>
       </li>
     </ol>
     <div class="ms-progress"><span class="ms-progress-fill" id="ms-progress-fill"></span></div>
@@ -7533,7 +7702,7 @@
   })();
   </script>
 
-  <!-- ═══════════════ PART 4 · THE BENCH & THE ASK ═══════════════ -->
+  <!-- ═══════════════ PART 4 · THE TOOLKIT ═══════════════ -->
   <div class="part-divider" id="part-4" data-part="4">
     <div class="pd-frame">
       <span class="pd-coord">sheet 04 / 04</span>
@@ -7542,7 +7711,7 @@
         <span class="pd-num">Part 4</span>
         <span class="pd-title">The Toolkit</span>
       </div>
-      <p class="pd-dek">Every skill and how they connect, the deterministic CLI underneath them, and the one command that installs all of it.</p>
+      <p class="pd-dek">Every skill and how they connect, the deterministic CLI underneath them, the dashboard that draws your backlog and docs, and how to install it all.</p>
     </div>
   </div>
 
@@ -8391,9 +8560,358 @@
   })();
   </script>
 
+  <!-- ───────── §4.4 · /dashboard · backlog and docs (your backlog and your docs, drawn) ───────── -->
+  <section class="db-section" id="dashboard" aria-labelledby="db-title">
+    <div class="db-head">
+      <div>
+        <div class="db-marker">§4.4 · /dashboard · <em>backlog and docs</em></div>
+        <h2 class="db-kicker" id="db-title">Your backlog and your docs, <em>drawn as maps.</em></h2>
+        <p class="db-lede">The <em>Backlog</em> page shows which tickets are ready, which are blocked, and what blocks them. The <em>Docs</em> page shows your requirements and the decisions they cite, so you can see how your project works. It also follows overnight runs. Everything comes from the files in your repo, with no account and no database.</p>
+      </div>
+      <div class="db-app">
+        <svg class="db-app-icon" viewBox="100 100 824 824" aria-hidden="true">
+        <defs><linearGradient id="dbi-bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2a2a33"/><stop offset="1" stop-color="#111115"/></linearGradient><linearGradient id="dbi-cream" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f6f1e2"/><stop offset="1" stop-color="#cfc8b4"/></linearGradient><radialGradient id="dbi-glow"><stop offset="0" stop-color="#e8b765" stop-opacity="0.75"/><stop offset="1" stop-color="#c79545" stop-opacity="0"/></radialGradient></defs>
+        <rect x="100" y="100" width="824" height="824" rx="186" fill="url(#dbi-bg)"/>
+        <rect x="101.5" y="101.5" width="821" height="821" rx="184.5" fill="none" stroke="#fff" stroke-opacity="0.08" stroke-width="3"/>
+        <path d="M544 210 L546 192 M575 215 L579 197 M606 223 L612 206 M636 234 L643 218 M691 266 L701 252 M715 286 L728 273 M738 309 L751 296 M758 333 L772 323 M790 388 L806 381 M801 418 L818 412 M809 449 L827 445 M814 480 L832 478 M814 544 L832 546 M809 575 L827 579 M801 606 L818 612 M790 636 L806 643 M758 691 L772 701 M738 715 L751 728 M715 738 L728 751 M691 758 L701 772 M636 790 L643 806 M606 801 L612 818 M575 809 L579 827 M544 814 L546 832 M480 814 L478 832 M449 809 L445 827 M418 801 L412 818 M388 790 L381 806 M333 758 L323 772 M309 738 L296 751 M286 715 L273 728 M266 691 L252 701 M234 636 L218 643 M223 606 L206 612 M215 575 L197 579 M210 544 L192 546 M210 480 L192 478 M215 449 L197 445 M223 418 L206 412 M234 388 L218 381 M266 333 L252 323 M286 309 L273 296 M309 286 L296 273 M333 266 L323 252 M388 234 L381 218 M418 223 L412 206 M449 215 L445 197 M480 210 L478 192" stroke="#ece6d3" stroke-opacity="0.22" stroke-width="4" stroke-linecap="round"/>
+        <path d="M512 220 L512 190 M658 259 L673 233 M765 366 L791 351 M804 512 L834 512 M765 658 L791 673 M658 765 L673 791 M512 804 L512 834 M366 765 L351 791 M259 658 L233 673 M220 512 L190 512 M259 366 L233 351 M366 259 L351 233" stroke="#ece6d3" stroke-opacity="0.55" stroke-width="7" stroke-linecap="round"/>
+        <path d="M512 174A338 338 0 0 1 820.8 649.5" fill="none" stroke="#c79545" stroke-width="10" stroke-linecap="round" opacity="0.9"/>
+        <path d="M689.7 661.1A232 232 0 1 1 689.7 362.9" fill="none" stroke="url(#dbi-cream)" stroke-width="58" stroke-linecap="round"/>
+        <path d="M430 420L560 500L452 585M560 500L744 512" stroke="#9a9486" stroke-width="12" stroke-linecap="round" fill="none"/>
+        <circle cx="430" cy="420" r="24" fill="#ece6d3"/><circle cx="452" cy="585" r="24" fill="#ece6d3"/><circle cx="560" cy="500" r="24" fill="#ece6d3"/>
+        <circle cx="744" cy="512" r="95" fill="url(#dbi-glow)"/><circle cx="744" cy="512" r="38" fill="#c79545"/><circle cx="744" cy="512" r="16" fill="#15151a"/>
+        </svg>
+        <p class="db-app-name">Cortex Dashboard</p>
+        <p class="db-app-kind">Mac app</p>
+        <p class="db-app-how">Run <code>cortex dashboard</code> once and this app appears. After that, open it from Spotlight, Launchpad or the Dock.</p>
+      </div>
+    </div>
+
+    <div class="db-sheet">
+      <div class="db-tabs" hidden>
+        <button class="db-tab" type="button" id="db-tab-backlog" data-plate="db-plate-backlog">Backlog<b>epics and blockers</b></button>
+        <button class="db-tab" type="button" id="db-tab-docs" data-plate="db-plate-docs">Docs<b>requirements and decisions</b></button>
+      </div>
+
+      <!-- plate · backlog -->
+      <div class="db-plate" id="db-plate-backlog">
+        <p class="db-plate-h"><em>Backlog</em> · epics and blockers</p>
+        <div class="db-ehead">
+          <span class="db-eid">epic #40</span>
+          <span class="db-etitle">Overnight line-setting</span>
+          <span class="db-ecount">1 ready · 3 blocked</span>
+        </div>
+        <p class="db-pan-hint">drag sideways to see the whole map</p>
+        <div class="db-pan">
+<svg class="db-svg db-svg-backlog" viewBox="0 0 1340 302" role="group" aria-label="Map of epic 40, Overnight line-setting. #41 blocks #42 and #43, which both block #44. #38, from outside the epic, also blocks #43.">
+<defs><marker id="db-arw-e40" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="db-arrow" d="M 0 0 L 8 4 L 0 8 z"></path></marker></defs>
+<g class="db-anno" aria-hidden="true">
+<path d="M 26 34 V 26 H 270 V 34"></path>
+<text x="148" y="18" text-anchor="middle">not in this epic</text>
+<path d="M 348 34 V 26 H 592 V 34"></path>
+<text x="470" y="18" text-anchor="middle">first</text>
+<path d="M 670 34 V 26 H 914 V 34"></path>
+<text x="792" y="18" text-anchor="middle">second</text>
+<path d="M 992 34 V 26 H 1236 V 34"></path>
+<text x="1114" y="18" text-anchor="middle">third</text>
+</g>
+<g transform="translate(0 44)">
+<text class="db-plabel" x="26" y="48">BLOCKERS FROM OUTSIDE</text>
+<path class="db-e db-e-live" data-a="41" data-b="42" d="M 592 94 H 631 V 94 H 662" marker-end="url(#db-arw-e40)"></path>
+<path class="db-e db-e-live" data-a="41" data-b="43" d="M 592 94 H 631 V 178 H 662" marker-end="url(#db-arw-e40)"></path>
+<path class="db-e db-e-live" data-a="42" data-b="44" d="M 914 94 H 953 V 94 H 984" marker-end="url(#db-arw-e40)"></path>
+<path class="db-e db-e-live" data-a="43" data-b="44" d="M 914 178 H 953 V 94 H 984" marker-end="url(#db-arw-e40)"></path>
+<path class="db-e db-e-external" data-a="38" data-b="43" d="M 270 94 H 309 V 178 H 662" marker-end="url(#db-arw-e40)"></path>
+<g class="db-n db-n-solid" data-id="38" tabindex="0" role="img" aria-label="#38 Save-file format v2, in progress">
+<rect x="26" y="60" width="244" height="68" rx="2"></rect>
+<text class="db-nhead" x="38" y="81">#38</text>
+<text class="db-nstate" x="258" y="80" text-anchor="end">IN PROGRESS</text>
+<text class="db-ntitle" x="38" y="103">Save-file format v2</text>
+</g>
+<g class="db-n db-n-solid" data-id="41" tabindex="0" role="img" aria-label="#41 Tide table data model, ready">
+<rect x="348" y="60" width="244" height="68" rx="2"></rect>
+<text class="db-nhead" x="360" y="81">#41</text>
+<text class="db-nstate" x="580" y="80" text-anchor="end">READY</text>
+<text class="db-ntitle" x="360" y="103">Tide table data model</text>
+</g>
+<g class="db-n db-n-dashed" data-id="42" tabindex="0" role="img" aria-label="#42 Cast-and-anchor controls, blocked">
+<rect x="670" y="60" width="244" height="68" rx="2"></rect>
+<text class="db-nhead" x="682" y="81">#42</text>
+<text class="db-nstate" x="902" y="80" text-anchor="end">BLOCKED</text>
+<text class="db-ntitle" x="682" y="103">Cast-and-anchor controls</text>
+</g>
+<g class="db-n db-n-dashed" data-id="43" tabindex="0" role="img" aria-label="#43 Bait drawdown while lines are out, blocked">
+<rect x="670" y="144" width="244" height="68" rx="2"></rect>
+<text class="db-nhead" x="682" y="165">#43</text>
+<text class="db-nstate" x="902" y="164" text-anchor="end">BLOCKED</text>
+<text class="db-ntitle" x="682" y="187">Bait drawdown while</text>
+<text class="db-ntitle" x="682" y="205">lines are out</text>
+</g>
+<g class="db-n db-n-dashed" data-id="44" tabindex="0" role="img" aria-label="#44 Resolve the night&#x27;s catch on wake, blocked">
+<rect x="992" y="60" width="244" height="68" rx="2"></rect>
+<text class="db-nhead" x="1004" y="81">#44</text>
+<text class="db-nstate" x="1224" y="80" text-anchor="end">BLOCKED</text>
+<text class="db-ntitle" x="1004" y="103">Resolve the night&#x27;s</text>
+<text class="db-ntitle" x="1004" y="121">catch on wake</text>
+</g>
+</g></svg>
+        </div>
+        <ul class="db-legend" aria-label="Key">
+          <li><svg viewBox="0 0 28 12" aria-hidden="true"><rect x="1" y="1" width="26" height="10" fill="none" stroke="var(--blue)" stroke-width="1.5"/></svg>ready or in progress</li>
+          <li><svg viewBox="0 0 28 12" aria-hidden="true"><rect x="1" y="1" width="26" height="10" fill="none" stroke="var(--ink-50)" stroke-width="1.5" stroke-dasharray="4 3"/></svg>blocked</li>
+          <li><svg viewBox="0 0 28 12" aria-hidden="true"><path d="M1 6 H22" stroke="var(--ochre)" stroke-width="1.5"/><path d="M21 2 L27 6 L21 10 Z" fill="var(--ochre)"/></svg>blocks a ticket in this epic</li>
+          <li><svg viewBox="0 0 28 12" aria-hidden="true"><path d="M1 6 H22" stroke="var(--ink-50)" stroke-width="1.5" stroke-dasharray="4 3"/><path d="M21 2 L27 6 L21 10 Z" fill="var(--ochre)"/></svg>blocks from outside this epic</li>
+        </ul>
+        <div class="db-board" data-board="backlog" aria-live="polite">
+          <p class="db-idle"><span class="db-only-js">Hover over or tap a ticket to see its details. </span>Each arrow comes from a <code>blocked-by:</code> line in a ticket&rsquo;s file.</p>
+        </div>
+      </div>
+
+      <!-- plate · docs -->
+      <div class="db-plate" id="db-plate-docs">
+        <p class="db-plate-h"><em>Docs</em> · requirements and decisions</p>
+        <p class="db-pan-hint">drag sideways to see the whole map</p>
+        <div class="db-pan">
+<svg class="db-svg db-svg-docs" viewBox="0 0 1178 492" role="group" aria-label="Map of 9 docs in four columns: instructions, project, areas and decisions.">
+<defs>
+<marker id="db-arw-docs-blue" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="db-darrow-blue" d="M 0 0 L 8 4 L 0 8 z"></path></marker>
+<marker id="db-arw-docs-ochre" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="db-darrow-ochre" d="M 0 0 L 8 4 L 0 8 z"></path></marker>
+<marker id="db-arw-docs-faint" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="db-darrow-faint" d="M 0 0 L 8 4 L 0 8 z"></path></marker>
+</defs>
+<rect class="db-pool" x="892" y="368" width="240" height="94" rx="2"></rect>
+<text class="db-dlabel db-dlabel-shelf" x="902" y="96">cited by project.md</text>
+<text class="db-dlabel db-dlabel-shelf" x="902" y="194">cited by fishing.md</text>
+<text class="db-dlabel db-dlabel-pool" x="902" y="386">not cited by any doc</text>
+<text class="db-dlabel db-dlabel-column" x="26" y="38">INSTRUCTIONS</text>
+<text class="db-dlabel db-dlabel-column" x="318" y="38">PROJECT</text>
+<text class="db-dlabel db-dlabel-column" x="610" y="38">AREAS</text>
+<text class="db-dlabel db-dlabel-column" x="902" y="38">DECISIONS</text>
+<path class="db-e db-de-maps-area" data-a="project.md" data-b="fishing.md" d="M 538 130 H 550 V 228 H 602" marker-end="url(#db-arw-docs-blue)"></path>
+<path class="db-e db-de-maps-area" data-a="project.md" data-b="save-data.md" d="M 538 130 H 550 V 298 H 602" marker-end="url(#db-arw-docs-blue)"></path>
+<path class="db-e db-de-maps-area" data-a="project.md" data-b="audio.md" d="M 538 130 H 550 V 368 H 602" marker-end="url(#db-arw-docs-blue)"></path>
+<path class="db-e db-de-cites" data-a="project.md" data-b="ADR-0002" d="M 538 130 H 550 V 60 H 842 V 130 H 894" marker-end="url(#db-arw-docs-ochre)"></path>
+<path class="db-e db-de-cites" data-a="fishing.md" data-b="ADR-0003" d="M 830 228 H 854 V 228 H 894" marker-end="url(#db-arw-docs-ochre)"></path>
+<path class="db-e db-de-cites" data-a="fishing.md" data-b="ADR-0006" d="M 830 228 H 854 V 292 H 894" marker-end="url(#db-arw-docs-ochre)"></path>
+<path class="db-e db-de-cites" data-a="save-data.md" data-b="ADR-0003" d="M 830 298 H 866 V 228 H 894" marker-end="url(#db-arw-docs-ochre)"></path>
+<path class="db-e db-de-supersedes" data-a="ADR-0006" data-b="ADR-0004" d="M 1122 292 H 1144 V 426 H 1130" marker-end="url(#db-arw-docs-faint)"></path>
+<g class="db-n db-dn db-dn-constitution" data-id="CLAUDE.md" tabindex="0" role="img" aria-label="CLAUDE.md, Nightline instructions, instructions">
+<rect x="26" y="82" width="220" height="56" rx="2"></rect>
+<text class="db-dhead" x="36" y="99">CLAUDE.md</text>
+<text class="db-nstate" x="236" y="98" text-anchor="end">INSTRUCTIONS</text>
+<text class="db-dtitle" x="36" y="117">Nightline instructions</text>
+<text class="db-ddeg" x="36" y="132">cites 1</text>
+</g>
+<g class="db-n db-dn db-dn-root" data-id="project.md" tabindex="0" role="img" aria-label="project.md, Requirements: Nightline, project">
+<rect x="318" y="102" width="220" height="56" rx="2"></rect>
+<text class="db-dhead" x="328" y="119">project.md</text>
+<text class="db-nstate" x="528" y="118" text-anchor="end">PROJECT</text>
+<text class="db-dtitle" x="328" y="137">Requirements: Nightline</text>
+<text class="db-ddeg" x="328" y="152">cites 1 · cited by 1</text>
+</g>
+<g class="db-n db-dn db-dn-area" data-id="fishing.md" tabindex="0" role="img" aria-label="fishing.md, Requirements: fishing, area">
+<rect x="610" y="200" width="220" height="56" rx="2"></rect>
+<text class="db-dhead" x="620" y="217">fishing.md</text>
+<text class="db-nstate" x="820" y="216" text-anchor="end">AREA</text>
+<text class="db-dtitle" x="620" y="235">Requirements: fishing</text>
+<text class="db-ddeg" x="620" y="250">cites 2</text>
+</g>
+<g class="db-n db-dn db-dn-area" data-id="save-data.md" tabindex="0" role="img" aria-label="save-data.md, Requirements: save data, area">
+<rect x="610" y="270" width="220" height="56" rx="2"></rect>
+<text class="db-dhead" x="620" y="287">save-data.md</text>
+<text class="db-nstate" x="820" y="286" text-anchor="end">AREA</text>
+<text class="db-dtitle" x="620" y="305">Requirements: save data</text>
+<text class="db-ddeg" x="620" y="320">cites 1</text>
+</g>
+<g class="db-n db-dn db-dn-area" data-id="audio.md" tabindex="0" role="img" aria-label="audio.md, Requirements: audio, area">
+<rect x="610" y="340" width="220" height="56" rx="2"></rect>
+<text class="db-dhead" x="620" y="357">audio.md</text>
+<text class="db-nstate" x="820" y="356" text-anchor="end">AREA</text>
+<text class="db-dtitle" x="620" y="375">Requirements: audio</text>
+<text class="db-ddeg" x="620" y="390">cites nothing</text>
+</g>
+<g class="db-n db-dn db-dn-adr db-dn-accepted" data-id="ADR-0002" tabindex="0" role="img" aria-label="ADR-0002, Simulate the night on wake, accepted">
+<rect x="902" y="102" width="220" height="56" rx="2"></rect>
+<text class="db-dhead" x="912" y="119">ADR-0002</text>
+<text class="db-nstate" x="1112" y="118" text-anchor="end">ACCEPTED</text>
+<text class="db-dtitle" x="912" y="137">Simulate the night on wake</text>
+<text class="db-ddeg" x="912" y="152">cited by 1</text>
+</g>
+<g class="db-n db-dn db-dn-adr db-dn-accepted" data-id="ADR-0003" tabindex="0" role="img" aria-label="ADR-0003, Seed catches once a night, accepted">
+<rect x="902" y="200" width="220" height="56" rx="2"></rect>
+<text class="db-dhead" x="912" y="217">ADR-0003</text>
+<text class="db-nstate" x="1112" y="216" text-anchor="end">ACCEPTED</text>
+<text class="db-dtitle" x="912" y="235">Seed catches once a night</text>
+<text class="db-ddeg" x="912" y="250">cited by 2</text>
+</g>
+<g class="db-n db-dn db-dn-adr db-dn-superseded" data-id="ADR-0004" tabindex="0" role="img" aria-label="ADR-0004, Lines snap after 6 hours, superseded">
+<rect x="902" y="398" width="220" height="56" rx="2"></rect>
+<text class="db-dhead" x="912" y="415">ADR-0004</text>
+<text class="db-nstate" x="1112" y="414" text-anchor="end">SUPERSEDED</text>
+<text class="db-dtitle" x="912" y="433">Lines snap after 6 hours</text>
+<text class="db-ddeg" x="912" y="448">cited by no doc</text>
+</g>
+<g class="db-n db-dn db-dn-adr db-dn-accepted" data-id="ADR-0006" tabindex="0" role="img" aria-label="ADR-0006, Line tension decays, accepted">
+<rect x="902" y="264" width="220" height="56" rx="2"></rect>
+<text class="db-dhead" x="912" y="281">ADR-0006</text>
+<text class="db-nstate" x="1112" y="280" text-anchor="end">ACCEPTED</text>
+<text class="db-dtitle" x="912" y="299">Line tension decays</text>
+<text class="db-ddeg" x="912" y="314">cited by 1</text>
+</g>
+</svg>
+        </div>
+        <ul class="db-legend" aria-label="Key">
+          <li><svg viewBox="0 0 28 12" aria-hidden="true"><path d="M1 6 H22" stroke="var(--blue)" stroke-width="1.5"/><path d="M21 2 L27 6 L21 10 Z" fill="var(--blue)"/></svg>parent doc</li>
+          <li><svg viewBox="0 0 28 12" aria-hidden="true"><path d="M1 6 H22" stroke="var(--ochre)" stroke-width="1.5"/><path d="M21 2 L27 6 L21 10 Z" fill="var(--ochre)"/></svg>cites</li>
+          <li><svg viewBox="0 0 28 12" aria-hidden="true"><path d="M1 6 H22" stroke="var(--ink-faint)" stroke-width="1.5" stroke-dasharray="4 3"/><path d="M21 2 L27 6 L21 10 Z" fill="var(--ink-faint)"/></svg>replaces</li>
+          <li><svg viewBox="0 0 28 12" aria-hidden="true"><rect x="1" y="1" width="26" height="10" fill="none" stroke="var(--blue)" stroke-width="1.5"/></svg>requirements</li>
+          <li><svg viewBox="0 0 28 12" aria-hidden="true"><rect x="1" y="1" width="26" height="10" fill="none" stroke="var(--ochre)" stroke-width="1.5"/></svg>decision (ADR)</li>
+        </ul>
+        <div class="db-board" data-board="docs" aria-live="polite">
+          <p class="db-idle"><span class="db-only-js">Hover over or tap a doc to see what it says and light up its links. </span>Each arrow comes from the doc&rsquo;s own text: a <code>Parent doc</code> line, a link, or a mention like <code>ADR-0003</code>.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <script>
+  // ─── §4.4 · dashboard maps · tabs, ticket card, doc one-hop lighting ───
+  (function () {
+    var sec = document.getElementById('dashboard');
+    if (!sec) return;
+    var DATA = {"t": {"38": {"title": "Save-file format v2", "status": "in progress", "priority": "high", "unblocks": "2 tickets, 3 in all", "held_by": []}, "41": {"title": "Tide table data model", "status": "refined", "priority": "high", "unblocks": "2 tickets, 3 in all", "held_by": []}, "42": {"title": "Cast-and-anchor controls", "status": "refined", "priority": "high", "unblocks": "1 ticket", "held_by": ["41"]}, "43": {"title": "Bait drawdown while lines are out", "status": "backlog", "priority": "medium", "unblocks": "1 ticket", "held_by": ["41", "38"]}, "44": {"title": "Resolve the night's catch on wake", "status": "backlog", "priority": "high", "unblocks": "nothing", "held_by": ["42", "43"]}}, "d": {"CLAUDE.md": {"title": "Nightline instructions", "kind": "instructions", "status": "", "nb": ["project.md"], "rows": [["cites", ["project.md"]]], "summary": "Nightline is a pixel-art fishing game. Read cortex/requirements/project.md before you change how the game works."}, "project.md": {"title": "Requirements: Nightline", "kind": "project", "status": "", "nb": ["ADR-0002", "CLAUDE.md", "audio.md", "fishing.md", "save-data.md"], "rows": [["lists areas", ["fishing.md", "save-data.md", "audio.md"]], ["cites", ["ADR-0002"]], ["cited by", ["CLAUDE.md"]]], "summary": "A pixel-art game about setting lines overnight. The night is simulated when the player wakes (ADR-0002)."}, "fishing.md": {"title": "Requirements: fishing", "kind": "area", "status": "", "nb": ["ADR-0003", "ADR-0006", "project.md"], "rows": [["parent doc", ["project.md"]], ["cites", ["ADR-0003", "ADR-0006"]]], "summary": "Players set lines at dusk and check them at dawn. Catches are rolled once per night (ADR-0003)."}, "save-data.md": {"title": "Requirements: save data", "kind": "area", "status": "", "nb": ["ADR-0003", "project.md"], "rows": [["parent doc", ["project.md"]], ["cites", ["ADR-0003"]]], "summary": "The save file keeps each line and the night's seed (ADR-0003), so reloading gives the same catch."}, "audio.md": {"title": "Requirements: audio", "kind": "area", "status": "", "nb": ["project.md"], "rows": [["parent doc", ["project.md"]]], "summary": "Every cast, reel and line snap has its own sound. Night sounds stay quiet so the game can run beside a sleeping player."}, "ADR-0002": {"title": "Simulate the night on wake", "kind": "decision", "status": "accepted", "nb": ["project.md"], "rows": [["cited by", ["project.md"]]], "summary": "The game works out the whole night when the player opens it, instead of running while it is closed."}, "ADR-0003": {"title": "Seed catches once a night", "kind": "decision", "status": "accepted", "nb": ["fishing.md", "save-data.md"], "rows": [["cited by", ["fishing.md", "save-data.md"]]], "summary": "Each night gets one random seed, so reloading a save cannot change the catch."}, "ADR-0004": {"title": "Lines snap after 6 hours", "kind": "decision", "status": "superseded", "nb": ["ADR-0006"], "rows": [["replaced by", ["ADR-0006"]]], "summary": "A line left out for 6 hours snaps and loses its bait."}, "ADR-0006": {"title": "Line tension decays", "kind": "decision", "status": "accepted", "nb": ["ADR-0004", "fishing.md"], "rows": [["cited by", ["fishing.md"]], ["replaces", ["ADR-0004"]]], "summary": "A line loses tension slowly over the night, so there is no hard 6-hour cutoff."}}};
+    sec.classList.add('db-js');
+
+    // tabs
+    var tabs = sec.querySelector('.db-tabs');
+    var buttons = Array.prototype.slice.call(sec.querySelectorAll('.db-tab'));
+    tabs.hidden = false;
+    tabs.setAttribute('role', 'tablist');
+    function select(btn, focus) {
+      buttons.forEach(function (b) {
+        var on = b === btn;
+        var plate = document.getElementById(b.getAttribute('data-plate'));
+        b.setAttribute('aria-selected', on ? 'true' : 'false');
+        b.tabIndex = on ? 0 : -1;
+        plate.hidden = !on;
+      });
+      if (focus) btn.focus();
+    }
+    buttons.forEach(function (b, i) {
+      var plate = document.getElementById(b.getAttribute('data-plate'));
+      b.setAttribute('role', 'tab');
+      b.setAttribute('aria-controls', plate.id);
+      plate.setAttribute('role', 'tabpanel');
+      plate.setAttribute('aria-labelledby', b.id);
+      b.addEventListener('click', function () { select(b, false); });
+      b.addEventListener('keydown', function (ev) {
+        if (ev.key !== 'ArrowRight' && ev.key !== 'ArrowLeft') return;
+        ev.preventDefault();
+        var n = buttons.length;
+        select(buttons[(i + (ev.key === 'ArrowRight' ? 1 : n - 1)) % n], true);
+      });
+    });
+    select(buttons[0], false);
+
+    function el(tag, cls, text) {
+      var e = document.createElement(tag);
+      if (cls) e.className = cls;
+      if (text != null) e.textContent = text;
+      return e;
+    }
+    function head(idText, title, chipTexts) {
+      var col = el('div');
+      var h = el('p', 'db-card-title');
+      h.appendChild(el('span', 'db-card-id', idText));
+      h.appendChild(document.createTextNode(title));
+      col.appendChild(h);
+      var chips = el('ul', 'db-chips');
+      chipTexts.forEach(function (c) { chips.appendChild(el('li', null, c)); });
+      col.appendChild(chips);
+      return col;
+    }
+
+    function ticketCard(id) {
+      var t = DATA.t[id], card = el('div', 'db-card');
+      card.appendChild(head('#' + id, t.title, ['status · ' + t.status, 'priority · ' + t.priority, 'unblocks · ' + t.unblocks]));
+      var file = el('p', 'db-file');
+      file.appendChild(el('span', null, 'in its file'));
+      if (id === '38') {
+        file.appendChild(el('i', null, 'no parent line · not in this epic, but it blocks #43'));
+      } else {
+        file.appendChild(document.createTextNode('parent: 40'));
+        file.appendChild(document.createElement('br'));
+        if (t.held_by.length) file.appendChild(document.createTextNode('blocked-by: [' + t.held_by.join(', ') + ']'));
+        else file.appendChild(el('i', null, 'no blocked-by line · nothing blocks it'));
+      }
+      card.appendChild(file);
+      return card;
+    }
+    function docCard(id) {
+      var d = DATA.d[id], card = el('div', 'db-card');
+      card.appendChild(head(id, d.title, d.status ? [d.kind, d.status] : [d.kind]));
+      var rel = el('div');
+      (d.rows.length ? d.rows : [['cited by', []]]).forEach(function (r) {
+        var p = el('p', 'db-rel');
+        p.appendChild(el('span', null, r[0] + ' · '));
+        p.appendChild(el('b', null, r[1].length ? r[1].join(', ') : 'no doc'));
+        rel.appendChild(p);
+      });
+      card.appendChild(rel);
+      if (d.summary) card.appendChild(el('p', 'db-sum', d.summary));
+      return card;
+    }
+
+    Array.prototype.forEach.call(sec.querySelectorAll('.db-plate'), function (plate) {
+      var svg = plate.querySelector('.db-svg');
+      var board = plate.querySelector('.db-board');
+      var idle = board.innerHTML;
+      var isDocs = plate.id === 'db-plate-docs';
+      var nodes = Array.prototype.slice.call(svg.querySelectorAll('.db-n'));
+      var edges = Array.prototype.slice.call(svg.querySelectorAll('.db-e'));
+      var current = null;
+
+      function light(node) {
+        if (node === current) return;
+        current = node;
+        var id = node.getAttribute('data-id');
+        nodes.forEach(function (n) { n.classList.toggle('db-cur', n.getAttribute('data-id') === id); });
+        if (isDocs) {
+          var nb = DATA.d[id].nb;
+          svg.classList.add('db-sel');
+          nodes.forEach(function (n) {
+            var nid = n.getAttribute('data-id');
+            n.classList.toggle('db-on', nid === id || nb.indexOf(nid) !== -1);
+          });
+          edges.forEach(function (e) {
+            e.classList.toggle('db-on', e.getAttribute('data-a') === id || e.getAttribute('data-b') === id);
+          });
+        }
+        board.textContent = '';
+        board.appendChild(isDocs ? docCard(id) : ticketCard(id));
+      }
+      function clear() {
+        if (!current) return;
+        current = null;
+        svg.classList.remove('db-sel');
+        nodes.forEach(function (n) { n.classList.remove('db-on', 'db-cur'); });
+        edges.forEach(function (e) { e.classList.remove('db-on'); });
+        board.innerHTML = idle;
+      }
+      nodes.forEach(function (n) {
+        n.addEventListener('mouseenter', function () { light(n); });
+        n.addEventListener('focus', function () { light(n); });
+        n.addEventListener('click', function () { light(n); });
+      });
+      svg.addEventListener('mouseleave', function () { if (!svg.contains(document.activeElement)) clear(); });
+      svg.addEventListener('focusout', function (ev) { if (!svg.contains(ev.relatedTarget)) clear(); });
+      document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape') clear(); });
+    });
+  })();
+  </script>
+
   <!-- ───────── What ships ───────── -->
   <section class="install" id="install">
-    <div class="marker">§4.4 · what installs · 3 core plugins · one CLI underneath</div>
+    <div class="marker">§4.5 · what installs · 3 core plugins · one CLI underneath</div>
     <h2>Start with the core. <em>It's complete on its own</em> — add the rest as you want them.</h2>
 
     <div class="ship-stack">
