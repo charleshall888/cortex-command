@@ -2,9 +2,9 @@
 
 Six scenarios covering the full dispatch contract: Sonnet success, Sonnet
 quality failure with Opus escalation, Opus quality failure, agent deferral,
-test failure after clean resolution, and SDK exception (no Opus escalation).
+test failure after clean resolution, and dispatch failure (no Opus escalation).
 
-Uses unittest.mock.patch — no real git operations or SDK calls.
+Uses unittest.mock.patch — no real git operations or CLI dispatches.
 """
 
 import asyncio
@@ -298,11 +298,11 @@ def test_test_failure_after_clean_resolution(tmp_path: Path) -> None:
 
 
 # ---------------------------------------------------------------------------
-# (f) SDK exception — no Opus escalation
+# (f) dispatch failure — no Opus escalation
 # ---------------------------------------------------------------------------
 
 def test_sdk_exception_no_opus_escalation(tmp_path: Path) -> None:
-    """Sonnet SDK dispatch fails (success=False) → failure returned, dispatch called exactly once."""
+    """Sonnet dispatch fails (success=False) → failure returned, dispatch called exactly once."""
     feature = "my-feature"
     worktree = tmp_path / f"repair-{feature}-1"
     worktree.mkdir()

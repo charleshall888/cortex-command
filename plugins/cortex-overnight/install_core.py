@@ -525,11 +525,11 @@ def _prune_uv_logs(retention: int = _UV_LOG_RETENTION_COUNT) -> None:
 def _cortex_install_requirement(tag: str) -> str:
     """PEP 508 requirement for a full-featured ``cortex-command`` install.
 
-    The ``[all]`` extra pulls the dashboard + overnight (Claude Agent SDK)
-    stacks. The auto-installer MUST request them: those features live behind
+    The ``[all]`` extra pulls the dashboard + overnight stacks. The
+    auto-installer MUST request them: those features live behind
     optional ``pyproject.toml`` extras (so a bare ``uv tool install`` stays
-    lean), and a no-extra reinstall would silently strip the SDK the overnight
-    runner depends on. Kept as a PEP 508 direct reference
+    lean), and a no-extra reinstall would silently strip the stacks the
+    overnight runner depends on. Kept as a PEP 508 direct reference
     (``name[extra] @ git+url@ref``) so uv installs the ``cortex-command`` tool
     with extras from the pinned tag.
     """

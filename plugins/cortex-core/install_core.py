@@ -364,8 +364,9 @@ def _install_argv() -> list[str]:
 
     The requirement carries the ``[all]`` extra: the dashboard and overnight
     runner live behind optional ``pyproject.toml`` extras (so a bare install
-    stays lean), and a no-extra reinstall would silently strip the Claude Agent
-    SDK the runner needs. PEP 508 direct reference (``name[extra] @ git+url``).
+    stays lean), and a no-extra reinstall would silently strip the dashboard
+    and overnight stacks the runner needs. PEP 508 direct reference
+    (``name[extra] @ git+url``).
     """
     return [
         "uv",

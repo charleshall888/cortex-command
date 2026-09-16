@@ -35,8 +35,10 @@ from typing import Optional
 # caller uses. Deriving it here from artifacts is what broke these arms.
 from cortex_command.lifecycle.advance import advance
 # The shared reviewer brief (ADR-0035). The import direction is load-bearing:
-# this module imports ``review_brief``, never the reverse — ``review_brief``
-# must stay free of the Claude Agent SDK, an optional extra this module pulls.
+# this module imports ``review_brief``, never the reverse — the fenced-JSON
+# verdict extraction below duplicates ``review_brief.parse_verdict_block``
+# rather than importing it for historical reasons; the duplication is now
+# tracked separately as its own cleanup rather than merged here.
 from cortex_command.lifecycle.review_brief import (
     RE_RUN,
     build_full_brief,

@@ -18,9 +18,10 @@ A **pure builder layer** with no I/O — :func:`build_full_brief`,
 **CLI/IO layer** (:func:`main` and its ``_``-prefixed helpers) that archives the
 prior cycle, captures the dispatch baseline, and fails open. Both consumers call
 *inward*: ``cortex_command/pipeline/review_dispatch.py`` imports this module,
-never the reverse. That direction is load-bearing — ``review_dispatch`` pulls
-the Claude Agent SDK, an optional extra, so the fenced-JSON verdict extraction
-its ``parse_verdict`` performs is reimplemented here rather than imported.
+never the reverse. That direction is load-bearing — the fenced-JSON verdict
+extraction its ``parse_verdict`` performs is reimplemented here rather than
+imported, for historical reasons now tracked as a separate cleanup rather
+than merged.
 
 What one invocation does
 ------------------------
@@ -152,8 +153,9 @@ def parse_verdict_block(text: str) -> Optional[dict]:
 
     Performs the same fenced-JSON extraction ``parse_verdict`` performs in
     ``cortex_command/pipeline/review_dispatch.py`` — the first ```` ```json ````
-    fence containing an object — reimplemented rather than imported because that
-    module pulls the Claude Agent SDK, an optional extra.
+    fence containing an object — reimplemented rather than imported for
+    historical reasons; the duplication is tracked separately as its own
+    cleanup rather than merged here.
 
     Returns the parsed dict, or ``None`` when no fence is present, the fence
     does not parse, or it parses to something other than an object. ``None`` is

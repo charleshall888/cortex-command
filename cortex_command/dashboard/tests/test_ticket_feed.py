@@ -12,7 +12,7 @@ Tests cover:
   - deferral exposed as two independent flags
   - blocker refs resolved to status and title across terminal items
   - every null-phase spelling collapsing to one value
-  - the module importing without the optional agent SDK installed
+  - the module importing and serving with no ``claude`` on PATH
   - stale marking that copies rather than mutates
 """
 
@@ -470,31 +470,38 @@ class TestImportSurface(unittest.TestCase):
     """This module is the dashboard's first dependency on the overnight package.
 
     That package's __init__ eagerly imports its orchestrator chain, so this
-    module's import graph now spans code whose own dependencies live behind
-    an optional extra. A dashboard-only install must still be able to import
-    it; this test fails the moment that stops being true.
+    module's import graph now spans code that spawns the operator's ``claude``
+    CLI. A dashboard-only install must still be able to import the module and
+    serve a snapshot with no ``claude`` binary anywhere reachable; this test
+    fails the moment that stops being true.
     """
 
-    def test_imports_without_the_optional_agent_sdk(self):
-        probe = (
-            "import builtins\n"
-            "_real = builtins.__import__\n"
-            "def _guard(name, *args, **kwargs):\n"
-            "    if name.split('.')[0] == 'claude_agent_sdk':\n"
-            "        raise ModuleNotFoundError(\"No module named 'claude_agent_sdk'\")\n"
-            "    return _real(name, *args, **kwargs)\n"
-            "builtins.__import__ = _guard\n"
-            "from cortex_command.dashboard.ticket_feed import build_backlog_snapshot\n"
-            "print('ok')\n"
-        )
+    def test_imports_and_builds_snapshot_with_no_claude_on_path(self):
+        with tempfile.TemporaryDirectory() as empty_dir:
+            probe = (
+                "from pathlib import Path\n"
+                "from cortex_command.dashboard.ticket_feed import build_backlog_snapshot\n"
+                "snapshot = build_backlog_snapshot(\n"
+                f"    backlog_dir=Path({empty_dir!r}),\n"
+                f"    lifecycle_dir=Path({empty_dir!r}),\n"
+                "    titles_by_id={},\n"
+                "    polled_ts='2024-01-01T00:00:00Z',\n"
+                ")\n"
+                "assert isinstance(snapshot, dict)\n"
+                "print('ok')\n"
+            )
 
-        result = subprocess.run(
-            [sys.executable, "-c", probe], capture_output=True, text=True
-        )
+            result = subprocess.run(
+                [sys.executable, "-c", probe],
+                capture_output=True,
+                text=True,
+                env={"PATH": empty_dir, "HOME": empty_dir},
+            )
 
         self.assertEqual(
             result.returncode, 0,
-            f"dashboard-only install can no longer import the feed:\n{result.stderr}",
+            f"dashboard-only install can no longer import and serve with no "
+            f"claude on PATH:\n{result.stderr}",
         )
         self.assertIn("ok", result.stdout)
 

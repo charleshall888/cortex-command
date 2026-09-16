@@ -222,8 +222,8 @@ async def dispatch_repair_agent(
     RepairResult.
 
     Retries ONLY on agent quality failure (unresolved markers or deferral
-    question after a successful SDK dispatch).  Does NOT retry on SDK
-    exceptions or test failures.  The cap is two attempts total; it used to
+    question after a successful dispatch).  Does NOT retry on dispatch
+    failures or test failures.  The cap is two attempts total; it used to
     spend the second one climbing sonnet -> opus, but cortex no longer selects
     models.
 
@@ -361,7 +361,7 @@ async def dispatch_repair_agent(
             costs.append(result.cost_usd)
 
         if not result.success:
-            return result, None, True  # SDK exception
+            return result, None, True  # dispatch failure
 
         report = _read_exit_report()
         return result, report, False
@@ -393,7 +393,7 @@ async def dispatch_repair_agent(
             feature=feature,
             recovery_type="merge_conflict",
             outcome="paused",
-            what_was_tried="(SDK exception during the first repair dispatch)",
+            what_was_tried="(dispatch failed during the first repair dispatch)",
             result=error,
         )
         return RepairResult(success=False, feature=feature, error=error, cost_usd=total_cost)
@@ -426,7 +426,7 @@ async def dispatch_repair_agent(
                 feature=feature,
                 recovery_type="merge_conflict",
                 outcome="paused",
-                what_was_tried="(SDK exception during the second repair dispatch)",
+                what_was_tried="(dispatch failed during the second repair dispatch)",
                 result=error,
             )
             return RepairResult(
