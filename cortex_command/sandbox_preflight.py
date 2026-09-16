@@ -30,7 +30,6 @@ SANDBOX_WATCHED_FILES: dict[str, tuple[str, ...]] = {
     "cortex_command/pipeline/dispatch.py": (
         r"_load_project_settings",
         r"sandbox",
-        r"SandboxSettings",
         r"build_sandbox",
         r"write_settings_tempfile",
     ),
@@ -43,8 +42,11 @@ SANDBOX_WATCHED_FILES: dict[str, tuple[str, ...]] = {
         # entire file is sandbox-source — any change fires the gate
         r".",
     ),
-    "pyproject.toml": (
-        r"claude-agent-sdk",
+    # The module that builds every dispatch's `claude` argv, including the
+    # per-spawn `--settings <tempfile>` passthrough (ADR-0038).
+    "cortex_command/claude_stream.py": (
+        r"--settings",
+        r"settings",
     ),
 }
 
