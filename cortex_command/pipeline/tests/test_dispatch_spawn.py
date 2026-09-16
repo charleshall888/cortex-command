@@ -235,6 +235,15 @@ def test_allowed_rate_limit_frame_is_not_a_rate_limit(env, monkeypatch):
     assert result.error_type == "task_failure"
 
 
+def test_rate_limit_phrase_in_assistant_text_yields_to_earlier_keywords(env, monkeypatch):
+    # A corpus rate-limit phrase halts the whole session, so it must not win
+    # over a refusal keyword in the same text; only structured signals may
+    # classify ahead of the keyword scans.
+    run = {"frames": [assistant_frame("I cannot proceed, rate limit concerns.")], "exit_code": 1}
+    result, _ = _dispatch(env, monkeypatch, run)
+    assert result.error_type == "agent_refusal"
+
+
 # ---------------------------------------------------------------------------
 # R10: each ERROR_RECOVERY key, driven through retry.retry_task
 # ---------------------------------------------------------------------------

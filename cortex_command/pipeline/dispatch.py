@@ -498,13 +498,16 @@ def classify_failure(
     2. ``subtype == "error_max_budget_usd"`` → ``budget_exhausted``.
     3. Turn-limit signature (:func:`_is_turn_limit_stop`) or
        ``subtype == "error_max_turns"`` → ``turn_limit_exhausted``.
-    4. ``api_error_status == 429``, a rate-limit frame whose status is not
-       ``allowed*``, or a rate-limit phrase in the corpus → ``api_rate_limit``.
+    4. ``api_error_status == 429`` or a rate-limit frame whose status is not
+       ``allowed*`` → ``api_rate_limit``.
     5. ``terminal_reason == "api_error"`` or ``api_error_status`` of 401, 403
        or >= 500 → ``api_unavailable``.
     6. Keyword scans → ``agent_timeout`` / ``agent_test_failure`` /
-       ``agent_refusal`` / ``agent_confused``; the ``--effort`` hard-reject
-       signature → ``effort_unsupported``.
+       ``agent_refusal`` / ``agent_confused``, then a rate-limit phrase →
+       ``api_rate_limit``; the ``--effort`` hard-reject signature →
+       ``effort_unsupported``. The phrase scan runs after the other keywords
+       because an assistant merely mentioning "rate limit" must not halt the
+       whole session.
     7. Otherwise ``task_failure`` — including a non-zero exit with no result
        frame.
 
@@ -549,7 +552,6 @@ def classify_failure(
     if (
         api_status == 429
         or (isinstance(rate_limit_status, str) and not rate_limit_status.startswith("allowed"))
-        or any(p in corpus for p in _RATE_LIMIT_PATTERNS)
     ):
         return "api_rate_limit"
 
@@ -566,6 +568,8 @@ def classify_failure(
         return "agent_refusal"
     if any(p in corpus for p in _CONFUSED_PATTERNS):
         return "agent_confused"
+    if any(p in corpus for p in _RATE_LIMIT_PATTERNS):
+        return "api_rate_limit"
 
     # An `--effort` hard-rejection (old claude, e.g. bundled 2.1.69) is a
     # permanently-invalid flag — NOT a transient failure to blind-retry.
@@ -819,8 +823,9 @@ async def dispatch_task(
         if len(_stderr_lines) < _MAX_STDERR_LINES:
             _stderr_lines.append(line)
 
-    # Pin the best-available CLI (newer of system-vs-fallback, #313). There is
-    # no bundled binary to fall back on: None means no claude was found at all.
+    # Resolve the operator's own claude (PATH, then known install locations).
+    # There is no bundled binary to fall back on: None means no claude was
+    # found at all.
     cli = resolve_claude_cli()
 
     if log_path:
