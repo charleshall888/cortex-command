@@ -27,11 +27,7 @@ from cortex_command.overnight.events import (
 )
 from cortex_command.overnight.state import load_state
 
-try:
-    from cortex_command.pipeline.dispatch import dispatch_task
-    _DISPATCH_AVAILABLE = True
-except ImportError:
-    _DISPATCH_AVAILABLE = False
+from cortex_command.pipeline.dispatch import dispatch_task
 
 
 # ---------------------------------------------------------------------------
@@ -183,20 +179,6 @@ def main() -> int:
     )
 
     # --- Dispatch repair agent ---
-    if not _DISPATCH_AVAILABLE:
-        print(
-            "integration_recovery: warning: cortex_command.pipeline.dispatch is not available "
-            "(SDK not installed); cannot dispatch repair agent",
-            file=sys.stderr,
-        )
-        _log(
-            INTEGRATION_RECOVERY_FAILED,
-            round_num,
-            events_path,
-            {"reason": "dispatch_unavailable"},
-        )
-        return 1
-
     asyncio.run(
         dispatch_task(
             feature="integration-recovery",

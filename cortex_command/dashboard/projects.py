@@ -19,8 +19,9 @@ filesystem scan, and :func:`is_project` rejects its worktree entries by shape
 after that the file is the source of truth, and a project the operator deleted
 from it stays deleted.
 
-Stdlib only — ``cortex init`` imports this on a base install that has no
-dashboard extra.
+Stdlib only — the dashboard stack lives in the base install (ADR-0039), but
+``cortex init`` still imports this module without pulling in FastAPI/uvicorn
+or any of the dashboard's own dependencies.
 """
 
 from __future__ import annotations

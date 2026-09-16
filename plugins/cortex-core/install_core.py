@@ -362,11 +362,11 @@ def _probe_installed_version() -> Optional[str]:
 def _install_argv() -> list[str]:
     """Return the ``uv tool install --reinstall`` argv pinned to ``CLI_PIN``.
 
-    The requirement carries the ``[all]`` extra: the dashboard and overnight
-    runner live behind optional ``pyproject.toml`` extras (so a bare install
-    stays lean), and a no-extra reinstall would silently strip the dashboard
-    and overnight stacks the runner needs. PEP 508 direct reference
-    (``name[extra] @ git+url``).
+    The requirement carries the ``[all]`` extra even though it is declared
+    empty (ADR-0039: the dashboard stack now lives in the base install). The
+    extra name stays in the argv byte-for-byte so every published,
+    version-locked install command keeps resolving rather than needing a
+    coordinated rewrite. PEP 508 direct reference (``name[extra] @ git+url``).
     """
     return [
         "uv",

@@ -83,12 +83,7 @@ class TestIntegrationRecoveryPinsNoModel(unittest.TestCase):
                         "cortex_command.overnight.integration_recovery.dispatch_task",
                         new=_spy_dispatch,
                     ):
-                        # Ensure the dispatch path is taken (not the
-                        # _DISPATCH_AVAILABLE early return).
-                        with patch.object(
-                            integration_recovery, "_DISPATCH_AVAILABLE", True,
-                        ):
-                            integration_recovery.main()
+                        integration_recovery.main()
 
         # Verify dispatch_task was actually invoked.
         self.assertIn("kwargs", recorded, "dispatch_task was not called")

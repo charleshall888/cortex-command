@@ -20,7 +20,7 @@ Starts a detached server at `http://localhost:8080` (or `$DASHBOARD_PORT` if set
 
 ### The Cortex Dashboard app (macOS)
 
-`cortex init` and `cortex dashboard` add **Cortex Dashboard** to `~/Applications` when the dashboard extra is installed. Open it from Spotlight, Launchpad, or the Dock: it runs `cortex dashboard --open` and never shows a terminal. It is an AppleScript applet, wearing the icon in `cortex_command/dashboard/app_icon/`, holding two build-time values a Finder-launched process cannot discover — the absolute path to `cortex` and your `PATH` — and all behavior stays in the verb, so upgrading cortex never requires rebuilding it.
+The first `cortex dashboard` run adds **Cortex Dashboard** to `~/Applications`. Open it from Spotlight, Launchpad, or the Dock: it runs `cortex dashboard --open` and never shows a terminal. It is an AppleScript applet, wearing the icon in `cortex_command/dashboard/app_icon/`, holding two build-time values a Finder-launched process cannot discover — the absolute path to `cortex` and your `PATH` — and all behavior stays in the verb, so upgrading cortex never requires rebuilding it.
 
 - Deleting the app is respected: it is not recreated. To get it back, delete `~/.local/state/cortex-command/dashboard-app` and run `cortex dashboard`.
 - `CORTEX_DASHBOARD_APP=0` stops it being created or refreshed.

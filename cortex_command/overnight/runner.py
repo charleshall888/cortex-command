@@ -107,8 +107,8 @@ RUNNER_HEARTBEAT_INTERVAL_SECONDS: float = 300.0
 #: Orchestrator ``claude -p`` turn cap. Raised from 50 alongside
 #: ``dispatch.TIER_CONFIG``, but deliberately NOT to the same magnitude.
 #:
-#: Dispatched agents get ``max_budget_usd`` on ``ClaudeAgentOptions``, so their
-#: turn ceiling can be enormous — cost is capped independently. The orchestrator
+#: Dispatched agents get ``--max-budget-usd`` on the dispatched ``claude``, so
+#: their turn ceiling can be enormous — cost is capped independently. The orchestrator
 #: is spawned as a bare ``claude -p`` subprocess with no budget flag, so this
 #: number is its ONLY ceiling on spend. Observed rounds used 13 turns ($7.60)
 #: and 9 turns ($0.72); at that ~$0.58/turn a 300-turn cap would permit roughly
