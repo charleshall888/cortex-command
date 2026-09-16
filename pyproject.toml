@@ -20,6 +20,10 @@ dependencies = [
     "uvicorn<1.0",
     "jinja2",
     "markdown<4",
+    # The Docs view's edit route takes `Form(...)` fields, which Starlette
+    # parses only with python-multipart installed. It used to arrive
+    # transitively through the Claude SDK's mcp dependency.
+    "python-multipart>=0.0.18,<1",
     # Constraint pin (not imported directly): FastAPI depends on starlette with
     # no upper bound and its maintainers refuse to add one (discussions
     # #6211/#15193), so the app owns this cap wherever starlette is pulled in.
