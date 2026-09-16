@@ -20,12 +20,6 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-# conftest.py installs the SDK stub before this module is imported under
-# pytest, but the dispatch import below also triggers under unittest runs;
-# call it directly to keep both runners happy.
-from cortex_command.pipeline.tests.conftest import _install_sdk_stub
-_install_sdk_stub()
-
 # Pre-load the overnight package before importing review_dispatch so its
 # transitive `from cortex_command.overnight.deferral import …` does not
 # trigger overnight/__init__.py to circle back through outcome_router →

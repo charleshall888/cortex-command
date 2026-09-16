@@ -27,12 +27,6 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-# conftest.py runs before this module under pytest and installs the SDK stub.
-# Under plain unittest, call _install_sdk_stub() directly here to keep parity
-# with the other retry-related test modules.
-from cortex_command.pipeline.tests.conftest import _install_sdk_stub
-_install_sdk_stub()
-
 from cortex_command.pipeline.dispatch import DispatchDiagnostics, DispatchResult
 from cortex_command.pipeline.retry import retry_task
 

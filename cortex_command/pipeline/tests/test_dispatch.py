@@ -22,7 +22,6 @@ import asyncio
 import contextlib
 import json
 import os
-import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -30,17 +29,10 @@ from unittest.mock import patch
 
 import pytest
 
-# conftest.py runs before this module under pytest and installs the SDK stub.
-# Under plain unittest, we call _install_sdk_stub() directly here.
-from cortex_command.pipeline.tests.conftest import _install_sdk_stub
-_install_sdk_stub()
-
 import cortex_command.pipeline.dispatch as _dispatch_module
 from cortex_command.claude_stream import ClaudeSpawnError
 from cortex_command.pipeline.parser import parse_feature_plan
 from cortex_command.tests._claude_double import fake_run_claude, result_frame
-
-_sdk = sys.modules["claude_agent_sdk"]
 
 
 # ---------------------------------------------------------------------------
@@ -313,8 +305,6 @@ class TestErrorRecovery(unittest.TestCase):
 # ---------------------------------------------------------------------------
 # Tests: dispatch_task sandbox settings (async)
 # ---------------------------------------------------------------------------
-
-_sdk = sys.modules["claude_agent_sdk"]
 
 
 class TestDispatchTaskSandboxSettings(unittest.IsolatedAsyncioTestCase):
@@ -841,70 +831,6 @@ class TestDispatchTaskValidation(unittest.IsolatedAsyncioTestCase):
 
 
 # ---------------------------------------------------------------------------
-# Tests: SDK message parser extracts stop_reason
-# ---------------------------------------------------------------------------
-
-def test_sdk_parser_extracts_stop_reason():
-    """Verifies that the upgraded claude-agent-sdk's CLI message parser extracts
-    `stop_reason` from a result-type JSON line into the typed `ResultMessage`.
-
-    This is the load-bearing gate of Spec Req #6: if the upgraded SDK's parser
-    drops `stop_reason`, this test fails and the implementation must add a
-    wrapper/extractor before the truncation observability stack can rely on it.
-
-    The conftest installs a stub at ``sys.modules['claude_agent_sdk']`` for all
-    other tests in this package. We bypass that stub here by temporarily removing
-    the stub modules from sys.modules, importing the real SDK's
-    ``_internal.message_parser`` directly, then restoring the stub so the rest
-    of the test session is unaffected.
-    """
-    import importlib
-
-    # Snapshot and remove any stub/real modules so a fresh import binds to
-    # the real package on disk.
-    saved: dict[str, Any] = {}
-    for key in list(sys.modules):
-        if key == "claude_agent_sdk" or key.startswith("claude_agent_sdk."):
-            saved[key] = sys.modules.pop(key)
-
-    try:
-        real_parser = importlib.import_module(
-            "claude_agent_sdk._internal.message_parser"
-        )
-        real_types = importlib.import_module("claude_agent_sdk.types")
-
-        # Confirm we actually loaded the real SDK (not the stub) — the stub
-        # has the marker attribute set in _stubs.py:_install_sdk_stub.
-        real_sdk_root = sys.modules["claude_agent_sdk"]
-        assert not getattr(real_sdk_root, "_is_test_stub", False), (
-            "Expected to load the real claude_agent_sdk, not the test stub"
-        )
-
-        # Canned CLI JSON line for a result-type message containing
-        # stop_reason="max_tokens". Field shape mirrors what the CLI emits.
-        cli_json_line = (
-            '{"type": "result", "subtype": "success", "duration_ms": 1234,'
-            ' "duration_api_ms": 1000, "is_error": false, "num_turns": 3,'
-            ' "session_id": "sess-abc", "stop_reason": "max_tokens",'
-            ' "total_cost_usd": 0.012, "usage": {"input_tokens": 10},'
-            ' "result": "partial output", "structured_output": null}'
-        )
-        data = json.loads(cli_json_line)
-
-        parsed = real_parser.parse_message(data)
-
-        assert isinstance(parsed, real_types.ResultMessage)
-        assert parsed.stop_reason == "max_tokens"
-    finally:
-        # Restore the stub so subsequent tests in this session see what
-        # they expect.
-        for key in list(sys.modules):
-            if key == "claude_agent_sdk" or key.startswith("claude_agent_sdk."):
-                del sys.modules[key]
-        sys.modules.update(saved)
-
-
-# ---------------------------------------------------------------------------
 # Tests: _EFFORT_MATRIX policy and resolve_effort()
 # ---------------------------------------------------------------------------
 
@@ -971,73 +897,6 @@ def test_effort_skill_overrides():
     assert _dispatch_module.resolve_effort(
         complexity="simple", criticality="low", skill="implement",
     ) == "low"
-
-
-def test_effort_value_passthrough():
-    """Verifies that each effort value in the closed vocabulary constructs
-    cleanly via ``ClaudeAgentOptions(effort=v)`` AND that the SDK's
-    ``SubprocessCLITransport._build_command`` propagates it as
-    ``["--effort", v]`` in the constructed argv.
-
-    Covers Spec Req #10. Bypasses the conftest stub so we exercise the real
-    SDK's ``ClaudeAgentOptions`` and CLI-argv builder; restores the stub on
-    exit so subsequent tests in this session are unaffected.
-    """
-    import importlib
-
-    saved: dict[str, Any] = {}
-    for key in list(sys.modules):
-        if key == "claude_agent_sdk" or key.startswith("claude_agent_sdk."):
-            saved[key] = sys.modules.pop(key)
-
-    try:
-        real_sdk = importlib.import_module("claude_agent_sdk")
-        # Confirm we have the real SDK, not the stub.
-        assert not getattr(real_sdk, "_is_test_stub", False), (
-            "Expected to load the real claude_agent_sdk, not the test stub"
-        )
-        real_options_cls = real_sdk.ClaudeAgentOptions
-        transport_mod = importlib.import_module(
-            "claude_agent_sdk._internal.transport.subprocess_cli"
-        )
-        SubprocessCLITransport = transport_mod.SubprocessCLITransport
-
-        for value in ("low", "medium", "high", "xhigh", "max"):
-            # Constructs cleanly. The SDK currently types effort as
-            # Literal["low","medium","high","max"], but Python does not enforce
-            # Literal at runtime, so xhigh passes through as an opaque string
-            # (Spec §3, Req #10).
-            opts = real_options_cls(effort=value)
-            assert opts.effort == value
-
-            # Build CLI argv via the SDK's transport. We avoid actually
-            # connecting (which would call the CLI binary) by constructing
-            # the transport with a synthetic cli_path so _build_command
-            # can run without _find_cli failing.
-            opts_with_cli = real_options_cls(
-                effort=value,
-                cli_path="/usr/bin/true",  # any path; we never exec it.
-            )
-            transport = SubprocessCLITransport(
-                prompt="", options=opts_with_cli,
-            )
-            argv = transport._build_command()
-            # The argv must contain the pair `["--effort", value]` in order.
-            for i in range(len(argv) - 1):
-                if argv[i] == "--effort":
-                    assert argv[i + 1] == value, (
-                        f"effort flag value mismatch for {value!r}: argv={argv!r}"
-                    )
-                    break
-            else:
-                raise AssertionError(
-                    f"--effort flag missing from argv for value {value!r}: {argv!r}"
-                )
-    finally:
-        for key in list(sys.modules):
-            if key == "claude_agent_sdk" or key.startswith("claude_agent_sdk."):
-                del sys.modules[key]
-        sys.modules.update(saved)
 
 
 def test_effort_rejects_unknown_tier_and_criticality():

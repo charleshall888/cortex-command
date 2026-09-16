@@ -19,8 +19,8 @@ Covers:
 
 All patch targets live on ``cortex_command.overnight.orchestrator`` (or
 ``cortex_command.overnight.outcome_router`` for ``apply_feature_result``).  The
-``conftest.py`` stub pre-installs ``backlog.update_item`` and
-``claude_agent_sdk`` so these tests can import orchestrator safely.
+``conftest.py`` stub pre-installs ``backlog.update_item`` so these tests can
+import orchestrator safely.
 """
 
 from __future__ import annotations

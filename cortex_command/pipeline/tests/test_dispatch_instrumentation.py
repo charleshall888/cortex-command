@@ -10,17 +10,12 @@ Tests cover:
 from __future__ import annotations
 
 import json
-import sys
 import tempfile
 import unittest
 from contextlib import contextmanager
 from pathlib import Path
 from unittest.mock import patch
 
-# conftest.py runs before this module under pytest and installs the SDK stub.
-# Under plain unittest, we call _install_sdk_stub() directly here.
-from cortex_command.pipeline.tests.conftest import _install_sdk_stub
-_install_sdk_stub()
 import cortex_command.pipeline.dispatch as _dispatch_module
 from cortex_command.tests._claude_double import (
     assistant_frame,
@@ -28,8 +23,6 @@ from cortex_command.tests._claude_double import (
     result_frame,
     tool_result_frame,
 )
-
-_sdk = sys.modules["claude_agent_sdk"]
 
 
 # ---------------------------------------------------------------------------
