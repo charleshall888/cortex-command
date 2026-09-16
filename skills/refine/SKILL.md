@@ -55,9 +55,9 @@ Approval write-back belongs to the spec-approve verb (in-process, same 3-arm rou
 ## 5. Finish
 
 ```bash
-cortex-lifecycle-stage-artifacts --phase refine --feature {lifecycle-slug}
+cortex-lifecycle-stage-artifacts --phase refine --feature {lifecycle-slug} --commit-subject "Refine {feature}: research and spec"
 ```
 
-`config_disabled` → relay `message`, skip the commit. `nothing_staged` → nothing. `staged` → commit as `Refine {feature}: research and spec`, or `Refine {feature}: cancelled at spec approval` when `spec.md` is absent. Non-zero exit from staging or commit → surface and halt.
+Use `Refine {feature}: cancelled at spec approval` when `spec.md` is absent. `config_disabled` → relay `message`. `nothing_staged` → nothing. `staged` → the verb committed the staged set; relay `commit.sha`, or `commit.message` on `failed` and halt.
 
 Announce the item, lifecycle directory, artifacts, fields written (`complexity`, `criticality`, `status: refined`, `spec`, `areas`), and that `/cortex-core:build {lifecycle-slug}` is next.

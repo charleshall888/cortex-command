@@ -359,8 +359,6 @@ _RESPONSE_VALUES = frozenset({
     "approve-all",
     "revise-piece",
     "drop-piece",
-    "consolidate-pieces",
-    "split-piece",
 })
 
 

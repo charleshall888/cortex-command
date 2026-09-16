@@ -103,7 +103,7 @@ Thread `advance_contract.expected_from_state` via `--from-state` when you have i
 The plan→implement transition rides the plan-decision arm. On any approval:
 
 ```bash
-cortex-lifecycle-stage-artifacts --phase plan --feature {feature}
+cortex-lifecycle-stage-artifacts --phase plan --feature {feature} --commit-subject "Plan {feature}: tasks and approval"
 ```
 
-`config_disabled` → relay `message`, skip the commit; `nothing_staged` → skip; `staged` → commit. Non-zero exit → halt rather than commit a partial set. On "wait" the commit makes approval durable, then the lifecycle halts.
+`config_disabled` → relay `message`; `nothing_staged` → nothing; `staged` → the verb committed the staged set — relay `commit.sha`, or `commit.message` on `failed` and halt. On "wait" the commit makes approval durable, then the lifecycle halts.

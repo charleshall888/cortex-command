@@ -366,3 +366,14 @@ def test_first_close_reports_status_changed(tmp_path: Path, backlog_dir: Path) -
     entry = _closed_entry(tmp_path, "auth-api", "1")
 
     assert entry["status_changed"] is True
+
+
+def test_omitted_backend_resolves_from_config(tmp_path: Path, backlog_dir: Path) -> None:
+    """No ``backend`` given → resolved from lifecycle.config.md in-process."""
+    make_item(backlog_dir, "001-auth-api.md", "Auth API", extra="status: refined\n")
+    (tmp_path / "cortex" / "lifecycle.config.md").write_text(
+        "---\nbacklog:\n  backend: none\n---\n", encoding="utf-8"
+    )
+    r = ct.close_tickets([("auth-api", "1")], project_root=tmp_path)
+    assert r["results"][0]["state"] == "skipped-disabled"
+    assert _status(backlog_dir / "001-auth-api.md") == "refined"

@@ -75,17 +75,13 @@ Invoke `/commit` for the review's artifacts (completion rows in `events.log`, cl
 
 ## 6. PR merge
 
-`integration_branch` missing from the state file → "No integration branch found — skipping PR step." Otherwise:
-
 ```
-gh pr list --head {integration_branch} --state all --json number,url,state,title,isDraft
+cortex-morning-review-pr-status
 ```
 
-`--state all` is required — the default hides merged and closed PRs. Head names repeat across sessions: empty → "No PR found for `{integration_branch}`. The runner may have failed to create one. Use `/pr` to create it manually."; several → list them and stop, never pick one; `MERGED` → report the url and stop without claiming this session's work landed or touching tickets; `CLOSED` → report and stop.
+`no-branch` / `no-pr` / `several` / `merged` / `closed` / `gh-error` → relay `message` and stop here (`several` lists `candidates` — never pick one; `merged` reports only, touching no tickets). `open` → show `pr` (url, title) and `open {url} 2>/dev/null || true`. `pr.draft` (a zero-progress session) → GitHub blocks the merge; offer **mark ready and merge** (`gh pr ready {number}` then the merge below), **close** (`gh pr close {number}`, warning that the remote branch `{integration_branch}` and any worktree survive and need manual deletion), or **leave as draft**. Otherwise ask `Merge this PR to main? [yes / no]`.
 
-Show the open PR (url, title, state) and `open {url} 2>/dev/null || true`. Draft (a zero-progress session) → GitHub blocks the merge; offer **mark ready and merge** (`gh pr ready {number}` then the merge below), **close** (`gh pr close {number}`, warning that the remote branch `{integration_branch}` and any worktree survive and need manual deletion), or **leave as draft**. Otherwise ask `Merge this PR to main? [yes / no]`.
-
-Yes → `gh pr merge {number} --merge --delete-branch`. Success → "Merged. Remote branch deleted."; if the state file's `worktree_path` exists, `git worktree remove --force {worktree_path}` (report either outcome, never fail the review), and remove any demo worktree from 2a the same way. Failure → show the error, leave the PR open. No → "PR left open at {url} — merge manually when ready."
+Yes → `gh pr merge {number} --merge --delete-branch`. Success → "Merged. Remote branch deleted."; if `worktree_path` exists, `git worktree remove --force {worktree_path}` (report either outcome, never fail the review), and remove any demo worktree from 2a the same way. Failure → show the error, leave the PR open. No → "PR left open at {url} — merge manually when ready."
 
 Sections 6a and 6b run only after a merge confirmed in this review.
 
@@ -99,10 +95,10 @@ Exit `0` → "Local main synced." `1` → rebase aborted (conflicts outside the 
 
 ## 6b. Close tickets
 
-Resolve the backend once with `cortex-read-backlog-backend`, then close every completed feature in one call:
+Close every completed feature in one call (the verb resolves the backend itself):
 
 ```
-cortex-morning-review-close-tickets --item {feature}={identifier} [--item ...] --backend {resolved-backend}
+cortex-morning-review-close-tickets --item {feature}={identifier} [--item ...]
 ```
 
 `{identifier}` is the zero-padded `backlog_id` from the state file (`078`), falling back to the lifecycle slug. Per-item `state`: `closed` → `closed #{id}` (`(parent epic also closed)` when `parent_closed`); `no-ticket` → `no ticket found`; `ambiguous` → show `message`'s candidates, ask for a disambiguated re-invoke; `skipped-disabled` → one-line advisory (`none` backend); `external` → make the equivalent close best-effort per `backlog.instructions`, surfacing it if it fails; `error` → `close failed: {message}`, continue. Print a `Ticket closure results:` summary.

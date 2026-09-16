@@ -26,22 +26,20 @@ Only `interactive/`-prefixed worktrees are cleaned — `git worktree list --porc
 
 ### Step 9 — Finalize
 
-Resolve the backend once (`cortex-read-backlog-backend`, argless), then:
-
 ```bash
-cortex-lifecycle-finalize --feature {slug} --backend {resolved-backend} --backlog-file {backlog-filename}
+cortex-lifecycle-finalize --feature {slug} --backlog-file {backlog-filename}
 ```
 
-`{backlog-filename}` is the file identified at entry (`""` when none). `finalized` → marked complete, `session_id=null`, index regenerated → Step 11a. `external-backend` → local write-back skipped; make the equivalent update on the tracker best-effort per `backlog.instructions`; the event is still emitted → Step 11a. `error` → surface `message`, halt. Exit 2 → ambiguous slug; backlog-writeback.md's exit-2 rule.
+`{backlog-filename}` is the file identified at entry (`""` when none); the verb resolves the backend itself. `finalized` → marked complete, `session_id=null`, index regenerated → Step 11a. `external-backend` → local write-back skipped; make the equivalent update on the tracker best-effort per `backlog.instructions`; the event is still emitted → Step 11a. `error` → surface `message`, halt. Exit 2 → ambiguous slug; backlog-writeback.md's exit-2 rule.
 
 <!-- finalization-commit-step -->
 ### Step 11a — Commit finalization artifacts
 
 ```
-cortex-lifecycle-stage-artifacts --phase complete --feature {slug}
+cortex-lifecycle-stage-artifacts --phase complete --feature {slug} --commit-subject "Complete {slug}: finalization artifacts"
 ```
 
-The verb reads `commit-artifacts` itself and owns explicit-path staging. Act on `signal`: `config_disabled` → relay `message`, skip the commit; `nothing_staged` → skip silently, continue to Step 12; `staged` → commit with `git commit --only -- <those paths>`, subject imperative ≤72 chars. Non-zero exit from staging or commit → surface and stop; never imply the artifacts were committed. After a commit off `main`/`master`, advise: `Artifacts committed on <branch> rather than the default branch — move them to main if appropriate.` No automatic switch.
+The verb reads `commit-artifacts` itself, owns explicit-path staging, and commits exactly its staged set. Act on `signal`: `config_disabled` → relay `message`; `nothing_staged` → continue to Step 12; `staged` → relay `commit.sha`, or on `commit.state: failed` surface `commit.message` and stop — never imply the artifacts were committed. After a commit off `main`/`master`, advise: `Artifacts committed on <branch> rather than the default branch — move them to main if appropriate.` No automatic switch.
 <!-- /finalization-commit-step -->
 
 ### Step 12 — Summarize

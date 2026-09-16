@@ -829,3 +829,57 @@ def test_large_capture_set_still_stages_the_prose(tmp_path: Path) -> None:
     assert f"{LC}/research.md" in result["staged_paths"]
     assert len(result["staged_paths"]) == 2600 + 5
     assert _staged(root) == sorted(result["staged_paths"])
+
+
+# ---------------------------------------------------------------------------
+# --commit-subject — the verb commits exactly its staged set (2026-09-16)
+# ---------------------------------------------------------------------------
+
+
+def test_commit_subject_commits_only_the_staged_set(tmp_path: Path, monkeypatch, capsys) -> None:
+    root = tmp_path
+    _new_repo(root)
+    _write(root, "README.md", "base\n")
+    _commit_all(root, "Initial commit")
+    _write(root, f"{LC}/research.md", "research\n")
+    _write(root, f"{LC}/spec.md", "spec\n")
+    _write(root, f"{LC}/index.md", "lifecycle index\n")
+    _write(root, f"{LC}/events.log", _APPROVAL_EVENTS)
+    _write_ticket(root)
+    # A concurrent session's staged file must NOT ride along.
+    _write(root, "unrelated.txt", "other session\n")
+    _git("add", "unrelated.txt", cwd=root)
+    head_before = _git("rev-parse", "HEAD", cwd=root).stdout.strip()
+
+    monkeypatch.delenv("CORTEX_REPO_ROOT", raising=False)
+    monkeypatch.chdir(root)
+    rc = main(["--phase", "refine", "--feature", SLUG,
+               "--commit-subject", "Refine my-feature: research and spec"])
+    assert rc == 0
+    out = json.loads(capsys.readouterr().out)
+    assert out["signal"] == "staged"
+    assert out["commit"]["state"] == "committed", out
+    head_after = _git("rev-parse", "HEAD", cwd=root).stdout.strip()
+    assert head_after != head_before
+    assert head_after.startswith(out["commit"]["sha"])
+    assert _git("log", "-1", "--format=%s", cwd=root).stdout.strip() == "Refine my-feature: research and spec"
+    committed = sorted(_git("show", "--name-only", "--format=", "HEAD", cwd=root).stdout.split())
+    assert committed == out["staged_paths"]
+    assert "unrelated.txt" not in committed
+    assert _staged(root) == ["unrelated.txt"]  # still staged, untouched
+
+
+def test_commit_subject_skipped_when_nothing_staged(tmp_path: Path, monkeypatch, capsys) -> None:
+    root = tmp_path
+    _new_repo(root)
+    _write(root, "README.md", "base\n")
+    _write(root, "cortex/lifecycle/.keep", "")
+    _commit_all(root, "Initial commit")
+    monkeypatch.delenv("CORTEX_REPO_ROOT", raising=False)
+    monkeypatch.chdir(root)
+    head_before = _git("rev-parse", "HEAD", cwd=root).stdout.strip()
+    assert main(["--phase", "refine", "--feature", SLUG, "--commit-subject", "Refine x: y"]) == 0
+    out = json.loads(capsys.readouterr().out)
+    assert out["signal"] == "nothing_staged"
+    assert "commit" not in out
+    assert _git("rev-parse", "HEAD", cwd=root).stdout.strip() == head_before

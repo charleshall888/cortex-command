@@ -101,9 +101,11 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 from typing import Optional
 
@@ -490,7 +492,50 @@ def _build_parser() -> argparse.ArgumentParser:
         metavar="SLUG",
         help="Feature slug (e.g. my-feature).",
     )
+    parser.add_argument(
+        "--commit-subject",
+        default=None,
+        metavar="SUBJECT",
+        help=(
+            "When given and the signal is 'staged', commit exactly the staged "
+            "paths (pathspec-limited, never the whole index) with this "
+            "subject. The result gains a {commit: {state, sha|message}} key."
+        ),
+    )
     return parser
+
+
+def commit_staged(root: Path, paths: list[str], subject: str) -> dict:
+    """Commit *paths* — and only them — under *subject*.
+
+    Pathspec-limited so a concurrent session's staged files never ride along;
+    the pathspec travels through a temp file so a large capture set cannot
+    overflow argv. Returns ``{"state": "committed", "sha": ...}`` or
+    ``{"state": "failed", "message": ...}`` — never raises.
+    """
+    if not paths:
+        return {"state": "failed", "message": "no staged paths to commit"}
+    with tempfile.NamedTemporaryFile("w", suffix=".pathspec", delete=False) as fh:
+        fh.write("\n".join(paths) + "\n")
+        spec_file = fh.name
+    try:
+        proc = _run(
+            ["commit", "--only", "-m", subject, f"--pathspec-from-file={spec_file}"],
+            cwd=str(root),
+        )
+    finally:
+        try:
+            os.unlink(spec_file)
+        except OSError:
+            pass
+    if proc is None:
+        return {"state": "failed", "message": "git unavailable or timed out"}
+    if proc.returncode != 0:
+        detail = (proc.stderr or proc.stdout or "").strip()
+        return {"state": "failed", "message": detail[-2000:] or f"git exited {proc.returncode}"}
+    head = _run(["rev-parse", "--short", "HEAD"], cwd=str(root))
+    sha = head.stdout.strip() if head is not None and head.returncode == 0 else None
+    return {"state": "committed", "sha": sha}
 
 
 def main(argv: Optional[list[str]] = None) -> int:
@@ -502,6 +547,8 @@ def main(argv: Optional[list[str]] = None) -> int:
         sys.stderr.write(f"cortex-lifecycle-stage-artifacts: {exc}\n")
         return 1
     result = stage(args.phase, args.feature, root)
+    if args.commit_subject and result.get("signal") == "staged":
+        result["commit"] = commit_staged(root, result["staged_paths"], args.commit_subject)
     sys.stdout.write(json.dumps(result, separators=(",", ":")) + "\n")
     return 0
 

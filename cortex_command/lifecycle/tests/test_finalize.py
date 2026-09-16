@@ -417,3 +417,30 @@ def test_rework_cycles_are_counted_from_the_written_log(
     row = [r for r in main_rows if r["event"] == "feature_complete"][0]
     assert row["rework_cycles"] == 0, "counted the worktree-local decoy rows"
     assert result["emitted"] is True
+
+
+def test_omitted_backend_resolves_from_config(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """``--backend`` omitted → the verb reads lifecycle.config.md itself.
+
+    A ``backlog: {backend: none}`` config must skip the write-back and report
+    ``backend: none`` — the same routing the caller used to pay a separate
+    ``cortex-read-backlog-backend`` turn for.
+    """
+    _scaffold(tmp_path, monkeypatch)
+    (tmp_path / "cortex" / "lifecycle.config.md").write_text(
+        "---\nbacklog:\n  backend: none\n---\n", encoding="utf-8"
+    )
+    result = fin.finalize(feature="feat", backend=None, backlog_file="")
+    assert result["state"] == "finalized"
+    assert result["backend"] == "none"
+    assert result["backlog"] == "skipped"
+
+
+def test_omitted_backend_defaults_to_cortex_backlog_without_config(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _scaffold(tmp_path, monkeypatch)
+    result = fin.finalize(feature="feat", backend=None, backlog_file="")
+    assert result["backend"] == "cortex-backlog"

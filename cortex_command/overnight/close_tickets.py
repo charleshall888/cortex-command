@@ -23,9 +23,9 @@ item and skill prose does the actual best-effort close.
 ADR-0019 (dumb arg-actor): the caller passes an explicit ``--item
 FEATURE=IDENTIFIER`` pair per feature (repeatable) rather than this verb
 scanning ``overnight-state.json`` for backlog_id/feature pairs itself — the
-skill already holds this list from Section 2's per-feature display. Likewise
-the already-resolved ``--backend`` value is passed in; this verb does not
-invoke ``cortex-read-backlog-backend`` itself.
+skill already holds this list from Section 2's per-feature display. The
+backend is resolved in-process from ``lifecycle.config.md`` unless the caller
+passes ``--backend`` (2026-09-16: the separate read was one turn per review).
 
 Per-item states (nested in ``results[i]["state"]``):
   closed           — the item was resolved and its status set to complete.
@@ -73,6 +73,7 @@ from cortex_command.backlog import _telemetry
 from cortex_command.backlog.resolve_item import ResolutionError, _format_candidates, _parse_frontmatter
 from cortex_command.backlog.update_item import _find_item_with_status, _get_item_id, update_item
 from cortex_command.common import _resolve_user_project_root
+from cortex_command.lifecycle_config import resolve_backlog_backend
 
 KNOWN_STATES = ("ok", "error")
 KNOWN_ITEM_STATES = (
@@ -191,15 +192,17 @@ def _close_one(
 
 def close_tickets(
     items: List[Tuple[str, str]],
-    backend: str,
+    backend: Optional[str] = None,
     project_root: Optional[Path] = None,
 ) -> dict:
     """Close (or report on) each ``(feature, identifier)`` pair in *items*.
 
-    *backend* is the already-resolved ``cortex-read-backlog-backend`` value —
-    this verb routes on it but does not resolve it itself (ADR-0019).
+    *backend* is the backlog backend to route on; ``None`` resolves it from
+    ``lifecycle.config.md`` in-process so the skill spends no separate
+    ``cortex-read-backlog-backend`` turn.
     """
     root = project_root or _resolve_user_project_root()
+    backend = backend or resolve_backlog_backend(root)
     backlog_dir = root / "cortex" / "backlog"
     results = [
         _close_one(feature, identifier, backend, backlog_dir, root)
@@ -231,12 +234,12 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--backend",
-        required=True,
+        default=None,
         help=(
-            "The already-resolved cortex-read-backlog-backend value. "
-            "'cortex-backlog' closes each item; 'none' skips all with an "
-            "advisory; any other value is reported as 'external' for the "
-            "caller to best-effort close."
+            "Backlog backend to route on; omit to resolve it from "
+            "lifecycle.config.md in-process. 'cortex-backlog' closes each "
+            "item; 'none' skips all with an advisory; any other value is "
+            "reported as 'external' for the caller to best-effort close."
         ),
     )
     return parser

@@ -10,7 +10,7 @@ Read `cortex/research/{topic}/research.md`. `### Pieces` is the piece set (one b
 
 Grouping coarsens ticket units without mutating `### Pieces`. **One piece** → one ticket, no epic. **Zero** → no tickets, but still write `decomposed.md` with frontmatter `decomposition_verdict: zero-piece` holding `## Fold-into` (an existing ticket number plus rationale) or `## Verdict` (no actionable work). **Two or more** → group, then one epic and one child per group.
 
-Group pieces that share a connection seam, form one integration cluster, carry the same role, or deliver visible value only together. Opportunistic, never forced — only gross, architecture-visible over-splitting; no evident coupling → 1:1. Subtler couplings belong to `consolidate-pieces` at §5a. A `blocked-by` *within* a group becomes an intra-ticket ordering note recorded in `## Grouping Notes`; outside dependencies retarget the surviving ticket.
+Group pieces that share a connection seam, form one integration cluster, carry the same role, or deliver visible value only together. Opportunistic, never forced — only gross, architecture-visible over-splitting; no evident coupling → 1:1. Subtler couplings are a `revise-piece` at §5a. A `blocked-by` *within* a group becomes an intra-ticket ordering note recorded in `## Grouping Notes`; outside dependencies retarget the surviving ticket.
 
 ### 5. Author tickets
 
@@ -23,10 +23,8 @@ After all N bodies and before any commit to `cortex/backlog/`, a user-blocking g
 - **`approve-all`** — write all N.
 - **`revise-piece <N>`** — free-text revision scoped to ticket N; re-walk it, re-present the full batch.
 - **`drop-piece <N>`** — don't write it; record under `## Dropped Items` with one sentence.
-- **`consolidate-pieces <N,M,…>`** — merge into one ticket (same prose-merge/union rule); the lowest-index piece survives at the lowest slot; renumber contiguously from 1 and re-present.
-- **`split-piece <N>`** — inverse of grouping: re-derive ticket N's constituent pieces from the unchanged `### Pieces` (not the merged body), restoring `## Grouping Notes` ordering; re-present renumbered.
 
-Loops until `approve-all` or all pieces are dropped. Record consolidations under `## Consolidation Notes` (which pieces merged into which survivor by post-renumber index, revised role summary, one-sentence rationale).
+Loops until `approve-all` or all pieces are dropped.
 
 ```
 cortex-discovery emit-checkpoint-response --topic <topic> --checkpoint decompose-commit --response <response>
@@ -64,7 +62,7 @@ Omit `## Grouping Notes` when nothing grouped; the single-piece branch omits Epi
 
 ### 7. Index
 
-Re-resolve the backend here (`cortex-read-backlog-backend`, argless — §6 never runs on the zero-piece branch). `cortex-backlog` → `cortex-generate-backlog-index`; anything else → skip with a one-line advisory.
+Under `cortex-backlog` (as resolved at §6; resolve now on the zero-piece branch) → `cortex-generate-backlog-index`; anything else → skip with a one-line advisory.
 
 ### 8. Commit and summarize
 

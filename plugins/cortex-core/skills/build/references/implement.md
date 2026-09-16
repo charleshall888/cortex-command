@@ -8,7 +8,7 @@ Read `{roots.artifacts.path}/plan.md`; identify pending tasks (`[ ]`).
 
 **Short road (no plan.md)** — the feature arrived via `spec.approved-direct`, so Plan was skipped by design. Derive tasks from spec.md's acceptance criteria and implement in-session: no batching, no sub-task dispatch, no batch emissions. Run the branch decision, do the work, exit via §4.
 
-**Branch decision** — one call composes the current-branch check, plan-time `dispatch_choice`, per-repo `branch-mode`, and the picker gate:
+**Branch decision.** Arriving from plan §4's `branch-mode-approved` in this session → skip the call and route on that `dispatch_choice` exactly as a `resolved` state below, with `entry_mode` `selected`. Otherwise one call composes the current-branch check, plan-time `dispatch_choice`, per-repo `branch-mode`, and the picker gate:
 
 ```bash
 cortex-lifecycle-branch-decision --feature {slug}

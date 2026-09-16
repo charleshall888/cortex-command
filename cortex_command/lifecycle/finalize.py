@@ -80,6 +80,7 @@ from pathlib import Path
 from typing import List, Optional
 
 from cortex_command.backlog import _telemetry
+from cortex_command.lifecycle_config import resolve_backlog_backend
 from cortex_command.backlog.resolve_item import (
     _format_candidates,
     _parse_frontmatter,
@@ -179,7 +180,7 @@ def _apply_backlog_writeback(backend: str, backlog_file: str, root: Path) -> str
 def finalize(
     *,
     feature: str,
-    backend: str,
+    backend: Optional[str],
     backlog_file: str,
     project_root: Optional[Path] = None,
 ) -> dict:
@@ -190,6 +191,9 @@ def finalize(
     backlog slug (→ the caller maps to exit 2).
     """
     root = project_root or _resolve_user_project_root_from_cwd()
+    # A caller that already holds the backend passes it; otherwise resolve it
+    # here so the skill spends no separate ``cortex-read-backlog-backend`` turn.
+    backend = backend or resolve_backlog_backend(root)
 
     backlog_signal = _apply_backlog_writeback(backend, backlog_file, root)
     state = "finalized" if backend in (_CORTEX_BACKLOG, "none") else "external-backend"
@@ -242,8 +246,11 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--feature", required=True, metavar="SLUG", help="Lifecycle feature slug.")
     parser.add_argument(
         "--backend",
-        required=True,
-        help="Caller-resolved backlog backend (cortex-backlog | none | other).",
+        default=None,
+        help=(
+            "Backlog backend (cortex-backlog | none | other). Omit to resolve "
+            "it from lifecycle.config.md in-process."
+        ),
     )
     parser.add_argument(
         "--backlog-file",

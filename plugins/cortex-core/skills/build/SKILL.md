@@ -67,14 +67,9 @@ Cross boundaries automatically — announce and continue; add no stop of your ow
 
 Override anytime: `cortex-lifecycle-event criticality-override --feature <name> --from <old> --to <new> --reason "{tag}: <one line>"` (tag from `reversibility:` / `exposure:` / `consequence:` / `other:`; carry the reason so the next reader need not re-derive it). `cortex-lifecycle-state --feature {feature}` (or `--field <x>`) reduces the log to current values, omitting absent keys — default `criticality=medium` / `tier=moderate` yourself. **`"corrupted": true`** → tier/criticality unknowable: treat the feature as *requiring* review.
 
-| Criticality | Review phase | Orchestrator review | Planning |
-|-------------|-------------|--------------------|---------|
-| low | tier-based (skip below complex) | complex only | tier-based |
-| medium | tier-based (skip below complex) | active at phase boundaries | tier-based |
-| high | forced at every tier; Stage 2 at complex only | active at all boundaries | single plan |
-| critical | forced at every tier; Stage 2 at complex only | active at all boundaries | competing plans |
+**Review** is forced at every tier when criticality is `high`/`critical` (Stage 2 complex-only); otherwise tier-based, complex only. **Orchestrator review** runs at every phase boundary except `low`-criticality below complex. **Planning** dispatches competing plans at `critical`, a single plan otherwise.
 
-Either axis can force Review; only its Stage 2 is tier-gated. Model choice is the dispatching agent's call at each site. The implement→{review|complete} routing lives in its verb.
+Model choice is the dispatching agent's call at each site. The implement→{review|complete} routing lives in its verb.
 
 ## Situational references
 
