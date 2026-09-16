@@ -4,90 +4,60 @@ description: Take a backlog item from idea to approved spec via Clarify → Rese
 argument-hint: "<topic>"
 ---
 
-# /cortex-core:refine
+# Refine
 
-Three phases — **Clarify** (intent gate + requirements alignment), **Research** (implementation-level exploration), **Spec** (structured requirements interview). On completion: `status: refined`, linked spec, ready for `/cortex-core:build`.
-
-Phase boundaries **auto-advance** — announce and continue, no confirmation. `<!-- pause: -->` markers, here and in the references, are the only sanctioned asks.
+Clarify (intent gate) → Research → Spec. Ends at `status: refined` with a linked spec, ready for `/cortex-core:build`. Phase boundaries auto-advance — announce and continue; `<!-- pause: -->` markers here and in the references are the only sanctioned asks.
 
 <!-- pause: refine-empty-topic-prompt question -->
-Topic: $ARGUMENTS. If empty, prompt the user first.
+Topic: $ARGUMENTS. Empty → ask for one first.
 
-## Step 1: Start
+## 1. Start
 
 ```bash
 cortex-refine start <input>
 ```
 
-One call resolves the item, reads the backlog backend, existence-checks epic context, classifies the resume point, idempotently seeds `lifecycle_start`, records the session marker, and creates `index.md`. Use its fields directly; don't re-derive them.
+Use its fields; don't re-derive them. Carry `backend`, `lifecycle_slug`, and `backlog_filename_slug` through the run — they key every write-back.
 
-- **`state: ready`** — proceed. Carry `backend`, `lifecycle_slug`, and `backlog_filename_slug` through the whole run: they key the write-backs, reconcile routing, and the §3b gate.
-- **`state: needs-slug`** — Context B (no matching item). Derive a short kebab slug from the input, announce it, and re-run with `--lifecycle-slug`; no confirmation needed.
-- **Exit 2** — ambiguous reference; candidates are on stderr, let the user pick.
-- **Exit 70** — surface and halt.
+- `ready` → proceed. `needs-slug` (Context B: no matching item) → derive a short kebab slug, announce it, re-run with `--lifecycle-slug`. Exit 2 → ambiguous; candidates are on stderr, let the user pick. Exit 70 → surface and halt.
+- `epic_research` / `epic_spec` set → read them as background, relay any `warning`, add a `## Epic Reference` link section to `research.md` and a preamble note to `spec.md`. Never copy epic content in — it spans every child ticket.
+- `resume`: `complete` → announce and skip to §5 (re-run only on explicit request; that overwrites the spec and resets `status: in_progress`). `research` → a spec without research: warn overnight needs both, run Research, skip Clarify. `spec` → resume at Spec. `clarify` → start there.
 
-**Epic context.** `epic_research` (and `epic_spec` alongside it) are already existence-checked; relay any `warning` verbatim. **Do not copy epic content into lifecycle files** — epic research spans all tickets, so copying bleeds cross-ticket context into this one. Read it as background before Clarify, announce it, and add a `## Epic Reference` section to `research.md` plus a preamble note to `spec.md` linking the path. An epic research path never substitutes for this ticket's own `research.md`.
+## 2. Clarify
 
-**Resume** branches on `resume` — judgment the CLI can't encode:
+Follow `${CLAUDE_SKILL_DIR}/references/clarify.md`; carry its §5 outputs forward.
 
-- **`complete`** — both artifacts exist; announce and skip to Step 6. Re-run only on explicit request; that overwrites the spec and resets `status: in_progress` until re-approved.
-- **`research`** — spec exists without research. Warn that overnight needs both, run Research, skip Clarify (intent was set when the spec was written).
-- **`spec`** — research exists; resume at Spec, where the Research Sufficiency Check applies at entry.
-- **`clarify`** — neither exists; start at Clarify.
+Write complexity and criticality back at once (Context A only), routed on `backend` — the **3-arm routing** every backend-gated write here uses: `cortex-backlog` → `cortex-update-item {backlog-filename-slug} --complexity {value} --criticality {value}`; `none` → skip with a one-line advisory; external → best-effort per `backlog.instructions`, surfacing the values if it fails. Exit 2 → the ambiguous-slug rule in `${CLAUDE_SKILL_DIR}/../build/references/backlog-writeback.md`.
 
-**Ordering invariant: seed → reconcile → §3b tier read.** On a non-local backend (or Context B) the seed carries the canonical `simple`/`medium` defaults, and the critical-review gate would skip silently at `tier = simple`. The gate stays alive only because Step 4's `reconcile-clarify` ratchets state up from Clarify's *computed* values before specify.md §3b reads it. The local `cortex-backlog` arm is immune either way — its `--backlog-slug` re-sources from backlog frontmatter.
+**Stop at `simple`** — no lifecycle needed: say so, hand back to direct implementation (dev rule 4), stop. Continue only at `moderate` or `complex`.
 
-## Step 2: Clarify
+## 3. Research
 
-Follow `${CLAUDE_SKILL_DIR}/references/clarify.md`. Carry its §5 outputs forward into later phases.
+Follow `${CLAUDE_SKILL_DIR}/references/research-phase.md`. Then re-assess the tier against §2's rubric with the research in hand. Only if it changed: `cortex-lifecycle-event complexity-override --feature <feature> --from <old> --to <new> --reason "{tag}: <one line>"` — a pointer to the argument in `research.md`, led by an optional tag from `reversibility:` / `exposure:` / `consequence:` / `other:`.
 
-Once complexity and criticality are set, write them back immediately (Context A only), gated on Step 1's backend — the canonical **backend-gated write-back routing**, the 3-arm shape every backend-gated write in this skill uses:
+## 4. Spec
 
-- **`cortex-backlog`** → `cortex-update-item {backlog-filename-slug} --complexity {value} --criticality {value}`
-- **`none`** → skip with a one-line advisory
-- **external** → apply the equivalent update best-effort per `backlog.instructions`; surface the values if it can't complete
-
-Every backend still feeds the critical-review gate — Step 4's `reconcile-clarify` carries the values forward regardless. On failure, surface and wait; on exit 2, apply the ambiguous-slug rule in `${CLAUDE_SKILL_DIR}/../build/references/backlog-writeback.md`.
-
-**Stop at `simple`.** If Clarify lands on `simple`, this work does not need a lifecycle: say so, hand back to direct implementation (dev Step 1.4), and stop — no research, no spec. Continue below only at `moderate` or `complex`.
-
-## Step 3: Research
-
-Follow `${CLAUDE_SKILL_DIR}/references/research-phase.md`. At the Research → Specify transition, run the complexity-escalation gate:
+Reconcile first — the seed carries pre-Clarify defaults and specify.md §3b's critical-review gate reads the ratcheted state:
 
 ```bash
-cortex-complexity-escalator <feature> --gate research_open_questions
+# Context A — re-sources from backlog frontmatter
+cortex-refine reconcile-clarify --backend {resolved} --lifecycle-slug {lifecycle-slug} --backlog-slug {backlog-filename-slug} --criticality-reason "{tag}: {why}" --tier-reason "{tag}: {why}"
+# Context B — passes Clarify's computed values
+cortex-refine reconcile-clarify --backend {resolved} --lifecycle-slug {lifecycle-slug} --complexity {value} --criticality {value} --criticality-reason "{tag}: {why}" --tier-reason "{tag}: {why}"
 ```
 
-**Advisory — it writes nothing.** Output means the unresolved-question count is unusually high; empty means it isn't. Either way *you* re-assess the tier now, with the research in hand, against Step 2's rubric. Only if your assessment changed, record it: `cortex-lifecycle-event complexity-override --feature <feature> --from <old> --to <new> --reason "{tag}: <one line>"` (either direction). The reason is what research surfaced to move you — a pointer that makes the argument in `research.md` findable, not the argument itself — led by an optional `{tag}` from `reversibility:`, `exposure:`, `consequence:`, `other:`. An unknown tag is rejected and the whole row, `from`/`to` included, is discarded: retag and re-run. Any other non-zero exit → surface stderr and halt.
+The `--*-reason` flags are optional one-liners reusing Clarify's stated reasoning; omit rather than fill with placeholders.
 
-## Step 4: Spec
+Then follow `${CLAUDE_SKILL_DIR}/references/specify.md` in full; its orchestrator-review path is `${CLAUDE_SKILL_DIR}/../build/references/orchestrator-review.md`.
 
-**Reconcile first** — the seed carries pre-Clarify values, so reconcile before §3a/§3b observe them. One unconditional, idempotent call:
+Approval write-back belongs to the spec-approve verb (in-process, same 3-arm routing). Hand it `--backend {resolved}`, `--backlog-file {backlog-filename-slug}` (`""` in Context B), `--spec-path cortex/lifecycle/{lifecycle-slug}/spec.md`, `--no-emit-transition` (refine stops at spec), and areas: `--areas a b` to set, `--clear-areas` to empty, omit to preserve. Areas name the primary subsystem modified (canonical: `overnight-runner`, `backlog`, `skills`, `lifecycle`, `hooks`, `report`, `tests`, `docs`); 4+ with no primary → clear.
 
-- **Context A**: `cortex-refine reconcile-clarify --backend {resolved} --lifecycle-slug {lifecycle-slug} --backlog-slug {backlog-filename-slug} --criticality-reason "{tag}: {why}" --tier-reason "{tag}: {why}"` — re-sources from backlog frontmatter.
-- **Context B**: `cortex-refine reconcile-clarify --backend {resolved} --lifecycle-slug {lifecycle-slug} --complexity {value} --criticality {value} --criticality-reason "{tag}: {why}" --tier-reason "{tag}: {why}"` — passes Clarify's computed values (the tier ratchet named in Step 1).
-
-`--criticality-reason` and its tier counterpart are both optional and record *why* this criticality/tier — reuse the reasoning Clarify already stated, condensed to one line led by a `{tag}` from `reversibility:`, `exposure:`, `consequence:`, `other:`. An unknown tag is rejected and nothing is written. Omit either flag rather than filling it with placeholder text.
-
-Then read `${CLAUDE_SKILL_DIR}/references/specify.md` and follow it in full, resolving its propagated target: orchestrator-review → `${CLAUDE_SKILL_DIR}/../build/references/orchestrator-review.md`.
-
-After approval, register the artifact with `cortex-lifecycle-register-artifact --feature {lifecycle-slug} --artifact spec`, then run the second escalation gate — same contract as Step 3:
-
-```bash
-cortex-complexity-escalator <feature> --gate specify_open_decisions
-```
-
-**Write-back on approval (Context A)** is performed *by the spec-approve verb* in-process, backend-gated exactly as Step 2's 3-arm routing is, and composed with the approval emissions — this step supplies the args, it does not call `cortex-update-item` itself. Hand the verb `--backend {resolved}`, `--backlog-file {backlog-filename-slug}` (`""` in Context B), `--spec-path cortex/lifecycle/{lifecycle-slug}/spec.md`, and areas: `--areas a b` to set, `--clear-areas` for the empty case, omit to leave them untouched (preserve-on-omit). Pass `--no-emit-transition` — refine stops at `spec.md`.
-
-**Infer areas** by naming the primary subsystem modified — the one where most files change (canonical: `overnight-runner`, `backlog`, `skills`, `lifecycle`, `hooks`, `report`, `tests`, `docs`). Spanning 4+ with no clear primary → clear the field.
-
-## Step 5: Completion
+## 5. Finish
 
 ```bash
 cortex-lifecycle-stage-artifacts --phase refine --feature {lifecycle-slug}
 ```
 
-The verb reads `commit-artifacts` itself. Act on `signal`: `config_disabled` → relay its `message` and skip the commit; `nothing_staged` → exit silently; `staged` → commit. A non-zero exit is a staging failure — halt rather than commit a partial set. Commit subject from the staged set: `Refine {feature}: research and spec`, or `Refine {feature}: cancelled at spec approval` when `spec.md` is absent. If the commit exits non-zero, surface the error and halt — the uncommitted transition row waits until the operator resolves it and re-invokes.
+`config_disabled` → relay `message`, skip the commit. `nothing_staged` → nothing. `staged` → commit as `Refine {feature}: research and spec`, or `Refine {feature}: cancelled at spec approval` when `spec.md` is absent. Non-zero exit from staging or commit → surface and halt.
 
-Announce: the item, the lifecycle directory, the artifacts produced, the fields written (`complexity`, `criticality`, `status: refined`, `spec`, `areas`), and that `/cortex-core:build {lifecycle-slug}` is the next step.
+Announce the item, lifecycle directory, artifacts, fields written (`complexity`, `criticality`, `status: refined`, `spec`, `areas`), and that `/cortex-core:build {lifecycle-slug}` is next.

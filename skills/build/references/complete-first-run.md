@@ -1,40 +1,32 @@
 # Complete Phase — First-Run PR Flow
 
-Read only on `first_run` routing from complete.md, or on a fresh `complete` entry that hasn't opened a PR. Creates a PR, then pauses for merge; re-invocation routing and finalization stay in complete.md.
+Read only on `first_run` routing from complete.md. Opens the PR, then pauses for merge; re-invocation routing and finalization stay in complete.md.
 
 ## Step 1 — Tests
 
-From `cortex/lifecycle.config.md`: `test-command` set → run it.
+`test-command` in `cortex/lifecycle.config.md` → run it.
 <!-- pause: complete-test-command-ask question -->
-Config present without `test-command` → ask the user whether there are tests to run. No config → skip, noting "No `cortex/lifecycle.config.md` found — skipping test step."
+Config present without `test-command` → ask whether there are tests to run. No config → skip, noting "No `cortex/lifecycle.config.md` found — skipping test step." Failures → report and halt until resolved. First run only.
 
-Failures → report and halt until resolved. First-run only; the router skips this on re-invocation.
+## Step 2 — Commit
 
-## Step 2 — Commit artifacts
-
-`cortex-read-commit-artifacts`: `true` (default) → stage `cortex/lifecycle/{slug}/` plus any uncommitted source and commit; `false` → commit only the source.
+`cortex-read-commit-artifacts`: `true` (default) → stage `cortex/lifecycle/{slug}/` plus uncommitted source and commit; `false` → source only.
 
 ## Step 3 — Push and open the PR
 
-Push the branch, then create a PR whose title and body reflect the feature's purpose and link the lifecycle directory. Capture the PR number, URL, and current branch for Step 4.
-
-Running from inside an `interactive/{slug}` worktree — `cortex-interactive-lock inspect {slug}` reports a `LIVE` lock **and** `git rev-parse --show-toplevel` is that worktree root — wrap `gh pr create` in a cd-in-then-out around the worktree; otherwise run it from the current cwd. Advisory, non-blocking.
+Push, then create a PR whose title and body reflect the feature and link the lifecycle directory. Capture number, URL, and branch. Inside an `interactive/{slug}` worktree (`cortex-interactive-lock inspect {slug}` reports `LIVE` **and** `git rev-parse --show-toplevel` is that root) wrap `gh pr create` in a cd-in-then-out; otherwise run it from cwd.
 
 ## Step 4 — Record it
-
-One call resolves repo identity, atomically writes `cortex/lifecycle/{slug}/pr.json`, and logs the opened-PR event. Pass `--url`/`--head-branch` from Step 3 so the verb skips its `gh pr view` fallback:
 
 ```bash
 cortex-lifecycle-record-pr-opened --feature {slug} --number {pr-number} --url {pr-url} --head-branch {head-branch}
 ```
 
-`ok` → Step 5. `gh-error` → surface `message` and halt; never hand off without a recorded PR. `repo` is locked at PR-creation time, so complete.md's router hits the right repository even if `origin` later changes.
+Atomically writes `pr.json` (repo identity locked at creation) and logs the event; passing `--url`/`--head-branch` skips its `gh pr view` fallback. `ok` → Step 5. `gh-error` → surface `message`, halt; never hand off without a recorded PR.
 
 <!-- pause: complete-merge-wait phase-exit-wait -->
 ## Step 5 — Phase-exit pause
 
-Exit with this handoff and go no further:
+Exit with this handoff and go no further — manual re-invocation is the gate, don't poll:
 
 > PR open at `<url>`; merge on GitHub, then re-run `/cortex-core:build complete <slug>` to finalize.
-
-Don't poll — manual re-invocation is the gate.

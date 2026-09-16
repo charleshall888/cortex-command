@@ -14,21 +14,15 @@ Sub-tests:
       ``compute_eligible_features(["Y","Z"], tmp_path)`` returns
       ``(["Z"], [<one skip-event with rationale containing test-session-B>])``.
 
-  C — overnight → interactive rejection mirror (actual sidecar bash):
-      synthetic ``active-session.json`` + ``runner.pid``; sidecar at
-      ``skills/build/references/_interactive_overnight_check.sh`` invoked
-      via ``cat ... | bash -s -- '<wording>' '<repo>'``; asserts non-zero exit
-      AND stderr contains ``"the run to complete"``.
-
   D — lock release: ``acquire X`` → file exists → ``release X`` → file absent
       → ``cortex/lifecycle/X/events.log`` contains ``interactive_lock_released``.
 
 Coupling notes (documented in spec R15):
   - Sub-test A's grep target ``"work on a different feature"`` is anchored to
     R5's rejection wording. If R5 changes, this test must update in lockstep.
-  - Sub-test C's grep target ``"the run to complete"`` is anchored to R7's
-    rejection wording (spec.md R15 note: use this substring, not the
-    spec-drift ``"work to complete"``).
+  - The overnight → interactive rejection (formerly sub-test C, a bash sidecar)
+    is covered by ``cortex_command/lifecycle/tests/test_prepare_worktree.py``
+    since ``cortex-lifecycle-prepare-worktree`` owns that guard.
 
 Out-of-scope per R15 / Non-Requirements:
   The principal TOCTOU window (owner acquires after scan but before round-N
@@ -57,30 +51,6 @@ from cortex_command.overnight.orchestrator import compute_eligible_features
 # ---------------------------------------------------------------------------
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent
-
-
-# ---------------------------------------------------------------------------
-# Capability probe for sub-test C
-# ---------------------------------------------------------------------------
-
-
-def _bash_herestring_available() -> bool:
-    """Return True if bash can create temp files needed for herestrings.
-
-    The sidecar script uses ``<<<`` (herestring) syntax which bash implements
-    via temp files.  In some restricted sandbox environments (e.g. Claude Code
-    Seatbelt with write-deny on /tmp) bash cannot create these temp files.
-    Sub-test C is skipped when this probe returns False.
-    """
-    try:
-        result = subprocess.run(
-            ["bash", "-c", "echo probe <<< test"],
-            capture_output=True,
-            timeout=5,
-        )
-        return result.returncode == 0
-    except (OSError, subprocess.TimeoutExpired):
-        return False
 
 
 def _cortex_interactive_lock_argv() -> list[str]:
@@ -222,119 +192,6 @@ def test_bidirectional_contract_B_interactive_overnight_scan(
     assert rationale, "skip event must have a non-empty rationale"
     assert "test-session-B" in rationale, (
         f"rationale must contain 'test-session-B'; got {rationale!r}"
-    )
-
-
-# ---------------------------------------------------------------------------
-# Sub-test C — overnight → interactive rejection mirror (actual sidecar bash)
-# ---------------------------------------------------------------------------
-
-
-@pytest.mark.skipif(
-    not _bash_herestring_available(),
-    reason=(
-        "bash cannot create temp files for herestrings in this environment "
-        "(Seatbelt write-deny on /tmp); test is designed for unrestricted CI"
-    ),
-)
-def test_bidirectional_contract_C_overnight_interactive_rejection(
-    tmp_path: Path,
-) -> None:
-    """Synthetic active-session.json + runner.pid causes the sidecar to exit 1
-    with the R7 rejection wording on stderr.
-
-    The sidecar at ``skills/build/references/_interactive_overnight_check.sh``
-    is invoked via ``cat ... | bash -s -- '<wording>' '<repo>'`` — the same
-    invocation shape used in implement.md §1 Step A.  No re-implementation of
-    the four-bash-call logic in Python.
-    """
-    # Set up a synthetic HOME so the sidecar reads from our tmp dir.
-    fake_home = tmp_path / "home"
-    fake_home.mkdir()
-
-    # Session dir for the synthetic overnight session
-    session_dir = tmp_path / "session-dir"
-    session_dir.mkdir(parents=True)
-
-    # The repo path that the sidecar will match against our $2 argument.
-    fake_repo_path = str(tmp_path / "repo")
-
-    # Write active-session.json under the fake home.
-    active_sessions_dir = fake_home / ".local" / "share" / "overnight-sessions"
-    active_sessions_dir.mkdir(parents=True)
-    active_session_path = active_sessions_dir / "active-session.json"
-    active_session_payload = {
-        "schema_version": 1,
-        "magic": "cortex-runner-v1",
-        "pid": os.getpid(),
-        "pgid": os.getpid(),
-        "session_id": "overnight-session-C",
-        "session_dir": str(session_dir),
-        "repo_path": fake_repo_path,
-        "phase": "executing",
-    }
-    active_session_path.write_text(
-        json.dumps(active_session_payload), encoding="utf-8"
-    )
-
-    # Write runner.pid in the session dir with the test process's PID so
-    # kill -0 in the sidecar sees a live process.
-    runner_pid_payload = {
-        "schema_version": 1,
-        "magic": "cortex-runner-v1",
-        "pid": os.getpid(),
-        "pgid": os.getpid(),
-        "session_id": "overnight-session-C",
-        "session_dir": str(session_dir),
-        "repo_path": fake_repo_path,
-    }
-    (session_dir / "runner.pid").write_text(
-        json.dumps(runner_pid_payload), encoding="utf-8"
-    )
-
-    # Rejection wording that contains the R7 coupling substring.
-    rejection_wording = (
-        "Overnight runner is active (session overnight-session-C, PID {pid}, "
-        "phase: executing) — wait for the run to complete "
-        "(`cortex overnight status`), or open a different feature."
-    ).format(pid=os.getpid())
-
-    # Sidecar path — relative to repo root; the bash -c below CWDs to repo root.
-    sidecar_rel = "skills/build/references/_interactive_overnight_check.sh"
-
-    # Build the env with HOME redirected so the sidecar reads from tmp dir.
-    # Set TMPDIR to a writable sandbox path so bash can create the temp files
-    # it needs for herestring (<<<) constructs — the sidecar uses herestrings
-    # when piping JSON into python3 for parsing.
-    bash_tmpdir = tmp_path / "bash-tmp"
-    bash_tmpdir.mkdir(parents=True, exist_ok=True)
-    env = os.environ.copy()
-    env["HOME"] = str(fake_home)
-    env["TMPDIR"] = str(bash_tmpdir)
-
-    result = subprocess.run(
-        [
-            "bash",
-            "-c",
-            f"cat {sidecar_rel} | bash -s -- '{rejection_wording}' '{fake_repo_path}'",
-        ],
-        env=env,
-        capture_output=True,
-        text=True,
-        cwd=str(_REPO_ROOT),
-        timeout=30,
-    )
-
-    assert result.returncode != 0, (
-        f"Sidecar should exit non-zero when overnight runner is live; "
-        f"got returncode={result.returncode}, "
-        f"stdout={result.stdout!r}, stderr={result.stderr!r}"
-    )
-
-    # Stderr must contain the R7 coupling substring (spec R15 note).
-    assert "the run to complete" in result.stderr, (
-        f"Sidecar stderr must contain 'the run to complete' (R7 coupling); "
-        f"got stderr={result.stderr!r}"
     )
 
 

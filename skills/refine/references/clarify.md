@@ -1,53 +1,44 @@
 # Clarify Phase
 
-Pre-research intent gate: confirm what's being built and why, align with requirements, set complexity/criticality, and surface targeted questions when intent is unclear.
+Intent gate before research: confirm what is being built and why, align with requirements, set complexity and criticality, ask only where intent is unclear.
 
-**Context A** — input resolved to a `cortex/backlog/NNN-*.md`; read its frontmatter and body. **Context B** — ad-hoc text, no matching item; assess directly, skip all backlog write-backs.
+**Context A** — input resolved to a `cortex/backlog/NNN-*.md`; read its frontmatter and body. **Context B** — ad-hoc text; assess directly, skip all backlog write-backs.
 
 ## 1. Load requirements
 
-`cortex-load-requirements --feature {slug}` — read every listed non-skipped path, inject the printed path list into downstream prompts, relay any fallback note. No `cortex/requirements/` → note it and proceed.
+`cortex-load-requirements --feature {slug}` — read every listed non-skipped path, carry the path list into downstream prompts, relay any fallback note. No `cortex/requirements/` → note it and proceed.
 
 ## 2. Confidence assessment
 
-| Dimension | High confidence | Low confidence |
-|-----------|-----------------|----------------|
-| **Intent clarity** | one clear, unambiguous outcome | vague, multi-interpretable, or contradictory |
+| Dimension | High | Low |
+|---|---|---|
+| **Intent clarity** | one unambiguous outcome | vague, multi-interpretable, contradictory |
 | **Scope boundedness** | in/out explicit | open-ended, or conflated with adjacent work |
-| **Requirements alignment** | aligns with `cortex/requirements/`, no conflicts | conflicts with, ignores, or has no connection to requirements |
+| **Requirements alignment** | aligns, no conflicts | conflicts with, ignores, or has no connection to requirements |
 
-A prescriptive ticket body does NOT make scope more bounded — treat implementation suggestions as unvalidated hypotheses for research, not scope constraints. In Context B with no requirements files, rate alignment as "no requirements files found".
+A prescriptive ticket body does not bound scope — implementation suggestions are hypotheses for research, not constraints. Context B with no requirements → rate alignment "no requirements files found".
 
 ## 3. Critic review
 
-Follow `${CLAUDE_SKILL_DIR}/references/clarify-critic.md`. The orchestrator, not the critic, writes the `clarify_critic` event to `cortex/lifecycle/{feature}/events.log`.
+Follow `${CLAUDE_SKILL_DIR}/references/clarify-critic.md`. The orchestrator writes the `clarify_critic` event, not the critic.
 
 ## 4. Question threshold
 
 <!-- pause: clarify-question-batch question -->
-All three dimensions high after §3 **and** no critic Ask items → skip questions, proceed to §5. Otherwise merge the low-confidence gaps and critic Asks into one list, present as choices, cap ≤5 — critic Asks first, then highest-impact gaps, drop the rest. Ask only about specific gaps, never for completeness, never re-asking what's already clear.
+All three dimensions high after §3 **and** no critic Ask items → skip to §5. Otherwise merge the low-confidence gaps and critic Asks into one list of ≤5 choices — critic Asks first, then highest-impact gaps. Ask only about specific gaps, never for completeness or about what is already clear.
 
-## 5. Produce the handoff package
+## 5. Handoff package
 
-1. **Clarified intent statement** — one sentence: what's being built and why. The anchor for research scope.
-2. **Complexity** — `simple` (you know the approach, or one read confirms it; nothing to decide — **size is not the test**, a wide mechanical change is still simple; handle directly, no lifecycle), `moderate` (needs orientation, but no real design fork — most work lands here), or `complex` (a decision code-reading won't settle: competing designs, a blast radius you can't enumerate, or a precedent others follow). Judge what the work *requires*, not its size. **When torn, take the lower tier** — the escalator re-checks after research. State whether the next tier down was considered, and why it was rejected.
-3. **Criticality** — `low` (trivially reversible, no downstream deps), `medium` (recoverable, isolated tooling with no downstream consumers), `high` (significant or hard to reverse, **or any change to shared skills / workflow infrastructure / overnight runner / hooks — the appropriate default for most agentic-layer changes**), `critical` (security, data loss, financial, or loss of a core capability). State both with brief reasoning and proceed without confirming.
-4. **Requirements alignment note** — aligned (name the file and its constraints), partial, none found, or conflict (resolve with the user before proceeding).
-5. **Open questions for research** — ambiguities best resolved by reading code, not by asking the user. May be empty.
+1. **Clarified intent** — one sentence: what and why. Anchors research scope.
+2. **Complexity** — `simple` (you know the approach, or one read confirms it; nothing to decide — size is not the test; handle directly, no lifecycle), `moderate` (needs orientation, no real design fork — most work), `complex` (a decision code-reading won't settle: competing designs, unenumerable blast radius, a precedent others follow). Judge what the work *requires*. When torn, take the lower tier — §3 of research re-checks. Say which lower tier was considered and why it was rejected.
+3. **Criticality** — `low` (trivially reversible, no downstream deps), `medium` (recoverable, isolated), `high` (hard to reverse, or any change to shared skills / workflow infrastructure / overnight runner / hooks — the default for most agentic-layer changes), `critical` (security, data loss, financial, loss of a core capability). State both with brief reasoning; do not confirm.
+4. **Requirements alignment** — aligned (name the file and constraints), partial, none found, or conflict (resolve with the user first).
+5. **Open questions for research** — resolvable by reading code, not by asking. May be empty.
 
-## 6. Research sufficiency criteria
+## 6. Research sufficiency
 
-Defined here, **applied at Research entry** against an existing `cortex/lifecycle/{slug}/research.md`. Research is sufficient when none of these hold:
-
-- (a) its goal differs materially from the clarified intent statement;
-- (b) files named in the item's description or acceptance criteria don't appear in its codebase findings;
-- (c) its codebase findings are empty or generic — no specific paths or patterns;
-- (d) requirements context has changed significantly since it was written.
-
-None apply → skip re-running, proceed to Spec. Any apply → name the signal, explain the insufficiency, re-run research.
+Applied at Research entry against an existing `cortex/lifecycle/{slug}/research.md`. Insufficient when any holds: (a) its goal differs materially from the clarified intent; (b) files named in the item's description or acceptance criteria are absent from its codebase findings; (c) its codebase findings are empty or generic; (d) requirements changed significantly since it was written. None → skip re-running. Any → name the signal and re-run.
 
 ## 7. Write back
 
-Write complexity and criticality per refine SKILL.md Step 2's canonical routing (Context B skips).
-
-Clarify checks intent, scope, and alignment only — the deep requirements interview belongs to Specify, technical feasibility to Research.
+Per refine SKILL.md §2's 3-arm routing (Context B skips). Clarify checks intent, scope, and alignment only — the requirements interview is Specify's, feasibility is Research's.

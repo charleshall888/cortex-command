@@ -1,27 +1,19 @@
 # Research Phase
 
-Clarify's §5 outputs (intent, scope, tier, criticality) are the inputs here.
+Inputs: Clarify's §5 outputs (intent, scope, tier, criticality).
 
-## Sufficiency check
+**Sufficiency.** If `cortex/lifecycle/{lifecycle-slug}/research.md` exists — only that exact path counts; a backlog `discovery_source`/`research` field is background — apply clarify.md §6. Sufficient → announce the signals checked and skip to Spec. Insufficient → name the signal(s) and re-run. Re-entry from specify.md §2a bypasses this check and re-runs from scratch.
 
-If `cortex/lifecycle/{lifecycle-slug}/research.md` exists, apply clarify.md §6's criteria against Clarify's intent and scope. **Only a file at that exact path counts** — a backlog item's `discovery_source`/`research` field is background, not a substitute. Sufficient → announce which signals were checked and skip to Spec. Insufficient → name the triggering signal(s) and run new research.
+**Alignment considerations.** Clarify-critic findings with `origin: "alignment"` dispositioned Apply (or Ask → Apply) — dismissed ones don't propagate. Only when ≥1 survives: overwrite `cortex/lifecycle/{lifecycle-slug}/research-considerations.md` with one one-sentence bullet each **and** pass `research-considerations-file=` on dispatch. Always paired.
 
-**Bypass**: re-entry from specify.md §2a's confidence-check loop-back skips this check and re-runs from scratch, overwriting `research.md`.
-
-## Alignment-considerations propagation
-
-Collect every clarify-critic finding with `origin: "alignment"` dispositioned **Apply** (or Ask resolved to Apply); dismissed findings don't propagate. **Only when ≥1 survives**: write them to `cortex/lifecycle/{lifecycle-slug}/research-considerations.md` (overwrite, never append — newline-delimited bullets, one one-sentence paraphrase each) **and** pass `research-considerations-file=` on the dispatch. Always paired.
-
-## Execution
+**Dispatch:**
 
 ```
 /cortex-core:research topic="{clarified intent}" lifecycle-slug="{lifecycle-slug}" tier={tier} criticality={criticality}
 ```
 
-The **clarified intent, not the ticket body**, is the research scope anchor. For complex-tier or high/critical features carrying a suggested implementation, research must explore ≥1 alternative alongside it — validating the suggestion is a fine outcome.
+The clarified intent, not the ticket body, anchors scope. Complex-tier or high/critical features carrying a suggested implementation must explore ≥1 alternative — validating the suggestion is a fine outcome.
 
-Afterwards verify `research.md` exists and is non-empty (else surface and halt), then register it: `cortex-lifecycle-register-artifact --feature {lifecycle-slug} --artifact research`.
+Afterwards `research.md` must exist and be non-empty, else surface and halt.
 
-## Exit gate
-
-Scan `## Open Questions`: an item is **resolved** with an inline answer, **deferred** when explicitly marked so with written rationale. A bare unannotated bullet is neither — resolve each from research or defer with rationale before Spec. An absent section passes.
+**Exit gate.** In `## Open Questions`, an item is resolved with an inline answer or deferred with written rationale; a bare bullet is neither — settle each before Spec. An absent section passes.

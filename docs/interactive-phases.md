@@ -60,7 +60,7 @@ You do not need to run all three skills — `/cortex-core:build` on a fresh feat
 
 **Clarify** — The agent asks focused questions: What problem does this solve? Who benefits? Any specific requirements? What is the scope? Expect at most 5 questions. Answer these directly; this is not the deep requirements interview — that happens in Specify.
 
-**Research** — Mostly automated. The agent reads relevant files, then re-assesses the tier with the research in hand and tells you if its assessment changed. A `cortex-complexity-escalator` hook may print a "Consider Complex tier" note when the unresolved-question count is unusually high, but it is advisory and writes nothing — the assessment decides, not the bullet count. The tier can also be changed manually at any time, in either direction.
+**Research** — Mostly automated. The agent reads relevant files, then re-assesses the tier with the research in hand and tells you if its assessment changed. The tier can also be changed manually at any time, in either direction.
 
 **Specify** — The agent conducts a structured requirements interview covering:
 - Problem statement (one paragraph)

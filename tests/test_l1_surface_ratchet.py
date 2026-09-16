@@ -67,14 +67,14 @@ UTILITY = REPO_ROOT / "bin" / "cortex-measure-l1-surface"
 _BASELINES: dict[str, int] = {
     "backlog": 50,
     "backlog-author": 103,
-    "critical-review": 193,
+    "critical-review": 144,
     "dev": 162,
     "discovery": 154,
     "hmm": 69,
     "interview": 118,
     "build": 151,
-    "morning-review": 320,
-    "overnight": 314,
+    "morning-review": 199,
+    "overnight": 181,
     # Re-capped 67 -> 152 when ``pick`` dropped ``disable-model-invocation: true``
     # to become agent-discoverable. That flag also blocks the Skill tool
     # (scripts/validate-callgraph.py), so the skill was previously reachable only
@@ -85,9 +85,9 @@ _BASELINES: dict[str, int] = {
     # date=2026-08-19
     "pick": 152,
     "refine": 149,
-    "requirements": 203,
+    "requirements": 172,
     "research": 157,
-    "total": 2295,
+    "total": 1961,
 }
 
 

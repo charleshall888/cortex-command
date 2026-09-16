@@ -7,25 +7,17 @@ argument-hint: "[area|project|list]"
 
 # Requirements
 
-Interview, then synthesize. Nothing is written until the interview completes, so an abandoned interview leaves no partial doc behind.
+Interview, then synthesize. Nothing is written until the interview completes.
 
 ## Scope
 
-Parse `$ARGUMENTS`:
-
-- **`list`** → run `cortex-list-requirements` and exit. `absent` → "No requirements documented yet. Run `/cortex-core:requirements` to start with project-level requirements." `ok` → render `rows` as a table (file, scope, last_gathered, requirement_count). Excludes `glossary.md`, a producer-managed vocabulary artifact rather than a scope-level doc.
-- **empty or `project`** → scope `project`.
-- **any other single token** → that token as a kebab-case area slug.
-
-The target is `cortex/requirements/{scope}.md`. When it already exists, refine it rather than rewriting.
+`$ARGUMENTS`: **`list`** → `cortex-list-requirements` and exit (`absent` → "No requirements documented yet. Run `/cortex-core:requirements` to start with project-level requirements."; `ok` → render `rows` as a table: file, scope, last_gathered, requirement_count; excludes `glossary.md`). **empty or `project`** → scope `project`. **any other token** → that kebab-case area slug. Target `cortex/requirements/{scope}.md`; when it exists, refine rather than rewrite.
 
 ## 1. Interview
 
-Run the interview loop from `/cortex-core:interview`: batch only independent questions, codebase-trumps-interview, recommend before asking. Every question carries a **Recommended answer:** grounded in explored code, the existing target doc, the parent requirements (area scope), or stated conventions — or `none — open question` with the gap explained.
+Run `/cortex-core:interview`'s loop: batch only independent questions, codebase trumps interview, recommend before asking. Every question carries a **Recommended answer:** grounded in explored code, the existing doc, the parent requirements (area scope), or stated conventions — or `none — open question` with the gap explained.
 
-Anchor each question block to one section, in template order. **Project**: Overview, Philosophy of Work, Architectural Constraints, Quality Attributes, Project Boundaries, Conditional Loading, Optional. **Area**: Overview, Functional Requirements, Non-Functional Requirements, Architectural Constraints, Dependencies, Edge Cases, Open Questions — reusing parent context from `cortex/requirements/project.md` rather than re-asking settled project-level positions.
-
-Capture answers as:
+Anchor each block to one section in template order. **Project**: Overview, Philosophy of Work, Architectural Constraints, Quality Attributes, Project Boundaries, Conditional Loading, Optional. **Area**: Overview, Functional Requirements, Non-Functional Requirements, Architectural Constraints, Dependencies, Edge Cases, Open Questions — reusing `cortex/requirements/project.md` rather than re-asking settled positions.
 
 ```
 ### {Section name}
@@ -35,36 +27,25 @@ Capture answers as:
 - **Code evidence:** {file paths or excerpts; omit for intent-only questions — never fabricate or write N/A}
 ```
 
-A section with no live questions collapses to a single bullet noting the confirmed code-derived position.
+A section with no live questions collapses to one bullet noting the confirmed code-derived position.
 
 ### Glossary
 
-The one write that happens during the interview is a per-term entry in `cortex/requirements/glossary.md`'s `## Language` section. Probe before classifying:
+The one write during the interview: a per-term entry in `cortex/requirements/glossary.md`'s `## Language`. Probe first:
 
 ```bash
 cortex-append-glossary-term --term "{term}"
 ```
 
-`found` → use the returned definition verbatim, or surface the conflict as a choice (keep / replace / flag as ambiguity); "replace" re-invokes with `--definition` and `--replace`. `not-found` → classify, then write with `--definition` only on a pass.
-
-Project-specific terms whose meaning is shaped by this repo's conventions ("phase transition", "kept user pauses") earn an entry; general programming terms ("timeout", "race condition") do not — explain the rejection in the interview turn and write nothing. Only a user-named or user-confirmed term persists; a mention inside a **Recommended answer:** is not consent. Entries must be definitional, not classification-shaped (`phase_transition: the named event emitted when …`), since `/cortex-core:critical-review` feeds this section in as reasoning-free Project Context.
+`found` → use the definition verbatim, or offer keep / replace / flag as ambiguity ("replace" re-invokes with `--definition` and `--replace`). `not-found` → classify, then write with `--definition` only on a pass: project-shaped terms ("phase transition", "kept user pauses") earn an entry; general programming terms ("timeout") do not — explain the rejection, write nothing. Only a user-named or user-confirmed term persists; a mention inside a Recommended answer is not consent. Entries are definitional, not classification-shaped — `/cortex-core:critical-review` feeds this section in as reasoning-free context.
 
 ## 2. Synthesize
 
-Preserve existing prose wherever the user's answer confirms it — refine in place, never rewrite from scratch. H2/H3 anchors stay verbatim across rewrites: downstream consumers grep section names. For a section the interview collapsed to a confirmed code-derived position, apply the template default. For a missing answer, keep the H2 with a one-line note pointing at Open Questions (area) or a `## Optional` bullet (project). Update `> Last gathered:` to today when any section changes.
+Preserve existing prose the user confirms — refine in place. H2/H3 anchors stay verbatim (downstream consumers grep them). A collapsed section takes the template default; a missing answer keeps the H2 with a one-line pointer to Open Questions (area) or a `## Optional` bullet (project). Bump `> Last gathered:` when any section changes.
 
-**Project template** — `# Requirements: {project-name}` + `> Last gathered: {YYYY-MM-DD}`, then these eight H2s in order:
+**Project** — `# Requirements: {project-name}` + `> Last gathered: {YYYY-MM-DD}`, then eight H2s in order: `## Overview` (1–2 paragraph north star; distribution posture if load-bearing) · `## Philosophy of Work` (cross-cutting principles, bold-led bullets) · `## Architectural Constraints` (strategic only; operational detail lives in CLAUDE.md) · `## Quality Attributes` · `## Project Boundaries` (`### In Scope`, `### Out of Scope`, `### Deferred`) · `## Conditional Loading` (many-to-one area→doc map, `{area key}/{synonym key} → cortex/requirements/{area}.md` per line; keys match a lifecycle `index.md`'s `areas:` by exact lookup, so every key is a real area name and a doc gains reach by listing more synonyms) · `## Global Context` (bare paths under `cortex/requirements/` every consumer loads on every invocation; absent paths are skipped, so listing one early is valid) · `## Optional` (prunable; first line states the convention; token budget ≤1,200 `cl100k_base` — overflow goes here or into an area doc, never new H2s).
 
-1. `## Overview` — 1–2 paragraph north star; distribution posture if load-bearing.
-2. `## Philosophy of Work` — cross-cutting principles, bold-led bullets.
-3. `## Architectural Constraints` — strategic constraints only; operational detail lives in CLAUDE.md.
-4. `## Quality Attributes` — the non-functional bar.
-5. `## Project Boundaries` — H3s `### In Scope`, `### Out of Scope`, `### Deferred`.
-6. `## Conditional Loading` — an explicit many-to-one area→doc map, `{area key}/{synonym key} → cortex/requirements/{area}.md` per line. Keys are matched by exact lookup against a lifecycle `index.md`'s `areas:` values, so every key must be a real area name; a doc gains reach by listing more synonym keys, never by wording.
-7. `## Global Context` — bare paths under `cortex/requirements/` that every consumer loads on every invocation regardless of area matches. No keys, no conditional prose. Absent paths are silently skipped, so listing one before its file exists is valid.
-8. `## Optional` — prunable; first line states the prunability convention. Token budget ≤1,200 (`cl100k_base`); overflow goes here or into an area doc, never into new top-level H2s.
-
-**Area template** — `# Requirements: {area-name}` + `> Last gathered:` + a backlink written verbatim as `**Parent doc**: [requirements/project.md](project.md)`, then seven H2s in order: `## Overview`, `## Functional Requirements` (one H3 per capability, with `**Description**`, `**Inputs**`, `**Outputs**`, nested `**Acceptance criteria**`, `**Priority**`), `## Non-Functional Requirements`, `## Architectural Constraints`, `## Dependencies`, `## Edge Cases` (`**Condition**: behavior`), `## Open Questions` (`- None` when nothing is open). No token budget; the parent backlink is the only navigation element.
+**Area** — `# Requirements: {area-name}` + `> Last gathered:` + `**Parent doc**: [requirements/project.md](project.md)` verbatim, then seven H2s: `## Overview`, `## Functional Requirements` (one H3 per capability with `**Description**`, `**Inputs**`, `**Outputs**`, nested `**Acceptance criteria**`, `**Priority**`), `## Non-Functional Requirements`, `## Architectural Constraints`, `## Dependencies`, `## Edge Cases` (`**Condition**: behavior`), `## Open Questions` (`- None` when empty). No token budget.
 
 ## 3. Accept and commit
 
@@ -72,8 +53,4 @@ Preserve existing prose wherever the user's answer confirms it — refine in pla
 cortex-validate-requirements-doc --path {written-path} --scope {project|area}
 ```
 
-`pass` → surface the path for approval. `fail` → `checks` names the failing check (missing canonical H2, over-budget `## Optional`); fix in place and re-run. `file-not-found`/`error` → the doc isn't where expected; resolve before returning.
-
-On approval, stage `cortex/requirements/` and commit.
-
-Requirements are passive artifacts — do not auto-dispatch any consumer; downstream skills load them on their own schedule. The glossary is the one producer-managed exception.
+`pass` → surface the path for approval. `fail` → `checks` names the failing check; fix and re-run. `file-not-found`/`error` → resolve before returning. On approval, stage `cortex/requirements/` and commit. Requirements are passive — dispatch no consumer; downstream skills load them on their own schedule.

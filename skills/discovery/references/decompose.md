@@ -1,50 +1,42 @@
 # Decompose Phase
 
-Turn the approved Architecture section into backlog tickets — the core value of discovery.
+Turn the approved Architecture section into backlog tickets.
 
-### 1. Consume the Architecture Section
+### 1. Consume Architecture
 
-Read `cortex/research/{topic}/research.md`. `### Pieces` is the analytical piece set (one bullet per piece, named by role); `### How they connect` is where dependencies come from. **Never re-derive pieces from raw findings.**
+Read `cortex/research/{topic}/research.md`. `### Pieces` is the piece set (one bullet per piece, named by role); `### How they connect` yields dependencies. Never re-derive pieces from raw findings. A piece set that looks *wrong* (missing, mis-named, mis-split, or two pieces with identical Touch points and Role) is research's to fix — surface it and offer to return to research. Distinct-but-coupled pieces are a packaging question for §4.
 
-A piece is not always a ticket — §4 groups tightly-coupled pieces into ticket units. A piece set that looks *wrong* (missing, mis-named, mis-split, or two pieces sharing identical Touch points and Role paragraphs) is research's to fix: surface it and offer to return to research rather than rewriting the research-owned set here. Distinct-but-coupled pieces are a *packaging* question for §4, not a defect.
+### 4. Group
 
-### 4. Determine Grouping
+Grouping coarsens ticket units without mutating `### Pieces`. **One piece** → one ticket, no epic. **Zero** → no tickets, but still write `decomposed.md` with frontmatter `decomposition_verdict: zero-piece` holding `## Fold-into` (an existing ticket number plus rationale) or `## Verdict` (no actionable work). **Two or more** → group, then one epic and one child per group.
 
-Grouping coarsens ticket units without mutating `### Pieces`.
+Group pieces that share a connection seam, form one integration cluster, carry the same role, or deliver visible value only together. Opportunistic, never forced — only gross, architecture-visible over-splitting; no evident coupling → 1:1. Subtler couplings belong to `consolidate-pieces` at §5a. A `blocked-by` *within* a group becomes an intra-ticket ordering note recorded in `## Grouping Notes`; outside dependencies retarget the surviving ticket.
 
-**One piece** → one ticket, no epic. **Zero pieces** → no tickets, but still write `decomposed.md` as an audit trail with frontmatter `decomposition_verdict: zero-piece`, holding either `## Fold-into` (the finding belongs on an existing open ticket — its number plus a one-line rationale) or `## Verdict` (no actionable work). **Two or more** → group first, then one epic and one child per *group*.
+### 5. Author tickets
 
-Group pieces that share a connection seam, form one integration cluster, carry substantially the same role, or deliver operator-visible value only once both land. Grouping is **opportunistic, never forced** — only gross, architecture-visible over-splitting; no evident coupling falls back to 1:1. Subtler couplings surfacing once bodies are drafted belong to `consolidate-pieces` at §5a.
+`/backlog-author compose` per ticket with that piece's context. A multi-piece child gets one merged body: Why/Role/Integration prose-merged, Edges/Touch-points unioned and deduplicated. Capture **title** (imperative, ≤72 chars), **priority** (low effort/risk → higher; high → lower, unless a decision record marks it critical), **type** (usually `feature`; sometimes `chore` or `spike`), **size** (S/M/L, ordering only), **dependencies** from `### How they connect`.
 
-A `blocked-by` relationship *among* grouped pieces becomes an intra-ticket ordering note, never a dropped one: carry it into the body as an explicit sequence and record it in `## Grouping Notes`. Dependencies from outside the group retarget the surviving ticket.
+### 5a. Batch-review gate
 
-### 5. Create Backlog Tickets
+After all N bodies and before any commit to `cortex/backlog/`, a user-blocking gate — the user's first sight of the bodies. Present every title and body, then offer:
 
-Invoke `/backlog-author compose` per ticket with that piece's context. A multi-piece child gets **one merged body**: Why/Role/Integration prose-merged into one narrative, Edges/Touch-points unioned and deduplicated.
+- **`approve-all`** — write all N.
+- **`revise-piece <N>`** — free-text revision scoped to ticket N; re-walk it, re-present the full batch.
+- **`drop-piece <N>`** — don't write it; record under `## Dropped Items` with one sentence.
+- **`consolidate-pieces <N,M,…>`** — merge into one ticket (same prose-merge/union rule); the lowest-index piece survives at the lowest slot; renumber contiguously from 1 and re-present.
+- **`split-piece <N>`** — inverse of grouping: re-derive ticket N's constituent pieces from the unchanged `### Pieces` (not the merged body), restoring `## Grouping Notes` ordering; re-present renumbered.
 
-Capture alongside each: **title** (imperative, ≤72 chars), **priority** (low effort/risk → higher; high effort or risk → lower, unless a decision record marks it critical), **type** (usually `feature`, sometimes `chore` or `spike`), **size** (S/M/L, ordering only — not stored), **dependencies** from `### How they connect`.
-
-### 5a. Post-Decompose Batch-Review Gate
-
-After all N bodies are authored and **before any commit to `cortex/backlog/`**, a user-blocking gate fires — the user's first encounter with the bodies. Present every title and body, then offer:
-
-- **`approve-all`** — write all N tickets.
-- **`revise-piece <N>`** — free-text revision scoped to ticket N; re-walk it in full, then re-present the FULL batch.
-- **`drop-piece <N>`** — don't write it; record it under `## Dropped Items` with a one-sentence rationale.
-- **`consolidate-pieces <N,M,…>`** — merge into one ticket (same prose-merge/union rule as §5). The lowest-index named piece survives at the lowest slot; the batch renumbers contiguously from 1 and re-presents in full.
-- **`split-piece <N>`** — inverse of grouping: re-derive ticket N into its constituent pieces from the unchanged `### Pieces` source (not the lossy merged body), restoring any `## Grouping Notes` ordering, then re-present the renumbered batch.
-
-Loops until `approve-all` or all pieces are dropped. Consolidations are recorded under `## Consolidation Notes` — which pieces merged into which survivor by post-renumber index, its revised role summary, and a one-sentence rationale.
+Loops until `approve-all` or all pieces are dropped. Record consolidations under `## Consolidation Notes` (which pieces merged into which survivor by post-renumber index, revised role summary, one-sentence rationale).
 
 ```
 cortex-discovery emit-checkpoint-response --topic <topic> --checkpoint decompose-commit --response <response>
 ```
 
-### 6. Backend Routing and Creation
+### 6. Create
 
-After `approve-all`, resolve the backend (SKILL.md § Backend routing). Under `cortex-backlog`, create the epic first so children have its ID. Pass `--parent <epic-id>` on children (omit on an epic or a lone ticket), `--blocked-by <ids>` from Integration-shape dependencies, `--tags <topic>`, and `discovery_source: cortex/research/{topic}/research.md` — lifecycle reads that first, with `research:` as the hand-authored fallback.
+After `approve-all`, resolve the backend (SKILL.md § Backend routing). Under `cortex-backlog` create the epic first so children have its ID; pass `--parent <epic-id>` on children (omit on an epic or lone ticket), `--blocked-by <ids>` from Integration-shape dependencies, `--tags <topic>`, and `discovery_source: cortex/research/{topic}/research.md`.
 
-### 6a. Write Decomposition Record
+### 6a. Decomposition record
 
 `cortex/research/{topic}/decomposed.md`:
 
@@ -68,14 +60,12 @@ After `approve-all`, resolve the backend (SKILL.md § Backend routing). Under `c
 - `cortex/backlog/NNN-slug.md` — [title]
 ```
 
-`## Grouping Notes` gives `split-piece` the ordering to restore — omit when no grouping occurred. The single-piece branch omits the Epic subsection; the zero-piece branch replaces Work Items with `## Fold-into` or `## Verdict`.
+Omit `## Grouping Notes` when nothing grouped; the single-piece branch omits Epic; the zero-piece branch replaces Work Items with `## Fold-into` or `## Verdict`.
 
-### 7. Update Index
+### 7. Index
 
-Re-resolve the backend **here** with `cortex-read-backlog-backend` (argless, fail-open) — §6's resolution is scoped to its create flow and never runs on the zero-piece branch. Under `cortex-backlog` run `cortex-generate-backlog-index`; any other value (`none` or external) → skip with a one-line advisory, since there is no index to regenerate.
+Re-resolve the backend here (`cortex-read-backlog-backend`, argless — §6 never runs on the zero-piece branch). `cortex-backlog` → `cortex-generate-backlog-index`; anything else → skip with a one-line advisory.
 
-### 8. Commit and Summarize
+### 8. Commit and summarize
 
-Commit the new backlog files and `decomposed.md`, then present the epic and its children (or the single ticket / zero-piece verdict), the dependency graph and suggested order, and a reminder that `/cortex-core:refine <feature>` is the next step.
-
-**No implementation planning here** — role, integration, and structural edges only; mechanism belongs to lifecycle's plan phase. At most one epic per discovery.
+Commit the backlog files and `decomposed.md`; present the epic and children (or the single ticket / zero-piece verdict), the dependency graph and order, and that `/cortex-core:refine <feature>` is next. No implementation planning here — role, integration, and structural edges only. At most one epic per discovery.
