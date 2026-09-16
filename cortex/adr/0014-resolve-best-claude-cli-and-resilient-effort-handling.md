@@ -41,3 +41,12 @@ Both degradations render as a loud **Effort Degradations** section in the mornin
 - The stale "silently downgraded"/`AssertionError` premises in `dispatch.py` and `docs/internals/sdk.md` are corrected to the verified hard-reject-vs-warn-ignore split.
 
 Background lives in `docs/internals/sdk.md`; this ADR is the canonical home for the decision and its rejected alternatives.
+
+## Amendment 2026-09-16 — partially superseded by ADR-0038
+
+ADR-0038 removes `claude-agent-sdk` and has cortex spawn the operator's own `claude` subprocess directly,
+which supersedes this ADR's bundled-vs-system resolution problem: with no SDK-bundled binary in the
+picture, `resolve_claude_cli()` keeps its system search (including the non-PATH fallbacks) but loses the
+bundled-first branch it existed to override. The effort-by-outcome handling above — hard-reject clamps
+once to `max`, warn-ignore emits `dispatch_effort_ignored`, both surfaced in the morning report — is
+**kept**: it is unaffected by how the CLI is invoked and continues to classify from captured stderr.

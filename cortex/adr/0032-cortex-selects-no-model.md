@@ -47,3 +47,11 @@ Three consequences are load-bearing and were chosen deliberately:
 ADR-0023 (route the core research fan-out to a Sonnet `searcher` tier) is superseded: its `searcher` role no longer exists. Its underlying observation — that breadth-first gather work does not need the most expensive model — is retained as guidance in `skills/research/references/fanout.md` rather than as a pinned model.
 
 Interactive fan-out that ADR-0023 routed to Sonnet now runs on whatever the dispatching agent picks. If overnight cost-per-round or interactive research cost regresses measurably, the lever is the dispatch-site guidance, not a reinstated matrix.
+
+## Amendment 2026-09-16 — mechanism correction (ADR-0038)
+
+ADR-0038 removes `claude-agent-sdk`, so the "Observability is preserved by reading the model back" wording
+above is corrected: with cortex parsing the CLI's own stream-json output rather than SDK objects, the
+observed model is read from the `assistant` frame, not from `AssistantMessage`. The decision itself —
+capture the first non-empty model value, emit `dispatch_model_observed` once and again on
+`dispatch_complete` — is unchanged.
