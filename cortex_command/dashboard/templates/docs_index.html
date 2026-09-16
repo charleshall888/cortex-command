@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{# The Docs view — the governing set of one repo, mapped and listed.
+
+   Two sections. The map is the constitution ladder: the constitution, the
+   root and policy docs, the area docs, then the decisions each one cites, an
+   ADR placed once under its first citer and the uncited ones in a dashed
+   pool. The index is the same set as rows, grouped by kind in index order,
+   one line of metadata per row. Both are computed per request from disk —
+   nothing here polls, because a governing doc changes on human timescales.
+
+   Section numbering restarts at § 01 because the register is per-view. #}
+{% set view = 'docs' %}
+{% from "_doc_map.svg.html" import map_svg, doc_status_badge %}
+{% block title %}Cortex · Docs{% endblock %}
+{% block page_main %}
+
+<section class="section-primary">
+  <span class="sec-num"><strong>§ 01</strong>map</span>
+  <h2>How the <em>governing docs</em> connect <span class="phase-tag">{{ ladder.drawn }} of {{ ladder.total }} drawn</span></h2>
+  <p class="sec-lede">Read left to right: the constitution, the root and its area docs, then the decisions each one cites. An ADR is placed once, under the first doc that cites it. ADRs no doc cites sit in the dashed pool — a finding, not a layout gap.</p>
+  {# The wrapper is the swap target for the map's ``more`` links, which
+     re-fetch the ladder alone with a wider ``expand`` set. #}
+  <div id="docmap-wrap">
+    {{ map_svg(ladder, repo_query) }}
+  </div>
+  <p class="docmap__key">
+    <span class="docmap__key-item docmap__key-item--parent">parent · maps-area · global</span>
+    <span class="docmap__key-item docmap__key-item--cites">cites</span>
+    <span class="docmap__key-item docmap__key-item--supersedes">supersedes</span>
+    <span class="docmap__key-item docmap__key-item--box docmap__key-item--constitution">constitution · policy</span>
+    <span class="docmap__key-item docmap__key-item--box docmap__key-item--requirements">requirements</span>
+    <span class="docmap__key-item docmap__key-item--box docmap__key-item--accepted">accepted</span>
+    <span class="docmap__key-item docmap__key-item--box docmap__key-item--proposed">proposed</span>
+    <span class="docmap__key-item docmap__key-item--box docmap__key-item--superseded">superseded · deprecated</span>
+  </p>
+</section>
+
+<section>
+  <span class="sec-num"><strong>§ 02</strong>index</span>
+  <h2>Governing <em>documents</em> <span class="phase-tag">{{ corpus.governing() | length }} docs</span></h2>
+
+  {# Client-side filter in the nav-filter pattern: ships hidden and is shown
+     by the script in base.html, so a no-JS reader is never offered a filter
+     that cannot filter. #}
+  <div class="nav-filter docs-filter" id="docs-filter" hidden>
+    <label class="nav-filter__label" for="docs-filter-q">filter</label>
+    <input class="nav-filter__q" id="docs-filter-q" type="search" autocomplete="off"
+           placeholder="id, title or status" aria-describedby="docs-filter-state">
+    <span class="nav-filter__state" id="docs-filter-state" role="status" aria-live="polite"></span>
+  </div>
+
+  {% for label, docs in groups %}
+  <h3 class="docs-group">{{ label }} <span class="phase-tag">{{ docs | length }}</span></h3>
+  <table class="round-table docs-table">
+    <thead>
+      <tr><th>doc</th><th>title</th><th>status</th><th>gathered</th><th>cited by</th></tr>
+    </thead>
+    <tbody>
+      {% for n in docs %}
+      {% set cited = corpus.in_edges(n.path, ('cites',)) | length %}
+      {% set successor = corpus.get(n.superseded_by) if n.superseded_by else none %}
+      <tr class="docs-row" data-doc-id="{{ n.short }}" data-doc-title="{{ n.title }}" data-doc-status="{{ n.status or n.kind }}">
+        <td class="docs-row__id"><a href="{{ n.href }}{{ repo_query }}" class="js-doc"
+             data-doc="{{ n.path }}" data-d-title="{{ n.title }}" data-d-kind="{{ n.kind }}"
+             data-d-status="{{ n.status or '' }}" data-d-short="{{ n.short }}"
+             data-d-in="{{ corpus.in_edges(n.path) | length }}" data-d-out="{{ corpus.out_edges(n.path) | length }}">{{ n.short }}</a></td>
+        <td class="docs-row__title">{{ n.title }}{% if successor %} <span class="phase-label">→ <a href="{{ successor.href }}{{ repo_query }}">{{ successor.short }}</a></span>{% elif n.superseded_by %} <span class="phase-label">→ {{ n.superseded_by }}</span>{% endif %}</td>
+        <td>{{ doc_status_badge(n.status) }}</td>
+        <td class="phase-label">{{ n.last_gathered or '' }}</td>
+        <td class="phase-label">{% if cited %}cited by {{ cited }}{% else %}—{% endif %}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="empty-state">no governing docs found under this root</p>
+  {% endfor %}
+</section>
+
+{# The hover card lives outside the map wrapper so a ``more`` swap cannot
+   destroy it mid-read. Filled by the delegated ``.js-doc`` handler in
+   base.html. #}
+<div id="doc-hover" class="hovercard" hidden aria-hidden="true">
+  <p class="hovercard__title"><span class="hovercard__id"></span> <span class="hovercard__name"></span></p>
+  <p class="hovercard__chips">
+    <span class="nav-chip hovercard__kind"></span>
+    <span class="nav-chip hovercard__status"></span>
+    <span class="nav-chip nav-chip--lev hovercard__degree"></span>
+  </p>
+  <p class="hovercard__hint">click to read the doc</p>
+</div>
+
+<div class="colophon">
+  <span>cortex-command · governing docs</span>
+  <span><em>computed per request · nothing here polls</em></span>
+</div>
+{% endblock %}

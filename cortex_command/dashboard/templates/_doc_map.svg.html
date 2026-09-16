@@ -1,0 +1,119 @@
+{# The Docs view's shared macros: the document map and the ADR status badge.
+
+   ``map_svg`` draws a ``docs.model.MapLayout`` verbatim, the way
+   ``_epic_frame.svg.html`` draws an epic frame. Every x, y, width, height
+   and path ``d`` was computed in ``docs.layout``; nothing here measures text
+   or derives a coordinate. The same macro draws both the constitution ladder
+   on ``/docs`` and the neighbourhood strip on ``/docs/{path}`` — the layout
+   decides the shape, the template only knows the grammar.
+
+   A node is a ``<foreignObject>`` of the size ``model.MAP_NW × MAP_NH`` holding
+   an ordinary anchor; CSS wraps and clamps the title inside a box whose
+   dimensions were already decided. The href stays real and stays first: a
+   middle-click, a cmd-click, keyboard Enter and a browser with no JS all reach
+   the doc. The ``data-d-*`` attributes feed the hover card without a fetch —
+   every value here was computed for this map already.
+
+   Three arrowhead markers per map — one per stroke colour — namespaced by the
+   layout's ``marker_id``. A shared id makes every map after the first depend
+   on the first staying in the DOM, and the ladder is swapped in place by the
+   ``more`` links.
+
+   The svg is ``role="group"`` rather than ``role="img"``: an image role would
+   hide the anchors inside it, and they are the only way through to the docs. #}
+{% from "patterns/badge.html" import badge %}
+
+{# ADR status → badge class, picked by RENDERED result under carbon (see
+   DESIGN.md: the class names do not name the hue). accepted paints blue and
+   solid, proposed paints ochre, superseded/deprecated paint faint. The
+   solid/dashed second channel is what a colour-blind reader gets. #}
+{% set doc_status_class = {
+  "accepted":   "badge-green",
+  "proposed":   "badge-amber",
+  "superseded": "badge-gray",
+  "deprecated": "badge-gray",
+} %}
+{% macro doc_status_badge(status) %}{% if status %}{{ badge(css_class=doc_status_class.get(status, "badge-gray"), label=status) }}{% endif %}{% endmacro %}
+
+{# Edge kind → arrowhead colour. The three hierarchy kinds share the blue
+   marker because they share the blue stroke; the map draws structure in one
+   colour and citation in another. #}
+{% set arrow_of = {
+  "parent": "blue", "maps-area": "blue", "global": "blue",
+  "cites": "ochre", "supersedes": "faint",
+} %}
+
+{# ``repo_query`` is ``?repo=<slug>`` or empty. A ``more`` label's href already
+   carries ``?expand=…``, so the repo param has to join it with ``&``. #}
+{% macro _join(href, repo_query) %}{{ href }}{% if repo_query %}{% if '?' in href %}{{ repo_query | replace('?', '&', 1) }}{% else %}{{ repo_query }}{% endif %}{% endif %}{% endmacro %}
+
+{% macro map_svg(layout, repo_query) %}
+<p class="epic-verdict docmap__verdict">{{ layout.verdict }}</p>
+{% if not layout.empty %}
+<div class="epic-pan docmap">
+  <svg class="epic-svg docmap__svg" viewBox="0 0 {{ layout.width }} {{ layout.height }}" width="{{ layout.width }}" height="{{ layout.height }}"
+       role="group" aria-label="document map — {{ layout.drawn }} of {{ layout.total }} governing docs drawn">
+    <defs>
+      {% for tone in ("blue", "ochre", "faint") %}
+      <marker id="{{ layout.marker_id }}-{{ tone }}" viewBox="0 0 8 8" refX="7" refY="4"
+              markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path class="darrow darrow--{{ tone }}" d="M 0 0 L 8 4 L 0 8 z"></path>
+      </marker>
+      {% endfor %}
+    </defs>
+
+    {% for b in layout.boxes %}
+    <rect class="dpool dpool--{{ b.role }}" x="{{ b.x }}" y="{{ b.y }}" width="{{ b.w }}" height="{{ b.h }}" rx="2"></rect>
+    {% endfor %}
+
+    {% for l in layout.labels %}
+    {% if l.href %}
+    {# A ``more`` label is a real link to the expanded page — the no-JS story —
+       and under JS the delegated ``.js-map-more`` handler in base.html swaps
+       only the map from the fragment URL carried here. Not an ``hx-get``: an
+       SVG anchor reports a lowercase ``a`` tagName, so htmx never cancels its
+       navigation and the page would reload on top of the swap. #}
+    <a href="{{ _join(l.href, repo_query) }}" class="js-map-more"
+       data-map-get="/partials/docs/map{{ _join(l.href, repo_query) }}">
+      <text class="dlabel dlabel--{{ l.role }}" x="{{ l.x }}" y="{{ l.y }}">{{ l.text }}</text>
+    </a>
+    {% else %}
+    <text class="dlabel dlabel--{{ l.role }}" x="{{ l.x }}" y="{{ l.y }}">{{ l.text }}</text>
+    {% endif %}
+    {% endfor %}
+
+    {# Edges before nodes, so nodes sit on top. #}
+    {% for e in layout.edges %}
+    <path class="dedge dedge--{{ e.kind }} dedge--{{ e.focus }}" d="{{ e.d }}"
+          marker-end="url(#{{ layout.marker_id }}-{{ arrow_of.get(e.kind, 'faint') }})"></path>
+    {% endfor %}
+
+    {% for n in layout.nodes %}
+    <foreignObject x="{{ n.x }}" y="{{ n.y }}" width="{{ MAP_NW }}" height="{{ MAP_NH }}">
+      <a xmlns="http://www.w3.org/1999/xhtml" href="{{ n.href }}{{ repo_query }}"
+         class="dn dn--{{ n.kind }}{% if n.status %} dn--{{ n.status }}{% endif %} dn--{{ n.focus }}{% if n.ghost %} dn--ghost{% endif %} js-doc"
+         aria-label="{{ n.short }} {{ n.title }}"
+         data-doc="{{ n.path }}"
+         data-d-title="{{ n.title }}"
+         data-d-kind="{{ n.kind }}"
+         data-d-status="{{ n.status or '' }}"
+         data-d-short="{{ n.short }}"
+         data-d-in="{{ n.in_count }}"
+         data-d-out="{{ n.out_count }}">
+        <span class="dn__head">{{ n.short }}<span class="dn__state">{{ n.state }}</span></span>
+        <span class="dn__title">{{ n.title }}</span>
+        <span class="dn__deg">←{{ n.in_count }} →{{ n.out_count }}</span>
+      </a>
+    </foreignObject>
+    {% endfor %}
+  </svg>
+</div>
+{% endif %}
+{% endmacro %}
+
+{# The fragment arm. ``/partials/docs/map`` renders this file directly with a
+   ``layout`` in context and gets the map alone — what a ``more`` link swaps
+   into ``#docmap-wrap``. A ``{% from %}`` import executes this body without
+   the importer's context, so ``layout`` is undefined there and the arm is
+   inert; the pages call the macro themselves. #}
+{% if layout is defined %}{{ map_svg(layout, repo_query | default('')) }}{% endif %}

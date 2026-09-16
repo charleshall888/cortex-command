@@ -1,0 +1,178 @@
+{% extends "base.html" %}
+{# The reading page for one governing document — identity, the neighbourhood
+   strip, the rendered body with its table of contents, and the lazily loaded
+   cited-by panel. In edit mode the body section is the edit form instead.
+
+   Shaped after ticket_page.html: a detail page reached by link, `view =
+   'docs'` so the masthead reads the docs register. The register counts the
+   sections that RENDER — the map is absent when the doc has no neighbours
+   and the body is replaced in edit mode — so numbering is dynamic for the
+   same reason the ticket page's is: a gap in a numbered register reads as a
+   section that failed to draw. #}
+{% set view = 'docs' %}
+{% from "_doc_map.svg.html" import map_svg, doc_status_badge %}
+
+{% set reg = namespace(n=0) %}
+{% macro sec_num(label) %}{% set reg.n = reg.n + 1 %}<span class="sec-num"><strong>§ {{ '%02d' % reg.n }}</strong>{{ label }}</span>{% endmacro %}
+
+{# ``?edit=1`` joined with the repo param, which must then follow with ``&``. #}
+{% set edit_query = '?edit=1' ~ (repo_query | replace('?', '&', 1) if repo_query else '') %}
+
+{% macro toc_list(entries) %}
+<ol class="doc-toc__list">
+  {% for t in entries %}
+  <li class="doc-toc__item doc-toc__item--{{ t.level }}"><a href="#{{ t.id }}">{{ t.text }}</a></li>
+  {% endfor %}
+</ol>
+{% endmacro %}
+
+{% block title %}Cortex · {% if doc %}{{ doc.short }}{% else %}Doc not found{% endif %}{% endblock %}
+
+{% block page_main %}
+{% if doc is none %}
+{# The not-found arm. Also the answer for a path that exists on disk but is
+   not in the governing set — the reader never renders a file the corpus did
+   not enumerate, which is the same rail the edit form stands on. #}
+<section>
+  <span class="sec-num"><strong>§ —</strong>missing</span>
+  <h2>Document not found <span class="phase-tag">{{ path }}</span></h2>
+  <p class="empty-state">not a governing document under this root</p>
+  <p style="margin-top: 14px;"><a href="/docs{{ repo_query }}" class="text-brand-primary">← back to docs</a></p>
+</section>
+{% else %}
+{% set successor = corpus.get(doc.superseded_by) if doc.superseded_by else none %}
+{% set parent = corpus.get(doc.parent) if doc.parent else none %}
+
+{# ── 1. Identity ────────────────────────────────────────────────────────── #}
+<section class="section-primary">
+  {{ sec_num('document') }}
+  <h2>{{ doc.title }} <span class="phase-tag">{{ doc.path }}</span></h2>
+  <div class="card-row doc-chips" style="margin-top: 12px;">
+    <span class="nav-chip">{{ doc.kind }}</span>
+    {{ doc_status_badge(doc.status) }}
+    {% if parent %}<span class="phase-label">parent · <a href="{{ parent.href }}{{ repo_query }}">{{ parent.short }}</a></span>{% endif %}
+    {% if doc.last_gathered %}<span class="phase-label">gathered · {{ doc.last_gathered }}</span>{% endif %}
+    {% if doc.decision_date %}<span class="phase-label">decided · {{ doc.decision_date }}{% if doc.origin_ticket %} · <a href="/tickets/{{ doc.origin_ticket | replace('#', '') }}{{ repo_query }}">{{ doc.origin_ticket }}</a>{% endif %}</span>{% endif %}
+    <span class="phase-label">{{ doc.bytes }} bytes · {{ words }} words</span>
+    <span class="doc-tools">
+      {% if not edit %}<a href="{{ doc.href }}{{ edit_query }}" class="doc-tools__link">edit</a>{% endif %}
+      <button type="button" class="doc-tools__btn js-copy" data-copy="{{ doc.path }}">copy path</button>
+    </span>
+  </div>
+  {% if doc.status in ('superseded', 'deprecated') %}
+  <div class="doc-banner doc-banner--{{ doc.status }}" role="note">
+    {% if doc.status == 'superseded' %}
+      superseded by
+      {% if successor %}<a href="{{ successor.href }}{{ repo_query }}">{{ successor.short }} · {{ successor.title }}</a>{% if successor.status %} ({{ successor.status }}){% endif %}
+      {% elif doc.superseded_by %}{{ doc.superseded_by }}
+      {% else %}<em>no successor named — the frontmatter carries no superseded_by</em>{% endif %}
+    {% else %}
+      deprecated{% if successor %} · see <a href="{{ successor.href }}{{ repo_query }}">{{ successor.short }}</a>{% endif %}
+    {% endif %}
+  </div>
+  {% endif %}
+</section>
+
+{# ── 2. Neighbourhood strip ─────────────────────────────────────────────
+   Absent, not empty, when the doc is an island: the verdict on an empty
+   strip would only say "0 in · 0 out", which the cited-by count already
+   says. #}
+{% if not strip.empty %}
+<section>
+  {{ sec_num('map') }}
+  <h2>Neighbourhood</h2>
+  <div id="docmap-wrap">
+    {{ map_svg(strip, repo_query) }}
+  </div>
+</section>
+{% endif %}
+
+{# ── 3. Body, or the edit form ─────────────────────────────────────────── #}
+{% if edit %}
+<section>
+  {{ sec_num('edit') }}
+  <h2>Edit <span class="phase-tag">writes the file · no commit</span></h2>
+  {% include "doc_edit.html" %}
+</section>
+{% else %}
+<section>
+  {{ sec_num('body') }}
+  <h2>Body{% if rendered.truncated %} <span class="phase-tag">truncated</span>{% endif %}</h2>
+  <div class="doc-read{% if rendered.toc %} doc-read--toc{% endif %}">
+    {% if rendered.toc %}
+    {# Rendered twice on purpose: the fold shows under 1080px, the rail at and
+       above it. One element cannot be both — a closed <details> hides its
+       content in a way no outside rule can reopen. #}
+    <details class="doc-toc doc-toc--fold">
+      <summary>contents · {{ rendered.toc | length }}</summary>
+      {{ toc_list(rendered.toc) }}
+    </details>
+    {% endif %}
+    <div class="doc-read__main">
+      {% if rendered.frontmatter_raw %}
+      <details class="doc-frontmatter">
+        <summary>frontmatter</summary>
+        <pre class="doc-frontmatter__pre">{{ rendered.frontmatter_raw }}</pre>
+      </details>
+      {% endif %}
+      <div class="prose ticket-prose doc-prose">
+        {% if rendered.html %}
+          {{ rendered.html | safe }}
+          {% if rendered.truncated %}
+          <p class="empty-state">body truncated · open the file for the rest</p>
+          {% endif %}
+        {% else %}
+          <p class="empty-state">no body · this document is frontmatter only</p>
+        {% endif %}
+      </div>
+    </div>
+    {% if rendered.toc %}
+    <nav class="doc-toc doc-toc--rail" aria-label="Contents">
+      <p class="doc-toc__head">contents</p>
+      {{ toc_list(rendered.toc) }}
+    </nav>
+    {% endif %}
+  </div>
+</section>
+{% endif %}
+
+{# ── 4. Cited by ────────────────────────────────────────────────────────
+   Lazy: the backlink scan reads every ticket and lifecycle artifact under
+   the root, which must not sit on the page load. Fetched exactly once, on
+   first open — the same idiom as the ticket page's artifact panels. #}
+<section>
+  {{ sec_num('cited by') }}
+  <h2>Cited <em>by</em> <span class="phase-tag">docs · tickets · lifecycles</span></h2>
+  <details id="cited-by" class="ticket-artifact">
+    <summary>who cites {{ doc.short }}</summary>
+    <div class="ticket-artifact__panel"
+         hx-get="/partials/docs/cited-by/{{ doc.path }}{{ repo_query }}"
+         hx-trigger="toggle once from:closest details"
+         hx-swap="innerHTML">
+      <p class="empty-state">loading citations</p>
+    </div>
+  </details>
+</section>
+
+{# The hover card, filled by the delegated ``.js-doc`` handler in base.html.
+   Map nodes carry their own ``data-d-*`` facts; a citation link inside the
+   prose carries only ``data-doc``, so the handler looks those up in this
+   one-per-page map of the doc's neighbours — the only docs the body can
+   link to, since a link is an edge. #}
+<div id="doc-hover" class="hovercard" hidden aria-hidden="true">
+  <p class="hovercard__title"><span class="hovercard__id"></span> <span class="hovercard__name"></span></p>
+  <p class="hovercard__chips">
+    <span class="nav-chip hovercard__kind"></span>
+    <span class="nav-chip hovercard__status"></span>
+    <span class="nav-chip nav-chip--lev hovercard__degree"></span>
+  </p>
+  <p class="hovercard__hint">click to read the doc</p>
+</div>
+<script type="application/json" id="doc-hover-data">{{ hover_data | tojson }}</script>
+{% endif %}
+
+<div class="handoff">
+  <span>every governing doc is listed in the <a href="/docs{{ repo_query }}" class="text-brand-primary">docs index</a></span>
+  <span class="phase-label">the map, the ADR pool, and who cites what</span>
+</div>
+{% endblock %}

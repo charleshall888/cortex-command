@@ -792,8 +792,9 @@ class TestStylesheetReachesTheMarkup(unittest.TestCase):
     #
     # is what regenerates it when a new interpolated class ships.
     DYNAMIC_PREFIXES = (
-        "alert-badge-", "badge-", "edge--", "egroup--", "ekid--",
-        "feature-row--", "lane-status-", "nav-list__row--", "node--",
+        "alert-badge-", "badge-", "darrow--", "dedge--", "dlabel--", "dn--",
+        "doc-banner--", "doc-toc__item--", "dpool--", "edge--", "egroup--",
+        "ekid--", "feature-row--", "lane-status-", "nav-list__row--", "node--",
     )
 
     @classmethod

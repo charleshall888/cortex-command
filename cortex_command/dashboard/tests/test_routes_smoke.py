@@ -33,6 +33,7 @@ PID write, leaving no clean way to isolate it without monkeypatching internals.)
 from __future__ import annotations
 
 import json
+import re
 
 import pytest
 from starlette.testclient import TestClient
@@ -72,6 +73,13 @@ PARTIAL_ROUTES = [
     # test, not in the route smoke list" — and the smoke list is the cheapest
     # of those three to keep honest.
     "/partials/ticket-card/1",
+    # The Docs view's two fragments. The cited-by panel is always 200 for the
+    # same reason the artifact partial is — it lands inside a <details> the
+    # operator opened. The map fragment is what a shelf's `more` link swaps
+    # in; against the fixture root it draws the two-node ladder CLAUDE.md
+    # and project.md make.
+    "/partials/docs/cited-by/CLAUDE.md",
+    "/partials/docs/map",
 ]
 
 # Page + health routes that must render 200. These are full pages — peers, not
@@ -82,7 +90,13 @@ PARTIAL_ROUTES = [
 # otherwise render every in-page "back to backlog" link a 404. ``/overnight``
 # is the session view that used to sit at ``/``. ``/tickets/1`` is the seeded
 # ticket from fixture_root below.
-PAGE_ROUTES = ["/", "/backlog", "/overnight", "/sessions", "/health", "/tickets/1"]
+PAGE_ROUTES = [
+    "/", "/backlog", "/overnight", "/sessions", "/health", "/tickets/1",
+    # The Docs view: the index and the reader for the CLAUDE.md fixture_root
+    # seeds. A path segment with a slash in it (`/docs/{path:path}`) is the
+    # one shape no other page route has, so the reader is listed by name.
+    "/docs", "/docs/CLAUDE.md", "/docs/cortex/requirements/project.md",
+]
 
 ALL_OK_ROUTES = PAGE_ROUTES + PARTIAL_ROUTES
 
@@ -119,6 +133,19 @@ def fixture_root(tmp_path, monkeypatch):
     lifecycle_feature_dir.mkdir()
     (lifecycle_feature_dir / "spec.md").write_text(
         "# Spec\n\nSpec artifact prose used by the route smoke suite.\n",
+        encoding="utf-8",
+    )
+    # The smallest governing set the Docs view can map: the constitution and
+    # the root requirements doc, with one citation between them so the
+    # ladder has an edge to draw. `/docs/CLAUDE.md` and the edit-verb tests
+    # below hardcode these two paths.
+    (tmp_path / "CLAUDE.md").write_text(
+        "# Smoke project\n\nRead `cortex/requirements/project.md` first.\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "cortex" / "requirements").mkdir(parents=True)
+    (tmp_path / "cortex" / "requirements" / "project.md").write_text(
+        "# Project\n\n> Last gathered: 2026-01-01\n\n## Vision\n\nA tiny root doc.\n",
         encoding="utf-8",
     )
     monkeypatch.setenv("CORTEX_REPO_ROOT", str(tmp_path))
@@ -234,3 +261,82 @@ def test_backlog_alias_serves_the_same_page_as_the_landing_route(fixture_root):
 
     assert client.get("/backlog").status_code == 200
     assert 'id="navigator-panel"' in client.get("/backlog").text
+
+
+# ---------------------------------------------------------------------------
+# The Docs view: the 404 arm and the edit verb's three answers.
+# ---------------------------------------------------------------------------
+
+_SHA_FIELD = re.compile(r'name="sha" value="([0-9a-f]{64})"')
+
+
+def _open_editor(client: TestClient, path: str) -> str:
+    """Open the edit form and return the content hash it was filled with."""
+    page = client.get(f"/docs/{path}?edit=1")
+    assert page.status_code == 200
+    match = _SHA_FIELD.search(page.text)
+    assert match, "the edit form carries no sha field"
+    return match.group(1)
+
+
+def test_unknown_doc_returns_404(client):
+    """A path outside the governing set is 404, whether or not it exists."""
+    assert client.get("/docs/nope.md").status_code == 404
+
+
+def test_existing_file_outside_the_governing_set_returns_404(client, fixture_root):
+    """The corpus is the rail: a ticket file exists on disk and is still 404."""
+    assert (fixture_root / "cortex" / "backlog" / "1-smoke-test-ticket.md").exists()
+    assert client.get("/docs/cortex/backlog/1-smoke-test-ticket.md").status_code == 404
+
+
+def test_save_with_a_stale_sha_is_409_and_writes_nothing(client, fixture_root):
+    target = fixture_root / "CLAUDE.md"
+    before = target.read_text(encoding="utf-8")
+    sha = _open_editor(client, "CLAUDE.md")
+
+    response = client.post(
+        "/docs/CLAUDE.md",
+        data={"content": "# Overwritten\n", "sha": "0" * 64},
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 409
+    assert target.read_text(encoding="utf-8") == before
+    # The operator's text survives, the disk version is shown, and the form
+    # now carries the disk hash so a second save is an informed one.
+    assert "# Overwritten" in response.text
+    assert "Smoke project" in response.text
+    assert f'name="sha" value="{sha}"' in response.text
+
+
+def test_save_with_the_current_sha_is_303_and_changes_the_file(client, fixture_root):
+    target = fixture_root / "CLAUDE.md"
+    sha = _open_editor(client, "CLAUDE.md")
+
+    response = client.post(
+        "/docs/CLAUDE.md",
+        data={"content": "# Smoke project\r\n\r\nEdited through the form.", "sha": sha},
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 303
+    assert response.headers["location"] == "/docs/CLAUDE.md"
+    # CRLF normalised, exactly one trailing newline.
+    assert target.read_text(encoding="utf-8") == "# Smoke project\n\nEdited through the form.\n"
+    assert "Edited through the form." in client.get("/docs/CLAUDE.md").text
+
+
+def test_save_to_a_non_governing_path_is_refused(client, fixture_root):
+    """POST to a path the corpus does not list renders the 404 arm and writes nothing."""
+    stray = fixture_root / "cortex" / "backlog" / "1-smoke-test-ticket.md"
+    before = stray.read_text(encoding="utf-8")
+
+    response = client.post(
+        "/docs/cortex/backlog/1-smoke-test-ticket.md",
+        data={"content": "x\n", "sha": "0" * 64},
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 404
+    assert stray.read_text(encoding="utf-8") == before

@@ -2709,6 +2709,294 @@
         .sec-num strong { display: inline; margin-right: 8px; }
       }
     }
+      /* ── Docs view ─────────────────────────────────────────────────────
+         The document map shares the epic frame's grammar (.epic-pan,
+         .epic-svg, .epic-verdict) and adds its own node and edge classes.
+         Border COLOUR is the document kind; border STYLE is the ADR status —
+         the second channel a colour-blind reader gets, same rule as the
+         badges. Focus state is precomputed server-side as dn--here / dn--in /
+         dn--out / dn--both / dn--far and dedge--in / dedge--out / dedge--far;
+         CSS only dims and rings. Tokens only, no raw values. */
+      .docmap__verdict { margin-bottom: 10px; }
+      .dn {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        box-sizing: border-box;
+        width: 100%;
+        height: 100%;
+        padding: 6px 10px;
+        overflow: hidden;
+        text-decoration: none;
+        cursor: pointer;
+        background: var(--color-parchment-3);
+        border: 1.5px solid var(--color-rule-soft);
+        border-radius: 2px;
+        transition: opacity 160ms ease-out;
+      }
+      .dn:hover {
+        background: color-mix(in srgb, var(--color-blue) 12%, var(--color-parchment-3));
+        border-color: var(--color-ochre);
+        opacity: 1;
+      }
+      .dn__head {
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+        font-family: var(--font-mono);
+        font-size: 10.5px;
+        line-height: 1;
+        color: var(--color-ochre);
+      }
+      .dn__state {
+        margin-left: auto;
+        font-size: 9px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--color-ink-faint);
+      }
+      .dn__title {
+        display: -webkit-box;
+        -webkit-line-clamp: 1;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        font-size: 11px;
+        line-height: 1.28;
+        color: var(--color-ink-2);
+      }
+      .dn__deg {
+        font-family: var(--font-mono);
+        font-size: 9px;
+        letter-spacing: 0.04em;
+        color: var(--color-ink-faint);
+      }
+      /* kind → border colour */
+      .dn--constitution, .dn--policy, .dn--config, .dn--readme { border-color: var(--color-ink-1); }
+      .dn--constitution .dn__head, .dn--policy .dn__head, .dn--config .dn__head, .dn--readme .dn__head { color: var(--color-ink-1); }
+      .dn--root, .dn--area, .dn--glossary { border-color: var(--color-blue); }
+      .dn--root .dn__head, .dn--area .dn__head, .dn--glossary .dn__head { color: var(--color-blue-soft); }
+      .dn--adr { border-color: var(--color-ochre); }
+      .dn--doc { border-color: var(--color-ink-3); }
+      .dn--doc .dn__head { color: var(--color-ink-3); }
+      /* status → border style */
+      .dn--proposed { border-style: dotted; }
+      .dn--superseded, .dn--deprecated {
+        border-style: dashed;
+        border-color: var(--color-ink-faint);
+        background: none;
+        opacity: 0.62;
+      }
+      .dn--superseded .dn__head, .dn--deprecated .dn__head { color: var(--color-ink-faint); }
+      .dn--ghost { border-style: dashed; border-color: var(--color-ink-faint); background: none; opacity: 0.62; }
+      .dn--ghost .dn__head { color: var(--color-ink-faint); }
+      /* focus: everything not within one hop of the open doc recedes */
+      .dn--far { opacity: 0.22; }
+      .dn--here {
+        border-color: var(--color-ochre);
+        box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-ochre) 28%, transparent);
+      }
+      .dedge { fill: none; stroke-width: 1.5; transition: opacity 160ms ease-out; }
+      .dedge--parent, .dedge--maps-area, .dedge--global { stroke: var(--color-blue); }
+      .dedge--cites { stroke: var(--color-ochre); stroke-width: 1.25; }
+      .dedge--supersedes { stroke: var(--color-ink-faint); stroke-dasharray: 5 4; }
+      .dedge--far { opacity: 0.22; }
+      .dedge--in, .dedge--out { stroke-width: 2.25; }
+      .darrow--blue { fill: var(--color-blue); }
+      .darrow--ochre { fill: var(--color-ochre); }
+      .darrow--faint { fill: var(--color-ink-faint); }
+      .dlabel {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        letter-spacing: 0.1em;
+        fill: var(--color-ink-faint);
+      }
+      .dlabel--column { text-transform: uppercase; }
+      .dlabel--shelf { font-size: 9.5px; letter-spacing: 0.08em; }
+      .dlabel--more { fill: var(--color-ochre); text-decoration: underline; cursor: pointer; }
+      .dpool {
+        fill: none;
+        stroke: var(--color-ink-3);
+        stroke-width: 1;
+        stroke-dasharray: 7 5;
+      }
+      .docmap__key {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 18px;
+        margin: 12px 0 0;
+        font-family: var(--font-mono);
+        font-size: 10.5px;
+        color: var(--color-ink-faint);
+      }
+      .docmap__key-item::before {
+        content: "";
+        display: inline-block;
+        width: 22px;
+        height: 0;
+        border-top: 1.5px solid;
+        vertical-align: middle;
+        margin-right: 6px;
+      }
+      .docmap__key-item--parent::before { border-color: var(--color-blue); }
+      .docmap__key-item--cites::before { border-color: var(--color-ochre); }
+      .docmap__key-item--supersedes::before { border-color: var(--color-ink-faint); border-top-style: dashed; }
+      .docmap__key-item--box::before { width: 14px; height: 8px; border: 1.5px solid; }
+      .docmap__key-item--constitution::before { border-color: var(--color-ink-1); }
+      .docmap__key-item--requirements::before { border-color: var(--color-blue); }
+      .docmap__key-item--accepted::before { border-color: var(--color-ochre); }
+      .docmap__key-item--proposed::before { border-color: var(--color-ochre); border-style: dotted; }
+      .docmap__key-item--superseded::before { border-color: var(--color-ink-faint); border-style: dashed; }
+
+      /* The index */
+      .docs-group {
+        margin: 18px 0 6px;
+        font-family: var(--font-mono);
+        font-size: 11px;
+        font-weight: 500;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--color-ink-3);
+      }
+      .docs-table { width: 100%; }
+      .docs-row[hidden] { display: none; }
+      .docs-row__id a { font-family: var(--font-mono); font-size: 12px; color: var(--color-ochre); text-decoration: none; }
+      .docs-row__id a:hover { color: var(--color-ochre-soft); }
+      .docs-row__title { color: var(--color-ink-2); }
+      .docs-filter { margin-bottom: 6px; }
+
+      /* The reader */
+      .doc-chips { align-items: center; }
+      .doc-tools { margin-left: auto; display: inline-flex; gap: 10px; align-items: center; }
+      .doc-tools__link, .doc-tools__btn {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        letter-spacing: 0.04em;
+        color: var(--color-ochre);
+        background: none;
+        border: 1px solid color-mix(in srgb, var(--color-ochre) 45%, transparent);
+        border-radius: 2px;
+        padding: 3px 8px;
+        text-decoration: none;
+        cursor: pointer;
+      }
+      .doc-tools__link:hover, .doc-tools__btn:hover { border-color: var(--color-ochre); color: var(--color-ochre-soft); }
+      .doc-tools__btn[data-copied] { color: var(--color-ink-2); border-color: var(--color-rule-soft); }
+      .doc-banner {
+        margin: 12px 0 0;
+        padding: 8px 12px;
+        font-family: var(--font-mono);
+        font-size: 11.5px;
+        line-height: 1.5;
+        color: var(--color-ink-2);
+        background: var(--color-parchment-3);
+        border-left: 3px solid var(--color-ochre);
+        border-radius: 2px;
+      }
+      .doc-banner a { color: var(--color-ochre); text-decoration: none; border-bottom: 1px solid var(--color-ochre); }
+      .doc-banner--superseded, .doc-banner--deprecated { border-left-color: var(--color-ink-faint); color: var(--color-ink-3); }
+      .doc-banner--conflict { border-left-color: var(--color-ochre); }
+      .doc-banner--refused { border-left-color: var(--c-state-failed); color: var(--c-state-failed); }
+      .doc-read { display: block; }
+      .doc-read__main { min-width: 0; }
+      .doc-prose { max-width: 76ch; }
+      .doc-prose :target, .doc-prose [id] { scroll-margin-top: 24px; }
+      .doc-frontmatter { margin: 0 0 14px; font-family: var(--font-mono); font-size: 11px; color: var(--color-ink-faint); }
+      .doc-frontmatter summary { cursor: pointer; letter-spacing: 0.06em; text-transform: uppercase; }
+      .doc-frontmatter__pre {
+        margin: 6px 0 0;
+        padding: 8px 10px;
+        background: var(--color-parchment-3);
+        border: 1px solid var(--color-rule-soft);
+        border-radius: 2px;
+        color: var(--color-ink-3);
+        white-space: pre-wrap;
+      }
+      .doc-toc { font-family: var(--font-mono); font-size: 11px; line-height: 1.6; }
+      .doc-toc__head, .doc-toc summary {
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--color-ink-faint);
+        margin: 0 0 6px;
+        cursor: pointer;
+      }
+      .doc-toc__list { list-style: none; margin: 0; padding: 0; }
+      .doc-toc__item a { color: var(--color-ink-3); text-decoration: none; }
+      .doc-toc__item a:hover { color: var(--color-ochre); }
+      .doc-toc__item--2 { padding-left: 12px; }
+      .doc-toc__item--3 { padding-left: 24px; }
+      .doc-toc--fold { margin: 0 0 14px; }
+      .doc-toc--rail { display: none; }
+      @media (min-width: 1080px) {
+        .doc-read--toc { display: grid; grid-template-columns: minmax(0, 1fr) 190px; gap: 28px; align-items: start; }
+        .doc-toc--fold { display: none; }
+        .doc-toc--rail {
+          display: block;
+          position: sticky;
+          top: 18px;
+          max-height: calc(100vh - 36px);
+          overflow-y: auto;
+          padding-left: 14px;
+          border-left: 1px solid var(--color-rule-soft);
+        }
+      }
+      .doc-cited__head {
+        margin: 14px 0 6px;
+        font-family: var(--font-mono);
+        font-size: 11px;
+        font-weight: 500;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--color-ink-3);
+      }
+      .doc-cited__head:first-child { margin-top: 0; }
+
+      /* The edit form */
+      .doc-edit { display: flex; flex-direction: column; gap: 10px; }
+      .doc-edit__label { font-family: var(--font-mono); font-size: 11px; color: var(--color-ink-faint); }
+      .doc-edit__text {
+        width: 100%;
+        min-height: 60vh;
+        box-sizing: border-box;
+        padding: 10px 12px;
+        font-family: var(--font-mono);
+        font-size: 12px;
+        line-height: 1.55;
+        color: var(--color-ink-1);
+        background: var(--color-parchment-3);
+        border: 1px solid var(--color-rule-soft);
+        border-radius: 2px;
+        resize: vertical;
+        tab-size: 2;
+      }
+      .doc-edit__text:focus { outline: none; border-color: var(--color-ochre); }
+      .doc-edit__actions { display: flex; gap: 14px; align-items: center; }
+      .doc-edit__save {
+        font-family: var(--font-mono);
+        font-size: 12px;
+        letter-spacing: 0.04em;
+        color: var(--color-parchment);
+        background: var(--color-ochre);
+        border: 1px solid var(--color-ochre);
+        border-radius: 2px;
+        padding: 5px 14px;
+        cursor: pointer;
+      }
+      .doc-edit__save:hover { background: var(--color-ochre-soft); border-color: var(--color-ochre-soft); }
+      .doc-edit__cancel { font-family: var(--font-mono); font-size: 11px; color: var(--color-ink-3); text-decoration: none; }
+      .doc-edit__cancel:hover { color: var(--color-ochre); }
+      .doc-edit__disk { font-family: var(--font-mono); font-size: 11px; color: var(--color-ink-faint); }
+      .doc-edit__disk summary { cursor: pointer; letter-spacing: 0.06em; text-transform: uppercase; }
+      .doc-edit__disk-pre {
+        margin: 6px 0 0;
+        padding: 10px 12px;
+        max-height: 50vh;
+        overflow: auto;
+        background: var(--color-parchment-3);
+        border: 1px solid var(--color-rule-soft);
+        border-radius: 2px;
+        color: var(--color-ink-3);
+        white-space: pre;
+      }
   </style>
   {% block head %}{% endblock %}
 </head>
@@ -2728,12 +3016,12 @@
          does not set it keeps the original masthead. #}
       {% set view = view | default('overnight') %}
       <div class="manuscript-meta">
-        <span>§ 00 · {% if view == 'backlog' %}backlog navigator · read-only{% elif view == 'history' %}session archive · read-only{% else %}overnight runner · live{% endif %}</span>
+        <span>§ 00 · {% if view == 'backlog' %}backlog navigator · read-only{% elif view == 'history' %}session archive · read-only{% elif view == 'docs' %}governing docs · read + edit{% else %}overnight runner · live{% endif %}</span>
         <span class="reg-divider"></span>
         <span>doc · cortex-command/dashboard</span>
         {% if view == 'overnight' %}<span>rev R{% if state is defined and state.overnight %}{{ state.overnight.current_round }}{% else %}0{% endif %}</span>{% endif %}
       </div>
-      <h1>cortex <em>{% if view == 'backlog' %}backlog{% elif view == 'history' %}history{% else %}overnight{% endif %}</em></h1>
+      <h1>cortex <em>{% if view == 'backlog' %}backlog{% elif view == 'history' %}history{% elif view == 'docs' %}docs{% else %}overnight{% endif %}</em></h1>
       <div class="crest">
         <nav>
           {# Every nav link carries the current repo, so switching view keeps
@@ -2748,6 +3036,7 @@
           <a href="/{{ repo_query }}" class="nav-link {% if request.url.path == '/' or request.url.path.startswith('/backlog') %}nav-link-active{% endif %}">Backlog</a>
           <a href="/overnight{{ repo_query }}" class="nav-link {% if request.url.path.startswith('/overnight') %}nav-link-active{% endif %}">Overnight</a>
           <a href="/sessions{{ repo_query }}" class="nav-link {% if request.url.path.startswith('/sessions') %}nav-link-active{% endif %}">History</a>
+          <a href="/docs{{ repo_query }}" class="nav-link {% if request.url.path.startswith('/docs') %}nav-link-active{% endif %}">Docs</a>
         </nav>
         {# Repo identity always renders; only its form changes. With several
            repos tracked these are links and the block is a switcher. With one
@@ -3233,6 +3522,174 @@
         if (back && back.focus) back.focus();
       }).observe(modal, { attributes: true, attributeFilter: ['open'] });
     })();
+
+    // Doc hover card — the Docs view's twin of the ticket card above, keyed
+    // on `.js-doc` and filling `#doc-hover`. Same shape: delegated from
+    // document, hover-intent delay, keyboard focus parity, hidden on scroll
+    // and after a swap. No modal: a plain click navigates to the doc.
+    //
+    // Two sources for the facts. A map node or an index row carries its own
+    // `data-d-*` attributes. A citation link inside rendered prose carries
+    // only `data-doc`, so the card looks that path up in the page's
+    // `#doc-hover-data` JSON — one map per page, rather than 300 bytes of
+    // attributes repeated on every one of ~50 anchors.
+    (function () {
+      var card = document.getElementById('doc-hover');
+      if (!card) return;
+
+      var GAP = 16;
+      var DELAY = 140;
+      var timer = null;
+      var lookup = {};
+      try {
+        var dataEl = document.getElementById('doc-hover-data');
+        if (dataEl) lookup = JSON.parse(dataEl.textContent || '{}') || {};
+      } catch (e) { lookup = {}; }
+
+      var fields = {
+        id: card.querySelector('.hovercard__id'),
+        name: card.querySelector('.hovercard__name'),
+        kind: card.querySelector('.hovercard__kind'),
+        status: card.querySelector('.hovercard__status'),
+        degree: card.querySelector('.hovercard__degree')
+      };
+
+      function hide() {
+        if (timer) { clearTimeout(timer); timer = null; }
+        card.hidden = true;
+      }
+
+      function place(x, y) {
+        var box = card.getBoundingClientRect();
+        var left = x + GAP;
+        var top = y + GAP;
+        if (left + box.width > window.innerWidth - 8) left = x - box.width - GAP;
+        if (top + box.height > window.innerHeight - 8) top = y - box.height - GAP;
+        card.style.left = Math.max(8, left) + 'px';
+        card.style.top = Math.max(8, top) + 'px';
+      }
+
+      function facts(el) {
+        if (el.hasAttribute('data-d-title')) {
+          return {
+            title: el.getAttribute('data-d-title') || '',
+            short: el.getAttribute('data-d-short') || '',
+            kind: el.getAttribute('data-d-kind') || '',
+            status: el.getAttribute('data-d-status') || '',
+            in: el.getAttribute('data-d-in'),
+            out: el.getAttribute('data-d-out')
+          };
+        }
+        return lookup[el.getAttribute('data-doc') || ''] || null;
+      }
+
+      function fill(el) {
+        var f = facts(el);
+        if (!f) return false;
+        fields.id.textContent = f.short || '';
+        fields.name.textContent = f.title || '';
+        fields.kind.textContent = f.kind ? 'kind · ' + f.kind : '';
+        fields.status.textContent = f.status ? 'status · ' + f.status : '';
+        fields.degree.textContent = (f.in === null || f.in === undefined)
+          ? ''
+          : '←' + f.in + ' →' + f.out;
+        card.hidden = false;
+        return true;
+      }
+
+      function show(el, x, y) { if (fill(el)) place(x, y); }
+
+      document.addEventListener('mouseover', function (ev) {
+        var el = ev.target.closest && ev.target.closest('.js-doc');
+        if (!el) { hide(); return; }
+        if (!card.hidden) { show(el, ev.clientX, ev.clientY); return; }
+        if (timer) clearTimeout(timer);
+        var x = ev.clientX, y = ev.clientY;
+        timer = setTimeout(function () { timer = null; show(el, x, y); }, DELAY);
+      });
+      document.addEventListener('mousemove', function (ev) {
+        if (card.hidden) return;
+        var el = ev.target.closest && ev.target.closest('.js-doc');
+        if (el) place(ev.clientX, ev.clientY); else hide();
+      });
+      document.addEventListener('focusin', function (ev) {
+        var el = ev.target.closest && ev.target.closest('.js-doc');
+        if (!el) { hide(); return; }
+        var box = el.getBoundingClientRect();
+        if (fill(el)) place(box.left, box.bottom - GAP);
+      });
+      document.addEventListener('focusout', hide);
+      document.addEventListener('keydown', function (ev) {
+        if (ev.key === 'Escape') hide();
+      });
+      window.addEventListener('scroll', hide, true);
+      document.body.addEventListener('htmx:afterSettle', hide);
+    })();
+
+    // The docs index filter. Client-side, no persistence: the index is not
+    // polled, so there is no swap to survive. Ships hidden and is shown here,
+    // so a no-JS reader is never offered a filter that cannot filter.
+    (function () {
+      var bar = document.getElementById('docs-filter');
+      if (!bar) return;
+      bar.hidden = false;
+      var input = document.getElementById('docs-filter-q');
+      var report = document.getElementById('docs-filter-state');
+      function apply() {
+        var q = (input.value || '').trim().toLowerCase();
+        var shown = 0, total = 0;
+        document.querySelectorAll('tr.docs-row').forEach(function (row) {
+          total++;
+          var hay = (
+            (row.getAttribute('data-doc-id') || '') + ' ' +
+            (row.getAttribute('data-doc-title') || '') + ' ' +
+            (row.getAttribute('data-doc-status') || '')
+          ).toLowerCase();
+          var ok = !q || hay.indexOf(q) !== -1;
+          row.hidden = !ok;
+          if (ok) shown++;
+        });
+        if (report) {
+          report.textContent = q ? shown + ' of ' + total + ' docs' + (shown ? '' : ' — nothing matches') : '';
+        }
+      }
+      input.addEventListener('input', apply);
+      document.addEventListener('keydown', function (ev) {
+        if (ev.key === 'Escape' && document.activeElement === input) { input.value = ''; apply(); }
+      });
+    })();
+
+    // The map's `more` links. Each is a real SVG anchor to the expanded page,
+    // which is the no-JS story; under JS the same click swaps only the map
+    // from the fragment URL the anchor carries. Done here rather than with an
+    // hx-get on the anchor because htmx's click-cancel tests `tagName === 'A'`
+    // and an SVG anchor reports lowercase `a`, so the browser would follow the
+    // href on top of the swap. Modified clicks fall through to the href.
+    document.addEventListener('click', function (ev) {
+      if (ev.defaultPrevented || ev.button !== 0) return;
+      if (ev.metaKey || ev.ctrlKey || ev.shiftKey || ev.altKey) return;
+      var el = ev.target.closest && ev.target.closest('.js-map-more');
+      if (!el || !window.htmx) return;
+      var url = el.getAttribute('data-map-get');
+      var wrap = document.getElementById('docmap-wrap');
+      if (!url || !wrap) return;
+      ev.preventDefault();
+      window.htmx.ajax('GET', url, { target: '#docmap-wrap', swap: 'innerHTML' });
+    });
+
+    // The reader's "copy path" button. Clipboard write is the only thing it
+    // does; the confirmation is a two-second label change, not a toast.
+    document.addEventListener('click', function (ev) {
+      var btn = ev.target.closest && ev.target.closest('.js-copy');
+      if (!btn || !navigator.clipboard) return;
+      var text = btn.getAttribute('data-copy') || '';
+      navigator.clipboard.writeText(text).then(function () {
+        var was = btn.textContent;
+        btn.textContent = 'copied';
+        btn.setAttribute('data-copied', '');
+        setTimeout(function () { btn.textContent = was; btn.removeAttribute('data-copied'); }, 2000);
+      });
+    });
 
   </script>
 </body>

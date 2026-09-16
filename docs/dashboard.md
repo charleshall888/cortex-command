@@ -484,6 +484,20 @@ The list carries session id, start, duration and outcome counts. Duration is the
 
 ---
 
+## Docs view (`/docs`)
+
+The repo's governing documents — `CLAUDE.md`, `docs/policies.md`, `cortex/lifecycle.config.md`, `cortex/README.md`, `cortex/requirements/*.md` and `cortex/adr/NNNN-*.md` — mapped, listed, read and, rarely, edited. The set is closed: a file is a doc here because the corpus enumerated it, never because a URL named it. Everything on these pages is computed per request from disk; nothing is polled and nothing is cached in dashboard state, because a governing doc changes on human timescales.
+
+**Index.** `/docs` draws the constitution ladder above a grouped table. The ladder has four columns — the constitution, the root and policy docs, the area docs in Conditional Loading order, and the decisions — with each ADR placed once, on a shelf under the first non-ADR doc that cites it; ADRs no doc cites sit in a dashed pool, which is a finding rather than a layout gap. Border colour is the document kind and border style is the ADR status, so the two channels survive colour-blindness. Long shelves collapse past six entries behind a `more` link that re-fetches the map alone from `/partials/docs/map?expand=…`. The table below lists every governing doc with its title, ADR status badge, `Last gathered` date, how many docs cite it, and its successor when superseded; a client-side filter narrows the rows by id, title or status.
+
+**Reader.** `/docs/{path}` renders one doc: a header with kind, status, parent, gathered and decision dates, size, an `edit` link and a copy-path button; a superseded or deprecated banner naming the successor; a three-column neighbourhood strip (what cites this doc, the doc, what it cites); and the body with a table of contents that sits as a sticky rail at wide widths and folds above the prose below 1080px. `ADR-NNNN` tokens, backticked repo paths and relative markdown links that resolve to a corpus doc become links; anything that does not resolve stays plain text, so the page never links to a 404. A path outside the governing set returns 404 even when the file exists.
+
+**Cited by.** A `<details>` panel fetched once from `/partials/docs/cited-by/{path}` on first open, grouped into governing docs (with the section and mention count), backlog tickets (with status, linking to the ticket page) and lifecycle artifacts (linking to the ticket's artifact panel when the lifecycle resolves to a ticket). Lazy because the scan reads every ticket and lifecycle artifact under the root.
+
+**Edit.** `?edit=1` replaces the body with a textarea holding the file and a hidden content hash of the bytes it was filled from. `POST /docs/{path}` re-hashes the disk file first: a match writes atomically (temp file plus rename, CRLF normalised, one trailing newline, mode preserved) and redirects with 303; a mismatch is a 409 that keeps the operator's text in the form, shows the disk version beneath it and carries the fresh hash, so nothing is ever overwritten silently; a path outside the governing set, or one that resolves through a symlink or outside the root, is a 403. The verb writes the file and nothing else — no `git add`, no commit. The change appears in `git status` and whichever session commits next carries it.
+
+---
+
 ## Data Sources
 
 The dashboard reads directly from files written by the overnight runner — no separate data pipeline is needed:
@@ -512,6 +526,12 @@ The dashboard reads directly from files written by the overnight runner — no s
 - `cortex/backlog/*.md` — feature titles and frontmatter status fields
 - `cortex/backlog/archive/*.md` — archived items, so a blocker pointing at a terminal ticket resolves as resolved rather than missing
 - `cortex/lifecycle.config.md` — backlog backend. The `cortex/backlog/` reads above happen only while `resolve_backlog_backend(root)` resolves to `cortex-backlog`; under any other backend the dashboard stands down rather than showing stale local counts.
+
+**Governing documents** (the Docs view; read per request, never polled)
+
+- `CLAUDE.md`, `docs/policies.md`, `cortex/lifecycle.config.md`, `cortex/README.md`, `cortex/requirements/*.md`, `cortex/adr/NNNN-*.md` — the closed governing set; plus any other `docs/*.md` one of them cites, shown as a grey neighbour on the map and never listed on its own
+- `cortex/backlog/*.md`, `cortex/backlog/archive/*.md`, `cortex/lifecycle/*/{research,spec,plan,review}.md` and their `archive/` copies — scanned only by the cited-by panel, on first open
+- The one write the dashboard performs anywhere: the Docs view's edit form rewrites a governing doc in place, hash-locked and atomic, with no git operation
 
 For the schemas, state machine, and lifecycle of these files, see [overnight-operations.md](overnight-operations.md).
 

@@ -21,8 +21,8 @@ from contextlib import ExitStack, asynccontextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 
-from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
+from fastapi import FastAPI, Form, Request
+from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from cortex_command.common import _resolve_user_project_root
@@ -37,6 +37,11 @@ from cortex_command.dashboard.data import (
     parse_session_detail,
     parse_session_list,
 )
+from cortex_command.dashboard.docs import corpus as docs_corpus
+from cortex_command.dashboard.docs import edit as docs_edit
+from cortex_command.dashboard.docs import layout as docs_layout
+from cortex_command.dashboard.docs import render as docs_render
+from cortex_command.dashboard.docs.model import MAP_NH, MAP_NW, Corpus, DocNode
 from cortex_command.dashboard.poller import DashboardState, run_polling
 from cortex_command.dashboard.repos import (
     Repo,
@@ -288,6 +293,11 @@ templates.env.filters["format_date"] = _format_date
 # consistently across surfaces.
 from cortex_command.phase_labels import phase_label as _phase_label_filter
 templates.env.filters["phase_label"] = _phase_label_filter
+# The document map's node box size. A constant the layout sized every node
+# to, so the template can print it on each <foreignObject> without deriving
+# a coordinate of its own.
+templates.env.globals["MAP_NW"] = MAP_NW
+templates.env.globals["MAP_NH"] = MAP_NH
 
 # ---------------------------------------------------------------------------
 # PID file path (XDG-compliant)
@@ -402,7 +412,10 @@ async def lifespan(app: FastAPI):
 # Application
 # ---------------------------------------------------------------------------
 
-app = FastAPI(lifespan=lifespan)
+# ``docs_url=None``: FastAPI would otherwise serve its Swagger UI at ``/docs``,
+# registered before any route below and so shadowing the Docs view. Nothing
+# consumed the generated UI; ``/openapi.json`` and ``/redoc`` are untouched.
+app = FastAPI(lifespan=lifespan, docs_url=None)
 
 
 @app.get("/health")
@@ -745,4 +758,238 @@ def ticket_artifact_partial(request: Request, item_id: str, kind: str):
         request,
         "ticket_artifact.html",
         {"request": request, "artifact": artifact},
+    )
+
+
+# ---------------------------------------------------------------------------
+# The Docs view — a repo's governing documents, mapped, read and (rarely)
+# edited. Everything below is computed per request from disk: nothing lands
+# in DashboardState and nothing is polled, because a governing doc changes on
+# human timescales. Every handler is a plain ``def`` for the reason
+# ``ticket_page`` gives — each one reads and renders documents, which belongs
+# on the threadpool rather than the event loop.
+#
+# The corpus is the one rail every route stands on: a path reaches disk only
+# by being a key in ``build_corpus(root).nodes``, never by being constructed
+# from the URL. That is what makes ``/docs/{path}`` safe to take a free path
+# segment, and what root-scopes the edit verb across the repo switcher.
+# ---------------------------------------------------------------------------
+
+#: Index groups in index order. Kinds absent from a root produce no group.
+_DOC_GROUPS: tuple[tuple[str, tuple[str, ...]], ...] = (
+    ("instructions", ("constitution",)),
+    ("policy", ("policy", "readme")),
+    ("requirements", ("root", "area", "glossary")),
+    ("decisions", ("adr",)),
+    ("config", ("config",)),
+)
+
+
+def _doc_groups(corpus: Corpus) -> list[tuple[str, list[DocNode]]]:
+    governing = corpus.governing()
+    groups: list[tuple[str, list[DocNode]]] = []
+    for label, kinds in _DOC_GROUPS:
+        members = [n for n in governing if n.kind in kinds]
+        if members:
+            groups.append((label, members))
+    return groups
+
+
+def _expand_of(request: Request) -> frozenset[str]:
+    """The ``?expand=a,b`` set that lifts a shelf's or the pool's cap."""
+    raw = request.query_params.get("expand", "")
+    return frozenset(part for part in raw.split(",") if part)
+
+
+def _governing_doc(corpus: Corpus, path: str) -> DocNode | None:
+    """The node at *path* if it is a governing doc on disk, else None.
+
+    A grey ``doc`` neighbour and a ghost both answer None: the reader shows
+    only the governing set, and the edit verb's allowlist is the same set.
+    """
+    node = corpus.get(path)
+    if node is None or not node.governing or not node.exists:
+        return None
+    return node
+
+
+def _hover_data(corpus: Corpus, doc: DocNode) -> dict[str, dict]:
+    """The facts the hover card needs for every doc the body can link to.
+
+    A citation inside rendered prose is an edge, so the set of linkable docs
+    is exactly the neighbourhood; the map nodes on the same page carry their
+    own attributes and never consult this.
+    """
+    out: dict[str, dict] = {}
+    for path in sorted(corpus.neighbours(doc.path) | {doc.path}):
+        node = corpus.get(path)
+        if node is None:
+            continue
+        out[path] = {
+            "title": node.title,
+            "short": node.short,
+            "kind": node.kind,
+            "status": node.status or "",
+            "in": len(corpus.in_edges(path)),
+            "out": len(corpus.out_edges(path)),
+        }
+    return out
+
+
+def _doc_page_response(
+    request: Request,
+    root: Path,
+    corpus: Corpus,
+    path: str,
+    doc: DocNode | None,
+    *,
+    edit: bool = False,
+    edit_view: docs_edit.EditView | None = None,
+    conflict: docs_edit.SaveResult | None = None,
+    save_error: str | None = None,
+    status_code: int = 200,
+):
+    """Render ``doc_page.html`` in one of its arms: not-found, read, or edit.
+
+    Shared by the GET and the POST so a refused save re-renders the same page
+    the operator was editing, with the same neighbourhood strip and header,
+    rather than a bare error. The body is not rendered in edit mode — the
+    form replaces it, and the markdown pass would be work nobody sees.
+    """
+    if doc is None:
+        return templates.TemplateResponse(
+            request,
+            "doc_page.html",
+            _ctx(request, doc=None, path=path),
+            status_code=404,
+        )
+    repo_query = _repo_context(request)["repo_query"]
+    text = docs_corpus.load_doc_text(root, path) or ""
+    rendered = None if edit else docs_render.render_doc(text, corpus, path, repo_query)
+    return templates.TemplateResponse(
+        request,
+        "doc_page.html",
+        _ctx(
+            request,
+            doc=doc,
+            path=path,
+            corpus=corpus,
+            rendered=rendered,
+            strip=docs_layout.layout_neighbourhood(corpus, path),
+            words=len(text.split()),
+            hover_data=_hover_data(corpus, doc),
+            edit=edit,
+            edit_view=edit_view,
+            conflict=conflict,
+            save_error=save_error,
+        ),
+        status_code=status_code,
+    )
+
+
+@app.get("/docs")
+def docs_index(request: Request):
+    """The governing set of one repo: the constitution ladder and the index."""
+    root = _root_of(request)
+    corpus = docs_corpus.build_corpus(root)
+    ladder = docs_layout.layout_ladder(corpus, expand=_expand_of(request))
+    return templates.TemplateResponse(
+        request,
+        "docs_index.html",
+        _ctx(request, corpus=corpus, groups=_doc_groups(corpus), ladder=ladder),
+    )
+
+
+@app.get("/docs/{path:path}")
+def doc_page(request: Request, path: str):
+    """The reading page for one governing doc; ``?edit=1`` opens the form.
+
+    404 for anything the corpus does not list as governing — including a
+    file that exists on disk, because a path the corpus did not enumerate is
+    a path the reader never opens.
+    """
+    root = _root_of(request)
+    corpus = docs_corpus.build_corpus(root)
+    doc = _governing_doc(corpus, path)
+    edit_view = None
+    edit = doc is not None and request.query_params.get("edit") == "1"
+    if edit:
+        edit_view = docs_edit.read_for_edit(root, corpus, path)
+        edit = edit_view is not None
+    return _doc_page_response(request, root, corpus, path, doc, edit=edit, edit_view=edit_view)
+
+
+@app.post("/docs/{path:path}")
+def doc_save(request: Request, path: str, content: str = Form(""), sha: str = Form("")):
+    """Save one governing doc through the hash lock.
+
+    Three answers. A clean save (or an unchanged one) redirects to the reading
+    page with 303, so a refresh re-reads rather than re-posts. A stale ``sha``
+    is a 409: the page comes back in edit mode with the operator's text still
+    in the textarea, the disk version shown beneath it, and the fresh hash in
+    the hidden field — nothing is overwritten. Any other refusal is a 403
+    naming the reason. The verb writes the file and nothing else: no add, no
+    commit.
+    """
+    root = _root_of(request)
+    corpus = docs_corpus.build_corpus(root)
+    doc = _governing_doc(corpus, path)
+    if doc is None:
+        return _doc_page_response(request, root, corpus, path, None)
+    result = docs_edit.save_doc(root, corpus, path, content, sha)
+    if result.ok:
+        repo_query = _repo_context(request)["repo_query"]
+        return RedirectResponse(url=f"/docs/{path}{repo_query}", status_code=303)
+    edit_view = docs_edit.EditView(path=path, text=content, sha=result.sha)
+    if result.reason == "conflict":
+        return _doc_page_response(
+            request, root, corpus, path, doc,
+            edit=True, edit_view=edit_view, conflict=result, status_code=409,
+        )
+    return _doc_page_response(
+        request, root, corpus, path, doc,
+        edit=True, edit_view=edit_view,
+        save_error=f"save refused · {result.reason or 'unknown reason'}",
+        status_code=403,
+    )
+
+
+@app.get("/partials/docs/cited-by/{path:path}")
+def doc_cited_by(request: Request, path: str):
+    """One doc's backlinks, fetched when its cited-by panel first opens.
+
+    Always 200: the fragment lands inside a <details> the operator opened,
+    and reports "unavailable" in prose when the path is not a governing doc.
+    Lazy because the scan reads every ticket and lifecycle artifact under
+    the root, which is work a page load should not pay for a panel most
+    loads never open.
+    """
+    root = _root_of(request)
+    corpus = docs_corpus.build_corpus(root)
+    doc = _governing_doc(corpus, path)
+    links = docs_corpus.backlinks(root, corpus, path) if doc is not None else None
+    return templates.TemplateResponse(
+        request,
+        "doc_cited_by.html",
+        _ctx(request, doc=doc, backlinks=links),
+    )
+
+
+@app.get("/partials/docs/map")
+def docs_map(request: Request):
+    """The ladder alone, for the map's ``more`` links and a ``?focus=`` view.
+
+    A focus naming no corpus node is dropped rather than refused: the map
+    still draws, just with nothing dimmed.
+    """
+    root = _root_of(request)
+    corpus = docs_corpus.build_corpus(root)
+    focus = request.query_params.get("focus") or None
+    if focus is not None and corpus.get(focus) is None:
+        focus = None
+    ladder = docs_layout.layout_ladder(corpus, focus=focus, expand=_expand_of(request))
+    return templates.TemplateResponse(
+        request,
+        "_doc_map.svg.html",
+        _ctx(request, layout=ladder),
     )

@@ -1,0 +1,46 @@
+{# One doc's backlinks, in three groups: the governing docs that cite it
+   (with the section the first mention sits under and the mention count),
+   the backlog tickets that name it, and the lifecycle artifacts that name it.
+
+   Lands inside a <details> the operator opened, so like the ticket artifact
+   partial it is always 200 and reports "unavailable" in prose when the path
+   resolves to no governing doc. ``backlinks`` is none in that arm. #}
+{% from "patterns/backlog_badges.html" import status_badge %}
+{% if backlinks is none %}
+<p class="empty-state">citations unavailable · not a governing document</p>
+{% else %}
+<div class="doc-cited">
+  <h3 class="doc-cited__head">docs <span class="phase-tag">{{ backlinks.docs | length }}</span></h3>
+  {% if backlinks.docs %}
+  <ul class="feature-list">
+    {% for citer, section, count in backlinks.docs %}
+    <li class="card-row"><a href="{{ citer.href }}{{ repo_query }}">{{ citer.short }}</a> <span class="phase-label">{{ citer.title }}{% if section %} · § {{ section }}{% endif %} · {{ count }}×</span></li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="empty-state">no governing doc cites this one</p>
+  {% endif %}
+
+  <h3 class="doc-cited__head">tickets <span class="phase-tag">{{ backlinks.tickets | length }}</span></h3>
+  {% if backlinks.tickets %}
+  <ul class="feature-list">
+    {% for t in backlinks.tickets %}
+    <li class="card-row"><a href="/tickets/{{ t.id }}{{ repo_query }}">#{{ t.id }} {{ t.title if t.title else 'untitled' }}</a> {{ status_badge(t.status) }}</li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="empty-state">no ticket names this doc</p>
+  {% endif %}
+
+  <h3 class="doc-cited__head">lifecycles <span class="phase-tag">{{ backlinks.lifecycles | length }}</span></h3>
+  {% if backlinks.lifecycles %}
+  <ul class="feature-list">
+    {% for l in backlinks.lifecycles %}
+    <li class="card-row">{% if l.ticket_id %}<a href="/tickets/{{ l.ticket_id }}{{ repo_query }}#{{ l.kinds[0] if l.kinds else 'spec' }}">{{ l.slug }}</a>{% else %}<span>{{ l.slug }}</span>{% endif %} <span class="phase-label">{{ l.kinds | join(' · ') }}</span></li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="empty-state">no lifecycle artifact names this doc</p>
+  {% endif %}
+</div>
+{% endif %}

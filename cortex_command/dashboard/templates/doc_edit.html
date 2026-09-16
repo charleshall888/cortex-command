@@ -1,0 +1,40 @@
+{# The edit form for one governing document. Included by doc_page.html in
+   edit mode; reads ``doc``, ``edit_view`` (path, text, sha), ``conflict``
+   (the SaveResult of a refused save, or none), ``save_error`` (a refusal
+   message, or none) and ``repo_query``.
+
+   The hidden ``sha`` is the content hash of the bytes the textarea was
+   filled from. The save verb re-hashes the disk file and refuses with 409
+   when they differ, which is what makes this a lock rather than a race: an
+   edit from another session between open and save can never be overwritten
+   silently. On a conflict the operator's text stays in the textarea, the
+   disk version is shown beneath it, and the hidden field carries the FRESH
+   hash — so a second save is an informed overwrite of exactly the version
+   they were shown.
+
+   Writes the file and nothing else: no add, no commit, no stash. The change
+   appears in ``git status`` and whichever session commits next carries it. #}
+<form method="post" action="{{ doc.href }}{{ repo_query }}" class="doc-edit">
+  {% if save_error %}
+  <p class="doc-banner doc-banner--refused" role="alert">{{ save_error }}</p>
+  {% endif %}
+  {% if conflict %}
+  <p class="doc-banner doc-banner--conflict" role="alert">
+    the file changed on disk since you opened it — your text is kept below and the disk version is shown beneath it. Saving again replaces the disk version with yours.
+  </p>
+  {% endif %}
+  <input type="hidden" name="sha" value="{{ edit_view.sha }}">
+  <label class="doc-edit__label" for="doc-edit-content">{{ doc.path }}</label>
+  <textarea id="doc-edit-content" name="content" class="doc-edit__text" spellcheck="false" wrap="off">{{ edit_view.text }}</textarea>
+  <div class="doc-edit__actions">
+    <button type="submit" class="doc-edit__save">save</button>
+    <a href="{{ doc.href }}{{ repo_query }}" class="doc-edit__cancel">cancel</a>
+    <span class="phase-label">writes the file · no commit · lock {{ edit_view.sha[:12] }}</span>
+  </div>
+  {% if conflict and conflict.disk_text is not none %}
+  <details class="doc-edit__disk" open>
+    <summary>disk version</summary>
+    <pre class="doc-edit__disk-pre">{{ conflict.disk_text }}</pre>
+  </details>
+  {% endif %}
+</form>
