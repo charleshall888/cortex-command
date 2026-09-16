@@ -1951,7 +1951,7 @@
     .tg-card svg * { animation: none !important; }
   }
 
-  /* ───────────── Gatefold · POP THE HOOD (§4.2 deep-dive) ─────────────
+  /* ───────────── Gatefold · POP THE HOOD (§4.3 deep-dive) ─────────────
      Lives at the bottom of the trust-grid section. The card grid above
      answers SEVEN questions about the harness one figure at a time.
      This is the eighth answer — the whole machine, running.
@@ -1985,7 +1985,7 @@
   }
 
   /* ── Pop-the-hood CTA / nameplate ─────────────────────────────────
-     Unified treatment shared by the SDK harness gatefold and §4.2
+     Unified treatment shared by the SDK harness gatefold and §4.3
      (CLI deep dive). Dark recessed plate with an ochre brand stripe
      on the left, ochre engineering corner marks, circular chev that
      warms to ochre on hover/open, gears that turn ochre and speed up
@@ -4396,7 +4396,267 @@
   .toast.first-light .body .top { color: var(--ochre); }
 
   /* ═════════════════════════════════════════════════════════════════
-     §4.1 · /cli · the bench (+ dive: SHA consensus walk-through)
+     §4.1 · /skills · the route map
+     ───────────────────────────────────────────────────────────────── */
+  .sk-section {
+    position: relative; z-index: 2;
+    padding: 56px 0 72px;
+    border-top: 1px solid var(--rule-soft);
+    margin-top: 24px;
+  }
+  .sk-section code {
+    font-family: var(--mono); font-size: 0.84em; color: var(--ink);
+    background: var(--grid-tint-strong); padding: 1px 5px; border-radius: 2px;
+  }
+  .sk-marker {
+    font-family: var(--mono); font-size: 10.5px;
+    text-transform: uppercase; letter-spacing: 0.18em;
+    color: var(--ink-faint); margin: 0 0 12px;
+  }
+  .sk-marker em { font-style: normal; color: var(--ochre); }
+  .sk-kicker {
+    font-family: var(--serif); font-weight: 300;
+    font-size: clamp(28px, 3.4vw, 46px); line-height: 1.04;
+    letter-spacing: -0.028em; margin: 0 0 14px;
+    text-wrap: balance; max-width: 24ch; color: var(--ink);
+  }
+  .sk-kicker em { font-style: italic; color: var(--ochre); font-weight: 400; }
+  .sk-lede {
+    font-family: var(--serif); font-size: 18px; line-height: 1.5;
+    color: var(--ink-2); max-width: 70ch; text-wrap: pretty;
+    margin: 0 0 24px; font-weight: 300;
+  }
+  .sk-lede em { font-style: italic; color: var(--ochre); }
+  .sk-only-map { display: none; }
+  .sk-js .sk-only-map { display: inline; }
+  .sk-js .sk-only-list { display: none; }
+
+  /* ─── the sheet (map + legend + station board) ─── */
+  .sk-sheet {
+    display: none;
+    border: 1px solid var(--rule-soft);
+    background:
+      linear-gradient(var(--grid-tint) 1px, transparent 1px) 0 0 / 20px 20px,
+      linear-gradient(90deg, var(--grid-tint) 1px, transparent 1px) 0 0 / 20px 20px,
+      var(--parchment-2);
+  }
+  .sk-js .sk-sheet { display: block; }
+  .sk-sheet-tag {
+    display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+    font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--ink-faint); padding: 9px 14px; border-bottom: 1px dotted var(--rule-soft);
+  }
+  .sk-sheet-tag em { font-style: normal; color: var(--ochre); }
+  .sk-map { display: block; width: 100%; height: auto; }
+
+  /* lines */
+  .sk-ln { fill: none; stroke-linecap: round; stroke-linejoin: round; transition: opacity .25s; }
+  .sk-ln.sk-main  { stroke: var(--ochre); stroke-width: 6; }
+  .sk-ln.sk-night { stroke: var(--blue); stroke-width: 6; }
+  .sk-ln.sk-call  { stroke: var(--ink-mute); stroke-width: 1.6; stroke-dasharray: 5 4; stroke-linecap: butt; }
+  .sk-ln.sk-route { stroke: var(--ink-2); stroke-width: 1.5; }
+  .sk-ln.sk-back  { stroke: var(--ochre-soft); stroke-width: 1.5; stroke-dasharray: 3 3; stroke-linecap: butt; }
+  .sk-ln.sk-data  { stroke: var(--blue-soft); stroke-width: 1.5; stroke-dasharray: 1 3; }
+  .sk-ln.sk-ring  { stroke: var(--ink-faint); stroke-width: 1.5; stroke-dasharray: 0.1 6; }
+  .sk-arrow { fill: var(--ochre-soft); }
+  .sk-linelabel {
+    font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.16em; text-transform: uppercase;
+    fill: var(--ink-faint); transition: opacity .25s;
+  }
+  .sk-linelabel.sk-l-main  { fill: var(--ochre); }
+  .sk-linelabel.sk-l-night { fill: var(--blue); }
+
+  /* stations */
+  .sk-st { cursor: pointer; outline: none; transition: opacity .25s; }
+  .sk-st .sk-hit { fill: transparent; stroke: none; }
+  .sk-st .sk-dot { fill: var(--parchment-2); stroke: var(--ink); stroke-width: 2.5; transition: stroke .2s, fill .2s; }
+  .sk-st.sk-helper .sk-dot { stroke-width: 2; }
+  .sk-st .sk-core { fill: var(--ink); transition: fill .2s; }
+  .sk-st .sk-halo { fill: none; stroke: var(--ochre); stroke-width: 1.5; opacity: 0; transition: opacity .2s; }
+  .sk-st .sk-name { font-family: var(--mono); font-size: 13px; font-weight: 500; fill: var(--ink); transition: fill .2s; }
+  .sk-st .sk-cap  { font-family: var(--mono); font-size: 9.5px; fill: var(--ink-faint); letter-spacing: 0.03em; }
+  .sk-st.sk-ringst .sk-name { fill: var(--ochre); }
+  .sk-st:hover .sk-dot, .sk-st.sk-cur .sk-dot { stroke: var(--ochre); }
+  .sk-st:hover .sk-name, .sk-st.sk-cur .sk-name { fill: var(--ochre); }
+  .sk-st.sk-cur .sk-core { fill: var(--ochre); }
+  .sk-st:focus-visible .sk-halo, .sk-st.sk-cur .sk-halo { opacity: 1; }
+  .sk-st:focus-visible .sk-halo { stroke-dasharray: 2 2; }
+  .sk-map .sk-anytime { opacity: 0; transition: opacity .25s; fill: none; stroke: var(--ochre); stroke-width: 1; stroke-dasharray: 1.5 2.5; }
+
+  /* selection: dim everything, relight what runs through the station */
+  .sk-map.sk-sel .sk-ln, .sk-map.sk-sel .sk-linelabel { opacity: 0.16; }
+  .sk-map.sk-sel .sk-st { opacity: 0.38; }
+  .sk-map.sk-sel .sk-ln.sk-route:not(.sk-on) { opacity: 0.06; } /* four routes share one bus; stacked, they would not dim */
+  .sk-map.sk-sel .sk-ln.sk-on, .sk-map.sk-sel .sk-linelabel.sk-on, .sk-map.sk-sel .sk-st.sk-on { opacity: 1; }
+  .sk-map.sk-sel .sk-st.sk-any .sk-anytime { opacity: 1; }
+
+  /* legend */
+  .sk-legend {
+    list-style: none; margin: 0; padding: 10px 14px;
+    display: flex; flex-wrap: wrap; gap: 8px 20px;
+    border-top: 1px dotted var(--rule-soft);
+    font-family: var(--mono); font-size: 10px; color: var(--ink-mute);
+  }
+  .sk-legend li { display: inline-flex; align-items: center; gap: 7px; }
+  .sk-legend svg { width: 28px; height: 12px; flex-shrink: 0; overflow: visible; }
+
+  /* station board */
+  .sk-board {
+    border-top: 1px solid var(--rule-soft);
+    background: var(--parchment);
+    padding: 16px 18px 18px;
+    min-height: 196px;
+  }
+  .sk-board-idle { font-family: var(--serif); font-weight: 300; font-size: 16px; color: var(--ink-2); max-width: 62ch; margin: 0; }
+  .sk-board-idle .sk-hint { display: block; font-family: var(--mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-faint); margin-bottom: 8px; }
+  .sk-board-idle b { font-family: var(--mono); font-weight: 500; font-size: 0.86em; color: var(--blue); }
+
+  /* the card (same markup in the board and in the phone list) */
+  .sk-card-head { display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px 12px; margin-bottom: 6px; }
+  .sk-card-name { font-family: var(--mono); font-weight: 500; font-size: 17px; color: var(--blue); }
+  .sk-card-line {
+    font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+  .sk-card-line em { font-style: normal; color: var(--ochre); }
+  .sk-card-what { font-family: var(--serif); font-weight: 300; font-size: 16px; line-height: 1.45; color: var(--ink); margin: 0 0 12px; max-width: 70ch; }
+  .sk-card-uses { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 22px; margin: 0; }
+  .sk-card-uses > div { border-left: 2px solid var(--rule-soft); padding-left: 10px; }
+  .sk-card-uses > div.sk-u-line { border-left-color: var(--ochre); }
+  .sk-card-uses dt { font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-faint); margin-bottom: 3px; }
+  .sk-card-uses dd { margin: 0; font-family: var(--ui); font-size: 13.5px; line-height: 1.45; color: var(--ink-2); }
+  .sk-card-uses b { font-family: var(--mono); font-weight: 500; font-size: 0.9em; color: var(--blue); }
+
+  .sk-foot { font-family: var(--mono); font-size: 10.5px; line-height: 1.6; color: var(--ink-faint); margin: 14px 0 0; max-width: 90ch; }
+  .sk-foot b { font-weight: 500; color: var(--ink-mute); }
+
+  /* ─── the list: the no-JS view, and the phone view (a vertical line diagram) ─── */
+  .sk-list { margin: 0; padding: 0; }
+  .sk-js .sk-list { display: none; }
+  .sk-group { margin: 0 0 26px; }
+  .sk-group-title {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--ink-faint); margin: 0 0 10px;
+  }
+  .sk-group-title em { font-style: normal; color: var(--ink); }
+  .sk-stops { list-style: none; margin: 0; padding: 0; position: relative; }
+  .sk-stops::before {
+    content: ""; position: absolute; left: 7px; top: 8px; bottom: 8px; width: 0;
+    border-left: 5px solid var(--ink-2);
+  }
+  .sk-g-main .sk-stops::before  { border-left-color: var(--ochre); }
+  .sk-g-night .sk-stops::before { border-left-color: var(--blue); }
+  .sk-g-helper .sk-stops::before { border-left: 2px dashed var(--ink-mute); left: 9px; }
+  .sk-g-ring .sk-stops::before  { border-left: 2px dotted var(--ink-faint); left: 9px; }
+  .sk-g-depot .sk-stops::before { border-left: 1px solid var(--rule-soft); left: 10px; }
+  .sk-stop { position: relative; padding: 0 0 18px 34px; }
+  .sk-stop:last-child { padding-bottom: 0; }
+  .sk-stop::before {
+    content: ""; position: absolute; left: 1px; top: 4px;
+    width: 12px; height: 12px; border-radius: 50%;
+    background: var(--parchment); border: 2.5px solid var(--ink);
+  }
+
+  /* desktop map only from 720px up; below that the list is the section */
+  @media (max-width: 719px) {
+    .sk-js .sk-sheet { display: none; }
+    .sk-js .sk-list { display: block; }
+    .sk-js .sk-only-map { display: none; }
+    .sk-js .sk-only-list { display: inline; }
+    .sk-card-uses { grid-template-columns: 1fr; }
+    .sk-card-name { font-size: 15px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .sk-ln, .sk-linelabel, .sk-st, .sk-st .sk-dot, .sk-st .sk-name, .sk-st .sk-halo, .sk-map .sk-anytime { transition: none; }
+  }
+  
+  /* ─── where are you? — a start pins its station (map) or jumps to its stop (no JS, phones) ─── */
+  .sk-starts { margin: 0 0 22px; }
+  .sk-starts-label {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--ink-faint); margin: 0 0 10px;
+  }
+  .sk-starts ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+  .sk-start {
+    display: inline-flex; align-items: baseline; gap: 10px; max-width: 100%;
+    padding: 6px 11px; border: 1px solid var(--rule-soft); border-radius: 2px;
+    background: var(--parchment-2); color: var(--ink); text-decoration: none;
+    transition: border-color .2s, background .2s;
+  }
+  .sk-start-q { font-family: var(--serif); font-weight: 300; font-size: 15px; line-height: 1.3; }
+  .sk-start-a { font-family: var(--mono); font-size: 11px; color: var(--ink-mute); white-space: nowrap; }
+  .sk-start:hover, .sk-start:focus-visible { border-color: var(--ochre); outline: none; }
+  .sk-start:hover .sk-start-a, .sk-start:focus-visible .sk-start-a { color: var(--ochre); }
+  .sk-start[aria-current="true"] { border-color: var(--ochre); background: var(--grid-tint-strong); }
+  .sk-start[aria-current="true"] .sk-start-a { color: var(--ochre); }
+  .sk-stop:target .sk-card-name { color: var(--ochre); }
+  @media (max-width: 719px) {
+    .sk-start { width: 100%; justify-content: space-between; }
+    .sk-start-q { font-size: 14.5px; }
+  }
+  @media (prefers-reduced-motion: reduce) { .sk-start { transition: none; } }
+
+  /* ─── source: the SKILL.md itself, fetched live from main ─── */
+  .sk-src {
+    margin-left: auto; font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.04em;
+    color: var(--ink-mute); text-decoration: none; white-space: nowrap;
+    border: 1px solid var(--rule-soft); border-radius: 2px; padding: 2px 7px;
+  }
+  .sk-src::before { content: "{ } "; color: var(--ochre); }
+  .sk-src:hover, .sk-src:focus-visible { color: var(--ochre); border-color: var(--ochre); outline: none; }
+  .sk-dlg {
+    width: min(780px, calc(100vw - 32px)); max-height: min(86vh, 920px);
+    padding: 0; border: 1px solid var(--rule-soft); border-radius: 2px;
+    background: var(--parchment); color: var(--ink);
+    box-shadow: 0 24px 60px var(--shadow-tint-deep);
+    overflow: hidden;
+  }
+  .sk-dlg[open] { display: flex; flex-direction: column; }
+  .sk-dlg::backdrop { background: var(--shadow-tint-deep); }
+  .sk-dlg-head {
+    display: flex; align-items: center; gap: 14px;
+    padding: 14px 18px 10px; border-bottom: 1px dotted var(--rule-soft);
+  }
+  .sk-dlg-title { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+  .sk-dlg-name { font-family: var(--mono); font-weight: 500; font-size: 18px; color: var(--blue); }
+  .sk-dlg-path { font-family: var(--mono); font-size: 10.5px; color: var(--ink-faint); overflow-wrap: anywhere; }
+  .sk-dlg-gh { font-family: var(--mono); font-size: 11px; color: var(--ink-mute); text-decoration: none; white-space: nowrap; }
+  .sk-dlg-gh:hover, .sk-dlg-gh:focus-visible { color: var(--ochre); }
+  .sk-dlg-x {
+    font: 400 22px/1 var(--ui); color: var(--ink-mute); background: none; cursor: pointer;
+    border: 1px solid var(--rule-soft); border-radius: 2px; width: 32px; height: 32px;
+  }
+  .sk-dlg-x:hover, .sk-dlg-x:focus-visible { color: var(--ochre); border-color: var(--ochre); outline: none; }
+  .sk-dlg-note { margin: 0; padding: 8px 18px; font-family: var(--ui); font-size: 12.5px; color: var(--ink-mute); border-bottom: 1px dotted var(--rule-soft); }
+  .sk-dlg-text {
+    margin: 0; padding: 16px 18px 22px; overflow: auto; flex: 1; min-height: 120px;
+    font-family: var(--mono); font-size: 12.5px; line-height: 1.6; color: var(--ink-2);
+    white-space: pre-wrap; overflow-wrap: anywhere; tab-size: 2;
+    background:
+      linear-gradient(var(--grid-tint) 1px, transparent 1px) 0 0 / 20px 20px,
+      var(--parchment-2);
+  }
+  .sk-dlg-text:focus-visible { outline: 1px dashed var(--ochre); outline-offset: -4px; }
+  .sk-dlg-text .sk-fm { color: var(--ink-faint); }
+  .sk-dlg-text .sk-fm-k { color: var(--blue); }
+  .sk-dlg-text .sk-h { color: var(--ink); font-weight: 600; }
+  .sk-dlg-text .sk-b { color: var(--ink); font-weight: 600; }
+  .sk-dlg-text .sk-c { color: var(--ochre); }
+  .sk-dlg-text .sk-msg { font-family: var(--ui); font-size: 14px; color: var(--ink-mute); }
+  .sk-dlg-text .sk-msg a { color: var(--blue); }
+  @media (prefers-reduced-motion: no-preference) {
+    .sk-dlg[open] { animation: sk-dlg-in .18s ease-out; }
+    @keyframes sk-dlg-in { from { opacity: 0; transform: translateY(8px); } }
+  }
+  @media (max-width: 719px) {
+    .sk-dlg { max-height: calc(100vh - 32px); }
+    .sk-dlg-head { padding: 12px 14px 8px; gap: 10px; }
+    .sk-dlg-note, .sk-dlg-text { padding-left: 14px; padding-right: 14px; }
+    .sk-dlg-text { font-size: 11.5px; }
+  }
+
+  /* ═════════════════════════════════════════════════════════════════
+     §4.2 · /cli · the bench (+ dive: SHA consensus walk-through)
      ───────────────────────────────────────────────────────────────── */
   .cli-section {
     position: relative; z-index: 2;
@@ -5486,7 +5746,7 @@
       <li data-section="part-4">
         <span class="ms-tick" aria-hidden="true"></span>
         <span class="ms-name">the toolkit</span>
-        <span class="ms-desc">the CLI &middot; why we built it &middot; install</span>
+        <span class="ms-desc">the skills &middot; the CLI &middot; why we built it &middot; install</span>
       </li>
     </ol>
     <div class="ms-progress"><span class="ms-progress-fill" id="ms-progress-fill"></span></div>
@@ -7282,14 +7542,552 @@
         <span class="pd-num">Part 4</span>
         <span class="pd-title">The Toolkit</span>
       </div>
-      <p class="pd-dek">The deterministic CLI underneath the prose — why it exists, and the one command that installs all of it.</p>
+      <p class="pd-dek">Every skill and how they connect, the deterministic CLI underneath them, and the one command that installs all of it.</p>
     </div>
   </div>
 
-  <!-- ───────── §4.1 · /cli · the bench (atomic subcommands behind the prose) ───────── -->
+  <!-- ───────── §4.1 · /skills · the route map (every skill, and how they connect) ───────── -->
+
+  <section class="sk-section" id="skills" aria-labelledby="sk-title">
+    <div class="sk-marker">§4.1 · /skills · <em>the skill map</em></div>
+    <h2 class="sk-kicker" id="sk-title">Every skill, <em>and how they connect.</em></h2>
+    <p class="sk-lede">You can run any skill by itself. Some skills also start other skills. To go from an idea to reviewed code, run <code>/requirements</code>, <code>/discovery</code>, <code>/refine</code> and <code>/build</code> in order. <span class="sk-only-map">Hover over a skill to see what it does, or click it to read its file.</span><span class="sk-only-list">Each skill below says what it does and what it works with.</span></p>
+
+    <nav class="sk-starts" aria-label="Where to start">
+      <p class="sk-starts-label">Or start from your situation</p>
+      <ul>
+        <li><a class="sk-start" href="#sk-s-dev" data-go="dev"><span class="sk-start-q">I don't know where to start</span><span class="sk-start-a">/dev</span></a></li>
+        <li><a class="sk-start" href="#sk-s-requirements" data-go="requirements"><span class="sk-start-q">I want to write down what this project is for</span><span class="sk-start-a">/requirements</span></a></li>
+        <li><a class="sk-start" href="#sk-s-discovery" data-go="discovery"><span class="sk-start-q">I have a vague idea</span><span class="sk-start-a">/discovery</span></a></li>
+        <li><a class="sk-start" href="#sk-s-refine" data-go="refine"><span class="sk-start-q">I have a ticket</span><span class="sk-start-a">/refine</span></a></li>
+        <li><a class="sk-start" href="#sk-s-build" data-go="build"><span class="sk-start-q">I have an approved spec</span><span class="sk-start-a">/build</span></a></li>
+        <li><a class="sk-start" href="#sk-s-overnight" data-go="overnight"><span class="sk-start-q">I have a stack of refined tickets and the day is over</span><span class="sk-start-a">/overnight</span></a></li>
+        <li><a class="sk-start" href="#sk-s-morning-review" data-go="morning-review"><span class="sk-start-q">The overnight run finished</span><span class="sk-start-a">/morning-review</span></a></li>
+        <li><a class="sk-start" href="#sk-s-critical-review" data-go="critical-review"><span class="sk-start-q">Attack this plan before I commit to it</span><span class="sk-start-a">/critical-review</span></a></li>
+        <li><a class="sk-start" href="#sk-s-pick" data-go="pick"><span class="sk-start-q">Either option is fine — you choose</span><span class="sk-start-a">/pick</span></a></li>
+        <li><a class="sk-start" href="#sk-s-hmm" data-go="hmm"><span class="sk-start-q">I don't follow what Claude just said</span><span class="sk-start-a">/hmm</span></a></li>
+      </ul>
+    </nav>
+
+    <div class="sk-sheet">
+      <div class="sk-sheet-tag"><span>sheet 4.1 · <em>skill map</em></span><span>hover to see what a skill does · click to read its SKILL.md</span></div>
+
+      <svg class="sk-map" viewBox="0 0 900 580" role="group" aria-label="Map of the skills. Each skill is a button: focus it to see details below the map, or press it to read its SKILL.md.">
+        <defs>
+          <marker id="sk-arrowhead" viewBox="0 0 8 8" refX="6" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path class="sk-arrow" d="M0 0 L8 4 L0 8 Z"></path>
+          </marker>
+        </defs>
+
+        <!-- ring line: /pick and /hmm, reachable from any station -->
+        <rect class="sk-ln sk-ring" data-id="R-ring" data-st="*" x="24" y="30" width="852" height="530" rx="22"></rect>
+        <text class="sk-linelabel" data-id="R-ring" x="44" y="54">use inside any skill</text>
+
+        <!-- /dev routes (drawn first so the lines sit on top) — hop-overs where they cross -->
+        <path class="sk-ln sk-route" data-id="D-dis" data-st="dev discovery" d="M150 440 H328 V270"></path>
+        <path class="sk-ln sk-route" data-id="D-ref" data-st="dev refine" d="M150 440 H346 A6 6 0 0 1 358 440 H540 V270"></path>
+        <path class="sk-ln sk-route" data-id="D-ovn" data-st="dev overnight" d="M150 440 H346 A6 6 0 0 1 358 440 H700 V390"></path>
+        <path class="sk-ln sk-route" data-id="D-bld" data-st="dev build" d="M150 440 H346 A6 6 0 0 1 358 440 H730 V396 A6 6 0 0 1 730 384 V344 H788 V270"></path>
+        <text class="sk-linelabel" data-id="D-dis D-ref D-ovn D-bld" x="380" y="458">/dev picks one of these</text>
+
+        <!-- /dev's triage reads the backlog that /backlog keeps: shared files, not a call -->
+        <path class="sk-ln sk-data" data-id="B-dev" data-st="dev backlog" d="M150 458 V511"></path>
+        <text class="sk-linelabel" data-id="B-dev" x="138" y="489" text-anchor="end">reads</text>
+
+        <!-- helper calls (dashed) -->
+        <path class="sk-ln sk-call" data-id="C-req-int" data-st="requirements interview" d="M150 270 V140"></path>
+        <path class="sk-ln sk-call" data-id="C-dis-res" data-st="discovery research" d="M352 270 V210 H438 V140"></path>
+        <path class="sk-ln sk-call" data-id="C-ref-res" data-st="refine research" d="M550 270 V210 H462 V140"></path>
+        <path class="sk-ln sk-call" data-id="C-ref-cr"  data-st="refine critical-review" d="M562 270 V190 H670 V140"></path>
+        <path class="sk-ln sk-call" data-id="C-dis-ba"  data-st="discovery backlog-author" d="M352 270 V480 H458 V520"></path>
+        <path class="sk-ln sk-call" data-id="C-mr-ba"   data-st="morning-review backlog-author" d="M840 390 V480 H482 V520"></path>
+        <path class="sk-ln sk-back" data-id="C-bld-ref" data-st="build refine" d="M800 270 V232 H598 L578 252" marker-end="url(#sk-arrowhead)"></path>
+        <text class="sk-linelabel" data-id="C-bld-ref" x="612" y="226">hand-back · not refined</text>
+
+        <!-- the two lines -->
+        <path class="sk-ln sk-night" data-id="L-night" data-st="refine overnight morning-review" d="M560 270 V300 L650 390 H840"></path>
+        <path class="sk-ln sk-main"  data-id="L-main"  data-st="requirements discovery refine build" d="M150 270 H800"></path>
+        <line class="sk-ln sk-main"  data-id="L-main" x1="800" y1="258" x2="800" y2="282" style="stroke-width:4"></line>
+        <line class="sk-ln sk-night" data-id="L-night" x1="840" y1="378" x2="840" y2="402" style="stroke-width:4"></line>
+        <text class="sk-linelabel sk-l-main" data-id="L-main" x="196" y="292">main line</text>
+        <text class="sk-linelabel sk-l-night" data-id="L-night" x="574" y="332" transform="rotate(45 574 332)">night line</text>
+
+        <!-- stations, in journey order (this is the tab order) -->
+        <g class="sk-st sk-hub" data-st="dev" data-ln="D-dis D-ref D-ovn D-bld B-dev" tabindex="0" role="button" aria-haspopup="dialog" aria-label="/dev, the front door">
+          <circle class="sk-hit" cx="150" cy="440" r="26"></circle>
+          <circle class="sk-anytime" cx="150" cy="440" r="24"></circle>
+          <circle class="sk-halo" cx="150" cy="440" r="21"></circle>
+          <circle class="sk-dot" cx="150" cy="440" r="15" style="stroke-width:3"></circle>
+          <circle class="sk-core" cx="150" cy="440" r="5.5"></circle>
+          <text class="sk-name" x="176" y="478">/dev</text>
+          <text class="sk-cap" x="176" y="492">front door</text>
+        </g>
+
+        <g class="sk-st" data-st="requirements" data-ln="L-main C-req-int" tabindex="0" role="button" aria-haspopup="dialog" aria-label="/requirements, main line">
+          <circle class="sk-hit" cx="150" cy="270" r="20"></circle>
+          <circle class="sk-anytime" cx="150" cy="270" r="17"></circle>
+          <circle class="sk-halo" cx="150" cy="270" r="14"></circle>
+          <circle class="sk-dot" cx="150" cy="270" r="9"></circle>
+          <text class="sk-name" x="136" y="258" text-anchor="end">/requirements</text>
+          <text class="sk-cap" x="136" y="244" text-anchor="end">the charter</text>
+        </g>
+        <g class="sk-st" data-st="discovery" data-ln="L-main C-dis-res C-dis-ba D-dis" tabindex="0" role="button" aria-haspopup="dialog" aria-label="/discovery, main line">
+          <circle class="sk-hit" cx="340" cy="270" r="20"></circle>
+          <circle class="sk-anytime" cx="340" cy="270" r="17"></circle>
+          <circle class="sk-halo" cx="340" cy="270" r="14"></circle>
+          <circle class="sk-dot" cx="340" cy="270" r="9"></circle>
+          <text class="sk-name" x="326" y="254" text-anchor="end">/discovery</text>
+          <text class="sk-cap" x="326" y="240" text-anchor="end">→ tickets</text>
+        </g>
+        <g class="sk-st" data-st="refine" data-ln="L-main L-night C-ref-res C-ref-cr C-bld-ref D-ref" tabindex="0" role="button" aria-haspopup="dialog" aria-label="/refine, main line, where the night line branches">
+          <circle class="sk-hit" cx="560" cy="270" r="20"></circle>
+          <circle class="sk-anytime" cx="560" cy="270" r="18"></circle>
+          <circle class="sk-halo" cx="560" cy="270" r="15"></circle>
+          <circle class="sk-dot" cx="560" cy="270" r="10" style="stroke-width:3"></circle>
+          <text class="sk-name" x="532" y="254" text-anchor="end">/refine</text>
+          <text class="sk-cap" x="532" y="240" text-anchor="end">→ spec</text>
+        </g>
+        <g class="sk-st" data-st="build" data-ln="L-main C-bld-ref D-bld" tabindex="0" role="button" aria-haspopup="dialog" aria-label="/build, end of the main line">
+          <circle class="sk-hit" cx="800" cy="270" r="20"></circle>
+          <circle class="sk-anytime" cx="800" cy="270" r="17"></circle>
+          <circle class="sk-halo" cx="800" cy="270" r="14"></circle>
+          <circle class="sk-dot" cx="800" cy="270" r="9"></circle>
+          <text class="sk-name" x="814" y="300">/build</text>
+          <text class="sk-cap" x="814" y="314">→ code</text>
+        </g>
+        <g class="sk-st" data-st="overnight" data-ln="L-night D-ovn" tabindex="0" role="button" aria-haspopup="dialog" aria-label="/overnight, night line">
+          <circle class="sk-hit" cx="700" cy="390" r="20"></circle>
+          <circle class="sk-anytime" cx="700" cy="390" r="17"></circle>
+          <circle class="sk-halo" cx="700" cy="390" r="14"></circle>
+          <circle class="sk-dot" cx="700" cy="390" r="9"></circle>
+          <text class="sk-name" x="676" y="372" text-anchor="middle">/overnight</text>
+          <text class="sk-cap" x="688" y="414" text-anchor="end">unattended</text>
+        </g>
+        <g class="sk-st" data-st="morning-review" data-ln="L-night C-mr-ba" tabindex="0" role="button" aria-haspopup="dialog" aria-label="/morning-review, end of the night line">
+          <circle class="sk-hit" cx="840" cy="390" r="20"></circle>
+          <circle class="sk-anytime" cx="840" cy="390" r="17"></circle>
+          <circle class="sk-halo" cx="840" cy="390" r="14"></circle>
+          <circle class="sk-dot" cx="840" cy="390" r="9"></circle>
+          <text class="sk-name" x="866" y="370" text-anchor="end">/morning-review</text>
+          <text class="sk-cap" x="828" y="414" text-anchor="end">after a run</text>
+        </g>
+
+        <g class="sk-st sk-helper" data-st="interview" data-ln="C-req-int" tabindex="0" role="button" aria-haspopup="dialog" aria-label="/interview, helper">
+          <circle class="sk-hit" cx="150" cy="140" r="18"></circle>
+          <circle class="sk-anytime" cx="150" cy="140" r="15"></circle>
+          <circle class="sk-halo" cx="150" cy="140" r="12"></circle>
+          <circle class="sk-dot" cx="150" cy="140" r="7"></circle>
+          <text class="sk-name" x="166" y="144">/interview</text>
+          <text class="sk-cap" x="166" y="158">grilling loop</text>
+        </g>
+        <g class="sk-st sk-helper" data-st="research" data-ln="C-dis-res C-ref-res" tabindex="0" role="button" aria-haspopup="dialog" aria-label="/research, helper">
+          <circle class="sk-hit" cx="450" cy="140" r="18"></circle>
+          <circle class="sk-anytime" cx="450" cy="140" r="15"></circle>
+          <circle class="sk-halo" cx="450" cy="140" r="12"></circle>
+          <circle class="sk-dot" cx="450" cy="140" r="7"></circle>
+          <text class="sk-name" x="450" y="120" text-anchor="middle">/research</text>
+          <text class="sk-cap" x="450" y="106" text-anchor="middle">1–6 agents</text>
+        </g>
+        <g class="sk-st sk-helper" data-st="critical-review" data-ln="C-ref-cr" tabindex="0" role="button" aria-haspopup="dialog" aria-label="/critical-review, helper">
+          <circle class="sk-hit" cx="670" cy="140" r="18"></circle>
+          <circle class="sk-anytime" cx="670" cy="140" r="15"></circle>
+          <circle class="sk-halo" cx="670" cy="140" r="12"></circle>
+          <circle class="sk-dot" cx="670" cy="140" r="7"></circle>
+          <text class="sk-name" x="670" y="120" text-anchor="middle">/critical-review</text>
+          <text class="sk-cap" x="670" y="106" text-anchor="middle">1–2 reviewers</text>
+        </g>
+        <g class="sk-st sk-helper" data-st="backlog-author" data-ln="C-dis-ba C-mr-ba" tabindex="0" role="button" aria-haspopup="dialog" aria-label="/backlog-author, helper">
+          <circle class="sk-hit" cx="470" cy="520" r="18"></circle>
+          <circle class="sk-anytime" cx="470" cy="520" r="15"></circle>
+          <circle class="sk-halo" cx="470" cy="520" r="12"></circle>
+          <circle class="sk-dot" cx="470" cy="520" r="7"></circle>
+          <text class="sk-name" x="490" y="524">/backlog-author</text>
+          <text class="sk-cap" x="490" y="538">one ticket body</text>
+        </g>
+
+        <g class="sk-st sk-helper" data-st="backlog" data-ln="B-dev" tabindex="0" role="button" aria-haspopup="dialog" aria-label="/backlog, the ticket list">
+          <circle class="sk-hit" cx="150" cy="520" r="18"></circle>
+          <circle class="sk-anytime" cx="150" cy="520" r="15"></circle>
+          <circle class="sk-halo" cx="150" cy="520" r="12"></circle>
+          <rect class="sk-dot" x="143" y="513" width="14" height="14"></rect>
+          <text class="sk-name" x="170" y="524">/backlog</text>
+          <text class="sk-cap" x="170" y="538">the ticket list</text>
+        </g>
+
+        <g class="sk-st sk-helper sk-ringst" data-st="pick" data-ln="R-ring" tabindex="0" role="button" aria-haspopup="dialog" aria-label="/pick, use inside any skill">
+          <circle class="sk-hit" cx="300" cy="30" r="18"></circle>
+          <circle class="sk-halo" cx="300" cy="30" r="12"></circle>
+          <circle class="sk-dot" cx="300" cy="30" r="7"></circle>
+          <text class="sk-name" x="316" y="34" style="paint-order:stroke;stroke:var(--parchment-2);stroke-width:6px">/pick</text>
+          <text class="sk-cap" x="316" y="52">you choose</text>
+        </g>
+        <g class="sk-st sk-helper sk-ringst" data-st="hmm" data-ln="R-ring" tabindex="0" role="button" aria-haspopup="dialog" aria-label="/hmm, use inside any skill">
+          <circle class="sk-hit" cx="560" cy="30" r="18"></circle>
+          <circle class="sk-halo" cx="560" cy="30" r="12"></circle>
+          <circle class="sk-dot" cx="560" cy="30" r="7"></circle>
+          <text class="sk-name" x="576" y="34" style="paint-order:stroke;stroke:var(--parchment-2);stroke-width:6px">/hmm</text>
+          <text class="sk-cap" x="576" y="52">that didn't land</text>
+        </g>
+      </svg>
+
+      <ul class="sk-legend" aria-label="Map legend">
+        <li><svg viewBox="0 0 28 12" aria-hidden="true"><line class="sk-ln sk-main" x1="2" y1="6" x2="26" y2="6"></line></svg>main line</li>
+        <li><svg viewBox="0 0 28 12" aria-hidden="true"><line class="sk-ln sk-night" x1="2" y1="6" x2="26" y2="6"></line></svg>night line</li>
+        <li><svg viewBox="0 0 28 12" aria-hidden="true"><line class="sk-ln sk-call" x1="1" y1="6" x2="27" y2="6"></line></svg>calls a helper</li>
+        <li><svg viewBox="0 0 28 12" aria-hidden="true"><line class="sk-ln sk-route" x1="1" y1="6" x2="27" y2="6"></line></svg>/dev can send you here</li>
+        <li><svg viewBox="0 0 28 12" aria-hidden="true"><path class="sk-ln sk-route" d="M1 8 H9 A5 5 0 0 1 19 8 H27"></path><line class="sk-ln sk-call" x1="14" y1="0" x2="14" y2="12"></line></svg>lines cross, not a link</li>
+        <li><svg viewBox="0 0 28 12" aria-hidden="true"><line class="sk-ln sk-data" x1="2" y1="6" x2="26" y2="6"></line></svg>reads the same backlog</li>
+        <li><svg viewBox="0 0 28 12" aria-hidden="true"><line class="sk-ln sk-ring" x1="2" y1="6" x2="26" y2="6"></line></svg>use inside any skill</li>
+      </ul>
+
+      <div class="sk-board" id="sk-panel" aria-live="polite">
+        <p class="sk-board-idle"><span class="sk-hint">nothing selected</span>Not sure where to start? Run <b>/dev</b>. It reads your request and picks the right skill for you.</p>
+      </div>
+    </div>
+
+    <!-- The list: every station, readable without the map. Shown with JS off, and as the phone layout. -->
+    <div class="sk-list">
+      <div class="sk-group sk-g-hub">
+        <p class="sk-group-title"><em>Front door</em> · picks the right skill</p>
+        <ul class="sk-stops">
+          <li class="sk-stop" id="sk-s-dev" data-st="dev"><div class="sk-card">
+            <div class="sk-card-head"><span class="sk-card-name">/dev</span><span class="sk-card-line">front door · cortex-core · you or the model</span><a class="sk-src" href="https://github.com/charleshall888/cortex-command/blob/main/skills/dev/SKILL.md" data-src="skills/dev/SKILL.md" data-st="dev">SKILL.md</a></div>
+            <p class="sk-card-what">Routes a request. With no arguments it triages the backlog (“what’s next”). A vague topic goes to /discovery; a simple change it does right there; otherwise /refine if there’s no spec yet, or /build if the ticket is refined. A batch of three or more larger features goes to /overnight.</p>
+            <dl class="sk-card-uses">
+              <div><dt>on its own</dt><dd>When you know what you want done but not which skill does it.</dd></div>
+              <div class="sk-u-line"><dt>with other skills</dt><dd>Sends you to <b>/discovery</b>, <b>/refine</b>, <b>/build</b>, or <b>/overnight</b>. Its triage reads the same backlog that <b>/backlog</b> manages.</dd></div>
+            </dl>
+          </div></li>
+        </ul>
+      </div>
+
+      <div class="sk-group sk-g-main">
+        <p class="sk-group-title"><em>Main line</em> · from an idea to reviewed code</p>
+        <ul class="sk-stops">
+          <li class="sk-stop" id="sk-s-requirements" data-st="requirements"><div class="sk-card">
+            <div class="sk-card-head"><span class="sk-card-name">/requirements</span><span class="sk-card-line"><em>main line</em> · cortex-core · slash command only</span><a class="sk-src" href="https://github.com/charleshall888/cortex-command/blob/main/skills/requirements/SKILL.md" data-src="skills/requirements/SKILL.md" data-st="requirements">SKILL.md</a></div>
+            <p class="sk-card-what">Interviews you and writes the project’s charter — <code>cortex/requirements/project.md</code> or an area doc — plus glossary terms.</p>
+            <dl class="sk-card-uses">
+              <div><dt>on its own</dt><dd>Set down what the project is for, or what one area of it must do.</dd></div>
+              <div class="sk-u-line"><dt>with other skills</dt><dd>Comes first, before any tickets exist. Runs <b>/interview</b>’s loop to ask its questions.</dd></div>
+            </dl>
+          </div></li>
+          <li class="sk-stop" id="sk-s-discovery" data-st="discovery"><div class="sk-card">
+            <div class="sk-card-head"><span class="sk-card-name">/discovery</span><span class="sk-card-line"><em>main line</em> · cortex-core · you or the model</span><a class="sk-src" href="https://github.com/charleshall888/cortex-command/blob/main/skills/discovery/SKILL.md" data-src="skills/discovery/SKILL.md" data-st="discovery">SKILL.md</a></div>
+            <p class="sk-card-what">Investigates a topic, then breaks it into backlog tickets grouped by epic. It ends at tickets, not a spec.</p>
+            <dl class="sk-card-uses">
+              <div><dt>on its own</dt><dd>Turn a fuzzy area of work into a set of concrete tickets.</dd></div>
+              <div class="sk-u-line"><dt>with other skills</dt><dd>Calls <b>/research</b> to investigate and <b>/backlog-author</b> to write each ticket body. Its tickets are what <b>/refine</b> takes next.</dd></div>
+            </dl>
+          </div></li>
+          <li class="sk-stop" id="sk-s-refine" data-st="refine"><div class="sk-card">
+            <div class="sk-card-head"><span class="sk-card-name">/refine</span><span class="sk-card-line"><em>main line</em> · the night line starts here · cortex-core · you or the model</span><a class="sk-src" href="https://github.com/charleshall888/cortex-command/blob/main/skills/refine/SKILL.md" data-src="skills/refine/SKILL.md" data-st="refine">SKILL.md</a></div>
+            <p class="sk-card-what">Takes one ticket through Clarify → Research → Spec, then marks it <code>status: refined</code>. It stops at the spec.</p>
+            <dl class="sk-card-uses">
+              <div><dt>on its own</dt><dd>Get an approved spec for a ticket without building anything yet.</dd></div>
+              <div class="sk-u-line"><dt>with other skills</dt><dd>Delegates its research phase to <b>/research</b>; runs <b>/critical-review</b> on the spec when the ticket is complex and criticality is medium or higher. Then hands off to <b>/build</b> — or leaves the ticket ready for <b>/overnight</b>.</dd></div>
+            </dl>
+          </div></li>
+          <li class="sk-stop" id="sk-s-build" data-st="build"><div class="sk-card">
+            <div class="sk-card-head"><span class="sk-card-name">/build</span><span class="sk-card-line"><em>end of the main line</em> · cortex-core · you or the model</span><a class="sk-src" href="https://github.com/charleshall888/cortex-command/blob/main/skills/build/SKILL.md" data-src="skills/build/SKILL.md" data-st="build">SKILL.md</a></div>
+            <p class="sk-card-what">Takes a refined ticket through plan → implement → review → complete.</p>
+            <dl class="sk-card-uses">
+              <div><dt>on its own</dt><dd>Build one ticket you’ve already refined.</dd></div>
+              <div class="sk-u-line"><dt>with other skills</dt><dd>Needs the ticket’s <code>research.md</code> and <code>spec.md</code>. If either is missing, it hands back to <b>/refine</b>.</dd></div>
+            </dl>
+          </div></li>
+        </ul>
+      </div>
+
+      <div class="sk-group sk-g-night">
+        <p class="sk-group-title"><em>Night line</em> · many tickets, run while you are away</p>
+        <ul class="sk-stops">
+          <li class="sk-stop" id="sk-s-overnight" data-st="overnight"><div class="sk-card">
+            <div class="sk-card-head"><span class="sk-card-name">/overnight</span><span class="sk-card-line"><em>night line</em> · cortex-overnight · you only</span><a class="sk-src" href="https://github.com/charleshall888/cortex-command/blob/main/skills/overnight/SKILL.md" data-src="skills/overnight/SKILL.md" data-st="overnight">SKILL.md</a></div>
+            <p class="sk-card-what">Picks eligible refined tickets, shows you a session plan to approve, then hands off to an unattended runner.</p>
+            <dl class="sk-card-uses">
+              <div><dt>on its own</dt><dd>Queue up a batch of refined tickets and let them run while you’re away.</dd></div>
+              <div class="sk-u-line"><dt>with other skills</dt><dd>Runs after <b>/refine</b>, instead of you running <b>/build</b> on each ticket. <b>/morning-review</b> goes through the results.</dd></div>
+            </dl>
+          </div></li>
+          <li class="sk-stop" id="sk-s-morning-review" data-st="morning-review"><div class="sk-card">
+            <div class="sk-card-head"><span class="sk-card-name">/morning-review</span><span class="sk-card-line"><em>end of the night line</em> · cortex-overnight · you only</span><a class="sk-src" href="https://github.com/charleshall888/cortex-command/blob/main/skills/morning-review/SKILL.md" data-src="skills/morning-review/SKILL.md" data-st="morning-review">SKILL.md</a></div>
+            <p class="sk-card-what">After a run: walks you through the morning report, collects your answers to deferred questions, advances finished lifecycles to Complete, and closes their tickets.</p>
+            <dl class="sk-card-uses">
+              <div><dt>on its own</dt><dd>Settle what happened during a run, one item at a time.</dd></div>
+              <div class="sk-u-line"><dt>with other skills</dt><dd>Comes after <b>/overnight</b>. Files follow-up tickets through <b>/backlog-author</b>.</dd></div>
+            </dl>
+          </div></li>
+        </ul>
+      </div>
+
+      <div class="sk-group sk-g-helper">
+        <p class="sk-group-title"><em>Helpers</em> · other skills start them · each also works alone</p>
+        <ul class="sk-stops">
+          <li class="sk-stop" id="sk-s-interview" data-st="interview"><div class="sk-card">
+            <div class="sk-card-head"><span class="sk-card-name">/interview</span><span class="sk-card-line">helper · cortex-core · you or the model</span><a class="sk-src" href="https://github.com/charleshall888/cortex-command/blob/main/skills/interview/SKILL.md" data-src="skills/interview/SKILL.md" data-st="interview">SKILL.md</a></div>
+            <p class="sk-card-what">A structured grilling loop to think a topic through. It recommends an answer before asking, lets the codebase answer what it can, and ends in a brief.</p>
+            <dl class="sk-card-uses">
+              <div><dt>on its own</dt><dd>Think a decision through before any ticket exists.</dd></div>
+              <div class="sk-u-line"><dt>with other skills</dt><dd><b>/requirements</b> runs this loop.</dd></div>
+            </dl>
+          </div></li>
+          <li class="sk-stop" id="sk-s-research" data-st="research"><div class="sk-card">
+            <div class="sk-card-head"><span class="sk-card-name">/research</span><span class="sk-card-line">helper · cortex-core · you or the model</span><a class="sk-src" href="https://github.com/charleshall888/cortex-command/blob/main/skills/research/SKILL.md" data-src="skills/research/SKILL.md" data-st="research">SKILL.md</a></div>
+            <p class="sk-card-what">Sends 1–6 agents down independent angles of a question and synthesizes what they find into <code>research.md</code>.</p>
+            <dl class="sk-card-uses">
+              <div><dt>on its own</dt><dd>Investigate any question and keep the findings as a document.</dd></div>
+              <div class="sk-u-line"><dt>with other skills</dt><dd>Called by <b>/discovery</b> and by <b>/refine</b>’s research phase.</dd></div>
+            </dl>
+          </div></li>
+          <li class="sk-stop" id="sk-s-critical-review" data-st="critical-review"><div class="sk-card">
+            <div class="sk-card-head"><span class="sk-card-name">/critical-review</span><span class="sk-card-line">helper · cortex-core · you or the model</span><a class="sk-src" href="https://github.com/charleshall888/cortex-command/blob/main/skills/critical-review/SKILL.md" data-src="skills/critical-review/SKILL.md" data-st="critical-review">SKILL.md</a></div>
+            <p class="sk-card-what">Adversarial review: 1–2 reviewer agents on distinct angles, then a synthesis. It pressure-tests a plan, a spec, or a research doc.</p>
+            <dl class="sk-card-uses">
+              <div><dt>on its own</dt><dd>Point it at any plan, spec, or research doc you want attacked.</dd></div>
+              <div class="sk-u-line"><dt>with other skills</dt><dd>Called by <b>/refine</b>’s spec gate.</dd></div>
+            </dl>
+          </div></li>
+          <li class="sk-stop" id="sk-s-backlog-author" data-st="backlog-author"><div class="sk-card">
+            <div class="sk-card-head"><span class="sk-card-name">/backlog-author</span><span class="sk-card-line">helper · cortex-core · you or the model</span><a class="sk-src" href="https://github.com/charleshall888/cortex-command/blob/main/skills/backlog-author/SKILL.md" data-src="skills/backlog-author/SKILL.md" data-st="backlog-author">SKILL.md</a></div>
+            <p class="sk-card-what">Writes one ticket body: Why, Role, Integration, Edges, Touch-points.</p>
+            <dl class="sk-card-uses">
+              <div><dt>on its own</dt><dd>Turn a note into one well-formed ticket.</dd></div>
+              <div class="sk-u-line"><dt>with other skills</dt><dd>Called by <b>/discovery</b> for each ticket, and by <b>/morning-review</b> for follow-ups.</dd></div>
+            </dl>
+          </div></li>
+        </ul>
+      </div>
+
+      <div class="sk-group sk-g-ring">
+        <p class="sk-group-title"><em>Any time</em> · use inside any other skill</p>
+        <ul class="sk-stops">
+          <li class="sk-stop" id="sk-s-pick" data-st="pick"><div class="sk-card">
+            <div class="sk-card-head"><span class="sk-card-name">/pick</span><span class="sk-card-line"><em>any time</em> · cortex-core · you, or the model on “either is fine”</span><a class="sk-src" href="https://github.com/charleshall888/cortex-command/blob/main/skills/pick/SKILL.md" data-src="skills/pick/SKILL.md" data-st="pick">SKILL.md</a></div>
+            <p class="sk-card-what">“You choose.” Hands a fork back to Claude. A small call, it just decides. Missing information, it researches, then decides. An open question, it sends out agents, synthesizes, and commits. A call that is genuinely yours — taste, priorities, risk — it asks you again, plainly.</p>
+            <dl class="sk-card-uses">
+              <div><dt>on its own</dt><dd>Any time you’d otherwise say “either is fine.”</dd></div>
+              <div class="sk-u-line"><dt>with other skills</dt><dd>Works inside any other skill. It changes how the conversation goes, not what gets built.</dd></div>
+            </dl>
+          </div></li>
+          <li class="sk-stop" id="sk-s-hmm" data-st="hmm"><div class="sk-card">
+            <div class="sk-card-head"><span class="sk-card-name">/hmm</span><span class="sk-card-line"><em>any time</em> · cortex-core · you only</span><a class="sk-src" href="https://github.com/charleshall888/cortex-command/blob/main/skills/hmm/SKILL.md" data-src="skills/hmm/SKILL.md" data-st="hmm">SKILL.md</a></div>
+            <p class="sk-card-what">“That didn’t land.” Claude backs up and re-explains the last stretch in plain words, leading with the context you’re missing and using the project’s glossary terms.</p>
+            <dl class="sk-card-uses">
+              <div><dt>on its own</dt><dd>The moment an explanation loses you.</dd></div>
+              <div class="sk-u-line"><dt>with other skills</dt><dd>Works inside any other skill. Only you can start it; Claude never does.</dd></div>
+            </dl>
+          </div></li>
+        </ul>
+      </div>
+
+      <div class="sk-group sk-g-depot">
+        <p class="sk-group-title"><em>The backlog</em> · the ticket list</p>
+        <ul class="sk-stops">
+          <li class="sk-stop" id="sk-s-backlog" data-st="backlog"><div class="sk-card">
+            <div class="sk-card-head"><span class="sk-card-name">/backlog</span><span class="sk-card-line">cortex-backlog · you or the model</span><a class="sk-src" href="https://github.com/charleshall888/cortex-command/blob/main/skills/backlog/SKILL.md" data-src="skills/backlog/SKILL.md" data-st="backlog">SKILL.md</a></div>
+            <p class="sk-card-what">Add, list, pick, or archive backlog items.</p>
+            <dl class="sk-card-uses">
+              <div><dt>on its own</dt><dd>Manage the ticket list by hand.</dd></div>
+              <div class="sk-u-line"><dt>with other skills</dt><dd>No skill runs it. <b>/dev</b> reads the same backlog when it triages, and the other skills create and update its tickets.</dd></div>
+            </dl>
+          </div></li>
+        </ul>
+      </div>
+    </div>
+
+    <p class="sk-foot">Installed names carry their plugin, e.g. <b>/cortex-core:refine</b>; this map writes them short. Not shown: <b>android-dev-extras</b>, a separate optional plugin (android-cli, edge-to-edge, r8-analyzer).</p>
+
+    <dialog class="sk-dlg" id="sk-dlg" aria-labelledby="sk-dlg-name">
+      <div class="sk-dlg-head">
+        <div class="sk-dlg-title">
+          <span class="sk-dlg-name" id="sk-dlg-name"></span>
+          <span class="sk-dlg-path"></span>
+        </div>
+        <a class="sk-dlg-gh" href="#" target="_blank" rel="noopener">GitHub ↗</a>
+        <button type="button" class="sk-dlg-x" aria-label="Close">×</button>
+      </div>
+      <p class="sk-dlg-note">The skill file as it is on <code>main</code> right now, read straight from the repo — the exact text Claude loads.</p>
+      <pre class="sk-dlg-text" tabindex="0"></pre>
+    </dialog>
+  </section>
+
+  <script>
+  (function() {
+    // ─── §4.1 · skills route map · select a station, relight the lines through it ───
+    var sec = document.getElementById('skills');
+    if (!sec) return;
+    var map = sec.querySelector('.sk-map');
+    var board = document.getElementById('sk-panel');
+    if (!map || !board) return;
+    sec.classList.add('sk-js');
+
+    var idle = board.innerHTML;
+    var cards = {};
+    Array.prototype.forEach.call(sec.querySelectorAll('.sk-list [data-st]'), function(li) {
+      var c = li.querySelector('.sk-card');
+      if (c) cards[li.getAttribute('data-st')] = c.innerHTML;
+    });
+    var stations = map.querySelectorAll('.sk-st');
+    var lined = map.querySelectorAll('[data-id]');
+    var pinned = null;
+    var shown = null; // the board keeps its nodes while the same station stays shown, so a click on them lands
+
+    function setBoard(id) {
+      if (id === shown) return;
+      shown = id;
+      board.innerHTML = (id && cards[id]) || idle;
+    }
+
+    function station(id) { return map.querySelector('.sk-st[data-st="' + id + '"]'); }
+
+    function show(id) {
+      Array.prototype.forEach.call(stations, function(s) { s.classList.remove('sk-on', 'sk-cur', 'sk-any'); });
+      Array.prototype.forEach.call(lined, function(el) { el.classList.remove('sk-on'); });
+      if (!id) {
+        map.classList.remove('sk-sel');
+        setBoard(null);
+        return;
+      }
+      var st = station(id);
+      if (!st) return;
+      map.classList.add('sk-sel');
+      st.classList.add('sk-on', 'sk-cur');
+      (st.getAttribute('data-ln') || '').split(' ').forEach(function(lid) {
+        if (!lid) return;
+        Array.prototype.forEach.call(lined, function(el) {
+          if ((' ' + el.getAttribute('data-id') + ' ').indexOf(' ' + lid + ' ') === -1) return;
+          el.classList.add('sk-on');
+          var ends = el.getAttribute('data-st');
+          if (ends === '*') {
+            // ring line: every station is a place you can use it from
+            Array.prototype.forEach.call(stations, function(s) {
+              if (s.classList.contains('sk-ringst')) s.classList.add('sk-on');
+              else s.classList.add('sk-any');
+            });
+          } else if (ends) {
+            ends.split(' ').forEach(function(e) { var n = station(e); if (n) n.classList.add('sk-on'); });
+          }
+        });
+      });
+      // the ring's "anywhere" marks stay visible, but the other stations are not dimmed out of reach
+      if (st.classList.contains('sk-ringst')) {
+        Array.prototype.forEach.call(stations, function(s) { s.classList.add('sk-on'); });
+      }
+      setBoard(id);
+    }
+
+    var starts = sec.querySelectorAll('.sk-start');
+    var mapShown = window.matchMedia('(min-width: 720px)');
+
+    // id: pin that station; null: clear the pin. toggle: pinning the pinned station clears it.
+    function setPin(id, toggle) {
+      pinned = (toggle && pinned === id) ? null : id;
+      Array.prototype.forEach.call(starts, function(a) {
+        if (a.getAttribute('data-go') === pinned) a.setAttribute('aria-current', 'true');
+        else a.removeAttribute('aria-current');
+      });
+      show(pinned || id);
+    }
+
+    // ─── the SKILL.md box: read the file live from main, so it never drifts from the repo ───
+    var RAW = 'https://raw.githubusercontent.com/charleshall888/cortex-command/main/';
+    var dlg = document.getElementById('sk-dlg');
+    var dText = dlg && dlg.querySelector('.sk-dlg-text');
+    var texts = {};
+
+    function esc(t) { return t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+    // Tints only: every character of the file is still shown as written.
+    function tint(raw) {
+      var fm = '', body = raw;
+      var m = raw.match(/^---\n[\s\S]*?\n---\n/);
+      if (m) { fm = m[0]; body = raw.slice(fm.length); }
+      var out = fm ? '<span class="sk-fm">' + esc(fm).replace(/^([\w-]+):/gm, '<span class="sk-fm-k">$1</span>:') + '</span>' : '';
+      return out + esc(body).split('\n').map(function(line) {
+        if (/^#{1,6} /.test(line)) return '<span class="sk-h">' + line + '</span>';
+        return line
+          .replace(/`[^`]+`/g, function(c) { return '<span class="sk-c">' + c + '</span>'; })
+          .replace(/\*\*[^*]+\*\*/g, function(b) { return '<span class="sk-b">' + b + '</span>'; });
+      }).join('\n');
+    }
+
+    function openSource(link) {
+      if (!dlg || !dlg.showModal) return false; // no <dialog> support: let the link open GitHub
+      var src = link.getAttribute('data-src');
+      var name = '/' + link.getAttribute('data-st');
+      dlg.querySelector('.sk-dlg-name').textContent = name;
+      dlg.querySelector('.sk-dlg-path').textContent = src;
+      dlg.querySelector('.sk-dlg-gh').href = link.href;
+      dlg.setAttribute('data-src', src);
+      if (texts[src]) dText.innerHTML = tint(texts[src]);
+      else {
+        dText.innerHTML = '<span class="sk-msg">Reading ' + esc(src) + ' from GitHub…</span>';
+        fetch(RAW + src).then(function(r) {
+          if (!r.ok) throw new Error(r.status);
+          return r.text();
+        }).then(function(t) {
+          texts[src] = t;
+          if (dlg.getAttribute('data-src') === src) dText.innerHTML = tint(t);
+        }).catch(function() {
+          if (dlg.getAttribute('data-src') !== src) return;
+          dText.innerHTML = '<span class="sk-msg">Couldn\u2019t reach GitHub. <a href="' + link.href + '" target="_blank" rel="noopener">Open ' + esc(src) + ' there ↗</a></span>';
+        });
+      }
+      if (!dlg.open) dlg.showModal();
+      dText.scrollTop = 0;
+      dText.focus();
+      return true;
+    }
+    function sourceFor(id) { return sec.querySelector('.sk-list .sk-src[data-st="' + id + '"]'); }
+    function openStation(st) {
+      var id = st.getAttribute('data-st');
+      setPin(id, false);
+      var link = sourceFor(id);
+      if (link && !openSource(link)) window.open(link.href, '_blank', 'noopener');
+    }
+    if (dlg) {
+      dlg.querySelector('.sk-dlg-x').addEventListener('click', function() { dlg.close(); });
+      dlg.addEventListener('click', function(e) { if (e.target === dlg) dlg.close(); }); // backdrop
+    }
+    sec.addEventListener('click', function(e) {
+      var link = e.target.closest && e.target.closest('.sk-src');
+      if (link && openSource(link)) e.preventDefault();
+    });
+
+    Array.prototype.forEach.call(stations, function(st) {
+      var id = st.getAttribute('data-st');
+      st.addEventListener('mouseenter', function() { show(id); });
+      st.addEventListener('mouseleave', function() { show(pinned); });
+      st.addEventListener('focus', function() { show(id); });
+      st.addEventListener('blur', function() { show(pinned); });
+      st.addEventListener('click', function() { openStation(st); });
+      st.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openStation(st); }
+        else if (e.key === 'Escape') { setPin(null); }
+      });
+    });
+
+    Array.prototype.forEach.call(starts, function(a) {
+      a.addEventListener('click', function(e) {
+        if (!mapShown.matches) return; // no map on phones: follow the link down to the stop
+        var id = a.getAttribute('data-go');
+        if (!station(id)) return;
+        e.preventDefault();
+        setPin(id, false);
+        var r = map.getBoundingClientRect();
+        if (r.top < 0 || r.bottom > window.innerHeight) {
+          var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+          map.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' });
+        }
+      });
+    });
+  })();
+  </script>
+
+  <!-- ───────── §4.2 · /cli · the bench (atomic subcommands behind the prose) ───────── -->
   <section class="cli-section" id="cli">
     <div class="head">
-      <div class="marker">§4.1 · /cli · <em>the bench</em><span class="prompt-cursor"></span></div>
+      <div class="marker">§4.2 · /cli · <em>the bench</em><span class="prompt-cursor"></span></div>
       <h2 class="kicker">Prose skills wander. <em>The CLI is the toolkit that doesn't.</em></h2>
       <p class="lede">A Cortex skill is prose — and prose, under fatigue or context drift, paraphrases, skips, coerces <em>"close enough."</em> Every skill shells out to deterministic <code>cortex-*</code> subcommands for the parts that can't. <em>Three guarantees a prose skill alone can never give you.</em></p>
       <div class="benefits">
@@ -7416,7 +8214,7 @@
         <svg id="cli-dive-gear-b" class="hood-gear gear-b" width="48" height="48" viewBox="-30 -30 60 60"></svg>
       </span>
       <span class="hood-label">
-        <span class="hood-marker">§4.2 · why <em>we built this</em></span>
+        <span class="hood-marker">§4.3 · why <em>we built this</em></span>
         <span class="hood-title">Pop the hood on an example — <em>one phase boundary</em></span>
         <span class="hood-sub">six ordered writes · one atomic arm · the gate refuses rather than guesses</span>
       </span>
@@ -7428,7 +8226,7 @@
     <div class="dive" id="cli-dive-panel">
       <div class="dive-inner">
         <div class="dive-head reveal">
-          <div class="sub-marker">§4.2 · why we built this</div>
+          <div class="sub-marker">§4.3 · why we built this</div>
           <h3>A phase boundary is six writes that must land in order, once. <em>A prompt can't enforce that.</em></h3>
         </div>
 
@@ -7511,7 +8309,7 @@
 
   <script>
   (function() {
-    // ─── §4.1 · CLI bench · dive toggle + animations ───
+    // ─── §4.2 · CLI bench · dive toggle + animations ───
     var toggle = document.getElementById('cli-dive-toggle');
     var dive   = document.getElementById('cli-dive-panel');
     if (!toggle || !dive) return;
@@ -7595,7 +8393,7 @@
 
   <!-- ───────── What ships ───────── -->
   <section class="install" id="install">
-    <div class="marker">§4.3 · what installs · 3 core plugins · one CLI underneath</div>
+    <div class="marker">§4.4 · what installs · 3 core plugins · one CLI underneath</div>
     <h2>Start with the core. <em>It's complete on its own</em> — add the rest as you want them.</h2>
 
     <div class="ship-stack">
