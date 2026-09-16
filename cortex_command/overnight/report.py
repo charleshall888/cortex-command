@@ -607,6 +607,12 @@ def render_executive_summary(data: ReportData) -> str:
             "remain queued for resume; consult `pipeline-events.log` for retry context."
         )
         lines.append("")
+    elif getattr(data.state, "paused_reason", None) == "api_unavailable":
+        lines.append(
+            "> **Session paused: Claude API unavailable (auth or provider error).** "
+            "Features in `pending` status will resume on `/overnight resume`."
+        )
+        lines.append("")
     elif getattr(data.state, "paused_reason", None) == "orchestrator_crash":
         lines.extend(_render_orchestrator_crash_banner(data))
     lines.append("")

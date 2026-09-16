@@ -53,6 +53,7 @@ from cortex_command.overnight import smoke_test
 from cortex_command.overnight import state as state_module
 from cortex_command.overnight.batch_runner import main as batch_runner_main  # noqa: F401  (R5: in-process import list)
 from cortex_command.overnight.constants import CIRCUIT_BREAKER_THRESHOLD
+from cortex_command.overnight.feature_executor import _SESSION_HALT_ERROR_TYPES
 from cortex_command.overnight.orchestrator import run_batch  # noqa: F401  (R5: in-process import list)
 from cortex_command.overnight.runner_primitives import (
     DEFAULT_KILL_ESCALATION_SECONDS,
@@ -2713,6 +2714,13 @@ def _post_loop(
                     f"Resume with /overnight resume when retry budget "
                     f"recovers (typically minutes). Session: {session_id}"
                 )
+            elif paused_reason == "api_unavailable":
+                _notify(
+                    f"Overnight session paused — the Claude API is unavailable "
+                    f"(auth or provider error). Check `claude` login and "
+                    f"provider status, then resume with /overnight resume. "
+                    f"Session: {session_id}"
+                )
             else:
                 _notify(
                     f"Overnight complete — "
@@ -3337,9 +3345,10 @@ def run(
                         log_path=events_path,
                     )
 
-                # Session-halt early-out (budget_exhausted or api_rate_limit).
+                # Session-halt early-out (budget_exhausted, api_rate_limit,
+                # or api_unavailable).
                 state = state_module.load_state(state_path)
-                if state.paused_reason in ("budget_exhausted", "api_rate_limit"):
+                if state.paused_reason in _SESSION_HALT_ERROR_TYPES:
                     print(
                         "Session paused — stopping round loop",
                         flush=True,

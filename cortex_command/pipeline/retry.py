@@ -398,7 +398,7 @@ async def retry_task(
             )
 
         elif recovery_path == "pause_session":
-            # Session-halting causes (budget_exhausted, api_rate_limit): zero retries.
+            # Session-halting causes (budget_exhausted, api_rate_limit, api_unavailable): zero retries.
             # Pause immediately so the runner can stop new dispatches.
             if log_path:
                 log_event(log_path, {

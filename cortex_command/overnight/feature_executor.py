@@ -73,7 +73,7 @@ IMPLEMENT_TEMPLATE = importlib.resources.files("cortex_command.pipeline.prompts"
 # Error types that halt the entire session and bypass brain triage.
 # Imported by orchestrator.py and runner.py for consistent set-membership
 # checks across the session-halt path.
-_SESSION_HALT_ERROR_TYPES = ("budget_exhausted", "api_rate_limit")
+_SESSION_HALT_ERROR_TYPES = ("budget_exhausted", "api_rate_limit", "api_unavailable")
 
 
 # ---------------------------------------------------------------------------
