@@ -2,7 +2,7 @@
 
 Tests cover:
   - Tool call + tool result events written to JSONL on a normal run
-  - ToolResultBlock with is_error=True produces "success": false
+  - A tool_result block with is_error=True produces "success": false
   - Write errors in _write_activity_event do not crash dispatch
   - _extract_input_summary truncates to 80 chars
 """
@@ -13,6 +13,7 @@ import json
 import sys
 import tempfile
 import unittest
+from contextlib import contextmanager
 from pathlib import Path
 from unittest.mock import patch
 
@@ -21,26 +22,29 @@ from unittest.mock import patch
 from cortex_command.pipeline.tests.conftest import _install_sdk_stub
 _install_sdk_stub()
 import cortex_command.pipeline.dispatch as _dispatch_module
+from cortex_command.tests._claude_double import (
+    assistant_frame,
+    fake_run_claude,
+    result_frame,
+    tool_result_frame,
+)
 
-# Pull stub types from the installed stub module so isinstance checks in
-# dispatch.py and the types used in test message construction match exactly.
 _sdk = sys.modules["claude_agent_sdk"]
-AssistantMessage = _sdk.AssistantMessage
-UserMessage = _sdk.UserMessage
-ResultMessage = _sdk.ResultMessage
-TextBlock = _sdk.TextBlock
-ToolUseBlock = _sdk.ToolUseBlock
-ToolResultBlock = _sdk.ToolResultBlock
 
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
-async def _async_gen(*items):
-    """Yield items from a scripted async generator."""
-    for item in items:
-        yield item
+@contextmanager
+def _patched_claude(frames, **kwargs):
+    """Patch dispatch's ``run_claude`` with the frame double and pin a CLI path.
+
+    ``kwargs`` pass through to :func:`fake_run_claude` (e.g. ``capture``).
+    """
+    with patch.object(_dispatch_module, "run_claude", fake_run_claude(frames, **kwargs)):
+        with patch.object(_dispatch_module, "resolve_claude_cli", return_value="/fake/claude"):
+            yield
 
 
 def _read_jsonl(path: Path) -> list[dict]:
@@ -114,32 +118,16 @@ class TestActivityLogJSONL(unittest.IsolatedAsyncioTestCase):
         with tempfile.TemporaryDirectory() as tmp:
             log_path = Path(tmp) / "activity.jsonl"
 
-            assistant_msg = AssistantMessage(
-                content=[
-                    ToolUseBlock(id="tu1", name="Write", input={"file_path": "foo.py"}),
-                ],
-                model="sonnet",
-            )
-            user_msg = UserMessage(
-                content=[
-                    ToolResultBlock(tool_use_id="tu1", content="ok", is_error=None),
-                ]
-            )
-            result_msg = ResultMessage(
-                subtype="success",
-                duration_ms=1000,
-                duration_api_ms=800,
-                is_error=False,
-                num_turns=1,
-                session_id="sess-1",
-                total_cost_usd=0.01,
-            )
+            frames = [
+                assistant_frame(
+                    model="sonnet",
+                    tool_uses=[("tu1", "Write", {"file_path": "foo.py"})],
+                ),
+                tool_result_frame("tu1"),
+                result_frame(duration_ms=1000, num_turns=1, total_cost_usd=0.01),
+            ]
 
-            async def mock_query(**kwargs):
-                async for m in _async_gen(assistant_msg, user_msg, result_msg):
-                    yield m
-
-            with patch.object(_dispatch_module, "query", mock_query):
+            with _patched_claude(frames):
                 result = await _dispatch_module.dispatch_task(
                     feature="test-feat",
                     task="do something",
@@ -172,36 +160,20 @@ class TestActivityLogJSONL(unittest.IsolatedAsyncioTestCase):
             self.assertAlmostEqual(turn_evt["cost_usd"], 0.01)
 
     async def test_tool_result_is_error_true_produces_success_false(self):
-        """ToolResultBlock with is_error=True -> "success": false in JSONL."""
+        """A tool_result block with is_error=True -> "success": false in JSONL."""
         with tempfile.TemporaryDirectory() as tmp:
             log_path = Path(tmp) / "activity.jsonl"
 
-            assistant_msg = AssistantMessage(
-                content=[
-                    ToolUseBlock(id="tu2", name="Bash", input={"command": "bad-cmd"}),
-                ],
-                model="sonnet",
-            )
-            user_msg = UserMessage(
-                content=[
-                    ToolResultBlock(tool_use_id="tu2", content="error output", is_error=True),
-                ]
-            )
-            result_msg = ResultMessage(
-                subtype="success",
-                duration_ms=500,
-                duration_api_ms=400,
-                is_error=False,
-                num_turns=1,
-                session_id="sess-2",
-                total_cost_usd=0.005,
-            )
+            frames = [
+                assistant_frame(
+                    model="sonnet",
+                    tool_uses=[("tu2", "Bash", {"command": "bad-cmd"})],
+                ),
+                tool_result_frame("tu2", is_error=True),
+                result_frame(duration_ms=500, num_turns=1, total_cost_usd=0.005),
+            ]
 
-            async def mock_query(**kwargs):
-                async for m in _async_gen(assistant_msg, user_msg, result_msg):
-                    yield m
-
-            with patch.object(_dispatch_module, "query", mock_query):
+            with _patched_claude(frames):
                 result = await _dispatch_module.dispatch_task(
                     feature="test-feat",
                     task="run failing command",
@@ -231,33 +203,17 @@ class TestActivityLogJSONL(unittest.IsolatedAsyncioTestCase):
             # fail if log_event were called normally; we also patch it to raise.
             log_path = Path(tmp) / "nonexistent_dir" / "activity.jsonl"
 
-            assistant_msg = AssistantMessage(
-                content=[
-                    ToolUseBlock(id="tu3", name="Read", input={"file_path": "bar.py"}),
-                ],
-                model="sonnet",
-            )
-            user_msg = UserMessage(
-                content=[
-                    ToolResultBlock(tool_use_id="tu3", content="content"),
-                ]
-            )
-            result_msg = ResultMessage(
-                subtype="success",
-                duration_ms=200,
-                duration_api_ms=150,
-                is_error=False,
-                num_turns=1,
-                session_id="sess-3",
-                total_cost_usd=0.001,
-            )
-
-            async def mock_query(**kwargs):
-                async for m in _async_gen(assistant_msg, user_msg, result_msg):
-                    yield m
+            frames = [
+                assistant_frame(
+                    model="sonnet",
+                    tool_uses=[("tu3", "Read", {"file_path": "bar.py"})],
+                ),
+                tool_result_frame("tu3"),
+                result_frame(duration_ms=200, num_turns=1, total_cost_usd=0.001),
+            ]
 
             # Patch log_event (called inside _write_activity_event) to raise
-            with patch.object(_dispatch_module, "query", mock_query):
+            with _patched_claude(frames):
                 with patch("cortex_command.pipeline.dispatch.log_event", side_effect=OSError("disk full")):
                     result = await _dispatch_module.dispatch_task(
                         feature="test-feat",
@@ -306,25 +262,12 @@ class TestActivityLogJSONL(unittest.IsolatedAsyncioTestCase):
         with tempfile.TemporaryDirectory() as tmp:
             log_path = Path(tmp) / "pipeline-events.log"
 
-            assistant_msg = AssistantMessage(
-                content=[TextBlock(text="done")],
-                model="sonnet",
-            )
-            result_msg = ResultMessage(
-                subtype="success",
-                duration_ms=100,
-                duration_api_ms=80,
-                is_error=False,
-                num_turns=1,
-                session_id="sess-rf",
-                total_cost_usd=0.0,
-            )
+            frames = [
+                assistant_frame("done", model="sonnet"),
+                result_frame(duration_ms=100, num_turns=1, total_cost_usd=0.0),
+            ]
 
-            async def mock_query(**kwargs):
-                async for m in _async_gen(assistant_msg, result_msg):
-                    yield m
-
-            with patch.object(_dispatch_module, "query", mock_query):
+            with _patched_claude(frames):
                 await _dispatch_module.dispatch_task(
                     feature="test-feat",
                     task="review-fix task",
@@ -353,25 +296,12 @@ class TestActivityLogJSONL(unittest.IsolatedAsyncioTestCase):
         with tempfile.TemporaryDirectory() as tmp:
             log_path = Path(tmp) / "pipeline-events.log"
 
-            assistant_msg = AssistantMessage(
-                content=[TextBlock(text="done")],
-                model="sonnet",
-            )
-            result_msg = ResultMessage(
-                subtype="success",
-                duration_ms=100,
-                duration_api_ms=80,
-                is_error=False,
-                num_turns=1,
-                session_id="sess-impl",
-                total_cost_usd=0.0,
-            )
+            frames = [
+                assistant_frame("done", model="sonnet"),
+                result_frame(duration_ms=100, num_turns=1, total_cost_usd=0.0),
+            ]
 
-            async def mock_query(**kwargs):
-                async for m in _async_gen(assistant_msg, result_msg):
-                    yield m
-
-            with patch.object(_dispatch_module, "query", mock_query):
+            with _patched_claude(frames):
                 await _dispatch_module.dispatch_task(
                     feature="test-feat",
                     task="implement task",
@@ -399,25 +329,12 @@ class TestActivityLogJSONL(unittest.IsolatedAsyncioTestCase):
         with tempfile.TemporaryDirectory() as tmp:
             log_path = Path(tmp) / "should_not_exist.jsonl"
 
-            assistant_msg = AssistantMessage(
-                content=[TextBlock(text="hello")],
-                model="sonnet",
-            )
-            result_msg = ResultMessage(
-                subtype="success",
-                duration_ms=100,
-                duration_api_ms=80,
-                is_error=False,
-                num_turns=1,
-                session_id="sess-4",
-                total_cost_usd=0.0,
-            )
+            frames = [
+                assistant_frame("hello", model="sonnet"),
+                result_frame(duration_ms=100, num_turns=1, total_cost_usd=0.0),
+            ]
 
-            async def mock_query(**kwargs):
-                async for m in _async_gen(assistant_msg, result_msg):
-                    yield m
-
-            with patch.object(_dispatch_module, "query", mock_query):
+            with _patched_claude(frames):
                 await _dispatch_module.dispatch_task(
                     feature="test-feat",
                     task="no log",
@@ -442,9 +359,9 @@ class TestActivityLogJSONL(unittest.IsolatedAsyncioTestCase):
 
 
 def test_max_tokens_truncation_emits_dispatch_truncation_event_via_dispatch_task():
-    """SDK-path: stop_reason=='max_tokens' emits dispatch_truncation BEFORE dispatch_complete.
+    """stop_reason=='max_tokens' emits dispatch_truncation BEFORE dispatch_complete.
 
-    Mocks a ``ResultMessage(stop_reason="max_tokens", ...)`` and asserts that
+    Feeds a ``result_frame(stop_reason="max_tokens", ...)`` and asserts that
     a ``dispatch_truncation`` event is logged before ``dispatch_complete``,
     and that ``dispatch_complete`` carries ``stop_reason`` per spec Req #8.
     """
@@ -454,26 +371,12 @@ def test_max_tokens_truncation_emits_dispatch_truncation_event_via_dispatch_task
         with tempfile.TemporaryDirectory() as tmp:
             log_path = Path(tmp) / "pipeline-events.log"
 
-            assistant_msg = AssistantMessage(
-                content=[TextBlock(text="partial output before truncation")],
-                model="opus",
-            )
-            result_msg = ResultMessage(
-                subtype="success",
-                duration_ms=900,
-                duration_api_ms=850,
-                is_error=False,
-                num_turns=1,
-                session_id="sess-trunc",
-                total_cost_usd=0.02,
-                stop_reason="max_tokens",
-            )
+            frames = [
+                assistant_frame("partial output before truncation", model="opus"),
+                result_frame(duration_ms=900, num_turns=1, total_cost_usd=0.02, stop_reason="max_tokens"),
+            ]
 
-            async def mock_query(**kwargs):
-                async for m in _async_gen(assistant_msg, result_msg):
-                    yield m
-
-            with patch.object(_dispatch_module, "query", mock_query):
+            with _patched_claude(frames):
                 await _dispatch_module.dispatch_task(
                     feature="test-feat",
                     task="task that gets truncated",
@@ -524,26 +427,12 @@ def test_dispatch_complete_exact_key_list():
         with tempfile.TemporaryDirectory() as tmp:
             log_path = Path(tmp) / "pipeline-events.log"
 
-            assistant_msg = AssistantMessage(
-                content=[TextBlock(text="done")],
-                model="sonnet",
-            )
-            result_msg = ResultMessage(
-                subtype="success",
-                duration_ms=100,
-                duration_api_ms=80,
-                is_error=False,
-                num_turns=1,
-                session_id="sess-keys",
-                total_cost_usd=0.0,
-                stop_reason="end_turn",
-            )
+            frames = [
+                assistant_frame("done", model="sonnet"),
+                result_frame(duration_ms=100, num_turns=1, total_cost_usd=0.0, stop_reason="end_turn"),
+            ]
 
-            async def mock_query(**kwargs):
-                async for m in _async_gen(assistant_msg, result_msg):
-                    yield m
-
-            with patch.object(_dispatch_module, "query", mock_query):
+            with _patched_claude(frames):
                 await _dispatch_module.dispatch_task(
                     feature="test-feat",
                     task="implement task",
@@ -567,7 +456,7 @@ def test_dispatch_complete_exact_key_list():
                 "duration_ms",
                 "num_turns",
                 "stop_reason",
-                # The model the CLI actually ran on, read off AssistantMessage.
+                # The model the CLI actually ran on, read off the assistant frame.
                 "model",
             }
             assert keys == expected, (
@@ -597,27 +486,15 @@ def test_dispatch_model_observed_fires_once_with_the_running_model():
 
             # Three assistant turns, all on the same model: the observed-model
             # event must fire exactly once, not once per turn.
-            msgs = [
-                AssistantMessage(content=[TextBlock(text=f"turn {i}")], model="some-model-id")
+            frames = [
+                assistant_frame(f"turn {i}", model="some-model-id")
                 for i in range(3)
             ]
-            result_msg = ResultMessage(
-                subtype="success", duration_ms=100, duration_api_ms=80,
-                is_error=False, num_turns=3, session_id="sess-obs", total_cost_usd=0.0,
-            )
+            frames.append(result_frame(duration_ms=100, num_turns=3, total_cost_usd=0.0))
 
-            seen_options = []
+            capture: dict = {}
 
-            async def mock_query(**kwargs):
-                # Captured, not asserted inline: an exception raised inside the
-                # query generator is absorbed by dispatch_task's error
-                # classification, so an inline assert would vanish into a
-                # dispatch_error instead of failing the test.
-                seen_options.append(kwargs["options"])
-                async for m in _async_gen(*msgs, result_msg):
-                    yield m
-
-            with patch.object(_dispatch_module, "query", mock_query):
+            with _patched_claude(frames, capture=capture):
                 await _dispatch_module.dispatch_task(
                     feature="obs-feat",
                     task="do work",
@@ -628,11 +505,11 @@ def test_dispatch_model_observed_fires_once_with_the_running_model():
                     skill="implement",
                 )
 
-            # The dispatch must not pin a model on the SDK options.
-            assert len(seen_options) == 1
-            assert getattr(seen_options[0], "model", None) is None, (
-                "dispatch_task must leave ClaudeAgentOptions.model unset so the "
-                "CLI default applies (ADR-0032)"
+            # The dispatch must not pin a model on the claude argv.
+            assert "argv" in capture, "run_claude was never called"
+            assert "--model" not in capture["argv"], (
+                "dispatch_task must pass no --model so the CLI default "
+                f"applies (ADR-0032); argv={capture['argv']!r}"
             )
 
             events = _read_jsonl(log_path)
@@ -669,16 +546,9 @@ def test_dispatch_complete_model_is_none_when_no_assistant_message():
     async def _run():
         with tempfile.TemporaryDirectory() as tmp:
             log_path = Path(tmp) / "pipeline-events.log"
-            result_msg = ResultMessage(
-                subtype="success", duration_ms=10, duration_api_ms=5,
-                is_error=False, num_turns=0, session_id="sess-empty", total_cost_usd=0.0,
-            )
+            frames = [result_frame(duration_ms=10, num_turns=0, total_cost_usd=0.0)]
 
-            async def mock_query(**kwargs):
-                async for m in _async_gen(result_msg):
-                    yield m
-
-            with patch.object(_dispatch_module, "query", mock_query):
+            with _patched_claude(frames):
                 await _dispatch_module.dispatch_task(
                     feature="quiet-feat",
                     task="do work",

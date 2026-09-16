@@ -22,20 +22,36 @@ from cortex_command.tests._stubs import _install_sdk_stub
 _install_sdk_stub()
 
 import cortex_command.pipeline.dispatch as _dispatch_module  # noqa: E402
+from cortex_command.tests._claude_double import fake_run_claude, result_frame  # noqa: E402
 
 _sdk = sys.modules["claude_agent_sdk"]
-ResultMessage = _sdk.ResultMessage
-ProcessError = _sdk.ProcessError
-ClaudeAgentOptions = _sdk.ClaudeAgentOptions
 
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
-async def _async_gen(*items):
-    for item in items:
-        yield item
+def _dispatch_with(double, **dispatch_kwargs):
+    """Run ``dispatch_task`` with ``run_claude`` replaced by ``double``.
+
+    Pins the resolved CLI path so the dispatch never depends on a ``claude``
+    being installed on the test host.
+    """
+    kwargs = {
+        "task": "do something",
+        "worktree_path": Path("/tmp"),
+        "complexity": "simple",
+        "system_prompt": "test",
+        "skill": "implement",
+    }
+    kwargs.update(dispatch_kwargs)
+
+    async def _run():
+        return await _dispatch_module.dispatch_task(**kwargs)
+
+    with patch.object(_dispatch_module, "run_claude", double):
+        with patch.object(_dispatch_module, "resolve_claude_cli", return_value="/fake/claude"):
+            return asyncio.run(_run())
 
 
 # ---------------------------------------------------------------------------
@@ -44,49 +60,30 @@ async def _async_gen(*items):
 
 class TestBudgetExhaustedDispatchPath(unittest.TestCase):
     """dispatch_task returns success=False / error_type=budget_exhausted when
-    ResultMessage.is_error is True with subtype error_max_budget_usd."""
+    the result frame carries subtype error_max_budget_usd."""
 
     def test_budget_exhausted_returns_failure_result(self):
-        async def _run():
-            async def mock_query(**kwargs):
-                msg = ResultMessage(
-                    subtype="error_max_budget_usd",
-                    duration_ms=100,
-                    duration_api_ms=80,
-                    is_error=True,
-                    num_turns=1,
-                    session_id="sess-budget-test",
-                    total_cost_usd=0.01,
-                )
-                async for m in _async_gen(msg):
-                    yield m
-
-            with patch("cortex_command.pipeline.dispatch.query", new=mock_query):
-                return await _dispatch_module.dispatch_task(
-                    feature="budget-test",
-                    task="do something",
-                    worktree_path=Path("/tmp"),
-                    complexity="simple",
-                    system_prompt="test",
-                    skill="implement",
-                )
-
-        result = asyncio.run(_run())
+        double = fake_run_claude(
+            [result_frame(is_error=True, subtype="error_max_budget_usd", total_cost_usd=0.01)],
+            exit_code=1,
+        )
+        result = _dispatch_with(double, feature="budget-test")
         self.assertFalse(result.success)
         self.assertEqual(result.error_type, "budget_exhausted")
 
 
 # ---------------------------------------------------------------------------
-# Test 2: rate-limit classify_error
+# Test 2: rate-limit classify_failure
 # ---------------------------------------------------------------------------
 
-class TestRateLimitClassifyError(unittest.TestCase):
-    """classify_error returns api_rate_limit when the ProcessError message
+class TestRateLimitClassifyFailure(unittest.TestCase):
+    """classify_failure returns api_rate_limit when a failed run's corpus
     contains a rate-limit keyword pattern."""
 
     def test_rate_limit_error_in_output_returns_api_rate_limit(self):
-        err = ProcessError("Command failed")
-        result = _dispatch_module.classify_error(err, "rate_limit_error in response")
+        result = _dispatch_module.classify_failure(
+            1, None, None, "rate_limit_error in response", None,
+        )
         self.assertEqual(result, "api_rate_limit")
 
 
@@ -96,41 +93,15 @@ class TestRateLimitClassifyError(unittest.TestCase):
 
 class TestStderrAccumulatorIntegration(unittest.TestCase):
     """dispatch_task classifies error as api_rate_limit when stderr lines
-    contain a rate-limit keyword and query raises ProcessError."""
+    contain a rate-limit keyword and claude exits non-zero."""
 
     def test_stderr_rate_limit_line_yields_api_rate_limit_error_type(self):
-        async def _run():
-            captured_options = {}
-
-            # Wrap ClaudeAgentOptions to intercept the stderr callback.
-            _original_cls = ClaudeAgentOptions
-
-            class _CapturingOptions(_original_cls):
-                def __init__(self, **kwargs):
-                    super().__init__(**kwargs)
-                    captured_options["stderr"] = kwargs.get("stderr")
-
-            async def mock_query(**kwargs):
-                # Call the stderr callback with a rate-limit line before raising.
-                stderr_cb = captured_options.get("stderr")
-                if stderr_cb is not None:
-                    stderr_cb("rate limit error received from API")
-                raise ProcessError("Command failed")
-                # Make this an async generator (required yield for the type).
-                yield  # pragma: no cover  -- never reached
-
-            with patch("cortex_command.pipeline.dispatch.ClaudeAgentOptions", new=_CapturingOptions):
-                with patch("cortex_command.pipeline.dispatch.query", new=mock_query):
-                    return await _dispatch_module.dispatch_task(
-                        feature="stderr-test",
-                        task="do something",
-                        worktree_path=Path("/tmp"),
-                        complexity="simple",
-                        system_prompt="test",
-                        skill="implement",
-                    )
-
-        result = asyncio.run(_run())
+        double = fake_run_claude(
+            [],
+            exit_code=1,
+            stderr_lines=["rate limit error received from API"],
+        )
+        result = _dispatch_with(double, feature="stderr-test")
         self.assertFalse(result.success)
         self.assertEqual(result.error_type, "api_rate_limit")
 
@@ -140,52 +111,27 @@ class TestStderrAccumulatorIntegration(unittest.TestCase):
 # ---------------------------------------------------------------------------
 
 class TestDispatchErrorCapturesStderrAndExitCode(unittest.TestCase):
-    """On the ProcessError branch, the emitted ``dispatch_error`` event payload
-    carries the real child stderr (accumulated in ``_stderr_lines``, not the
-    SDK's hardcoded ProcessError.stderr placeholder) plus a non-null exit_code.
+    """On a non-zero exit, the emitted ``dispatch_error`` event payload carries
+    the real child stderr (accumulated in ``_stderr_lines`` through the
+    ``on_stderr`` callback) plus the child's exit_code.
 
     A regression that drops the real child stderr — emitting an empty or
     placeholder-only payload — must fail this test.
     """
 
-    def test_process_error_payload_has_seeded_stderr_and_exit_code(self):
+    def test_nonzero_exit_payload_has_seeded_stderr_and_exit_code(self):
         marker = "CORTEX_TEST_STDERR_MARKER_xyz"
-
-        async def _run(log_path: Path):
-            captured_options: dict = {}
-            _original_cls = ClaudeAgentOptions
-
-            class _CapturingOptions(_original_cls):
-                def __init__(self, **kwargs):
-                    super().__init__(**kwargs)
-                    captured_options["stderr"] = kwargs.get("stderr")
-
-            async def mock_query(**kwargs):
-                # Feed a recognizable line to the real stderr accumulator, then
-                # raise ProcessError carrying a non-null exit_code.
-                stderr_cb = captured_options.get("stderr")
-                if stderr_cb is not None:
-                    stderr_cb(f"{marker}: child exited abnormally")
-                exc = ProcessError("Command failed with exit code 1")
-                exc.exit_code = 1
-                raise exc
-                yield  # pragma: no cover -- never reached
-
-            with patch("cortex_command.pipeline.dispatch.ClaudeAgentOptions", new=_CapturingOptions):
-                with patch("cortex_command.pipeline.dispatch.query", new=mock_query):
-                    return await _dispatch_module.dispatch_task(
-                        feature="stderr-capture-test",
-                        task="do something",
-                        worktree_path=Path("/tmp"),
-                        complexity="simple",
-                        system_prompt="test",
-                        skill="implement",
-                        log_path=log_path,
-                    )
 
         with tempfile.TemporaryDirectory() as tmpdir:
             log_path = Path(tmpdir) / "events.log"
-            result = asyncio.run(_run(log_path))
+            double = fake_run_claude(
+                [],
+                exit_code=1,
+                stderr_lines=[f"{marker}: child exited abnormally"],
+            )
+            result = _dispatch_with(
+                double, feature="stderr-capture-test", log_path=log_path,
+            )
 
             self.assertFalse(result.success)
 
@@ -215,51 +161,29 @@ class TestDispatchErrorCapturesStderrAndExitCode(unittest.TestCase):
 # ---------------------------------------------------------------------------
 
 
-def _capture_dispatch_options(monkeypatch_env: dict, repo_root: Path | None = None) -> dict:
-    """Run ``dispatch_task`` with mocks, return the captured ClaudeAgentOptions kwargs.
+def _capture_dispatch_spawn(monkeypatch_env: dict) -> dict:
+    """Run ``dispatch_task`` against the frame double; return what it spawned.
 
-    Patches the SDK ``query`` to immediately yield a ResultMessage so the
-    dispatch returns success. Captures the kwargs passed to
-    ``ClaudeAgentOptions`` for assertion.
+    The double yields a single successful result frame so the dispatch
+    returns success, and records the ``argv``/``env`` handed to
+    ``run_claude``.
 
     Args:
         monkeypatch_env: Mapping of env vars to set for the duration of the call.
-        repo_root: Optional cortex repo root used to write a fixture
-            ``.claude/settings.local.json`` for the no-blob-injection test.
 
     Returns:
-        Dict with at least ``options_kwargs`` and ``settings_path_contents`` keys.
+        Dict with ``argv``, ``env``, ``settings_path`` (the value following
+        ``--settings`` in argv, or None) and ``settings_path_contents`` keys.
     """
     captured: dict = {}
-    _original_cls = ClaudeAgentOptions
+    double = fake_run_claude([result_frame(total_cost_usd=0.0)], capture=captured)
 
-    class _CapturingOptions(_original_cls):
-        def __init__(self, **kwargs):
-            super().__init__(**kwargs)
-            captured["options_kwargs"] = kwargs
-
-    async def mock_query(**kwargs):
-        msg = ResultMessage(
-            subtype="success",
-            duration_ms=10,
-            duration_api_ms=8,
-            is_error=False,
-            num_turns=1,
-            session_id="sess-test",
-            total_cost_usd=0.0,
-        )
-        async for m in _async_gen(msg):
-            yield m
-
-    async def _run():
-        return await _dispatch_module.dispatch_task(
-            feature="sandbox-test",
-            task="do something",
-            worktree_path=Path(tempfile.gettempdir()),
-            complexity="simple",
-            system_prompt="test",
-            skill="implement",
-        )
+    # A CORTEX_REPO_ROOT without a repo marker is rejected (ADR-0013) and the
+    # root falls back to the cwd walk — the live repo — so the sandbox sidecar
+    # and settings tempfile would land in the real cortex/lifecycle/sessions/.
+    # Give the pinned root the cortex/ marker so the pin is honoured.
+    if "CORTEX_REPO_ROOT" in monkeypatch_env:
+        (Path(monkeypatch_env["CORTEX_REPO_ROOT"]) / "cortex").mkdir(exist_ok=True)
 
     # Apply env overrides.
     saved_env: dict[str, str | None] = {}
@@ -267,9 +191,11 @@ def _capture_dispatch_options(monkeypatch_env: dict, repo_root: Path | None = No
         saved_env[k] = os.environ.get(k)
         os.environ[k] = v
     try:
-        with patch("cortex_command.pipeline.dispatch.ClaudeAgentOptions", new=_CapturingOptions):
-            with patch("cortex_command.pipeline.dispatch.query", new=mock_query):
-                asyncio.run(_run())
+        _dispatch_with(
+            double,
+            feature="sandbox-test",
+            worktree_path=Path(tempfile.gettempdir()),
+        )
     finally:
         for k, prev in saved_env.items():
             if prev is None:
@@ -277,7 +203,13 @@ def _capture_dispatch_options(monkeypatch_env: dict, repo_root: Path | None = No
             else:
                 os.environ[k] = prev
 
-    settings_path = captured["options_kwargs"].get("settings")
+    argv = captured["argv"]
+    settings_path = None
+    if "--settings" in argv:
+        idx = argv.index("--settings")
+        if idx + 1 < len(argv):
+            settings_path = argv[idx + 1]
+    captured["settings_path"] = settings_path
     if settings_path is not None and Path(settings_path).exists():
         captured["settings_path_contents"] = json.loads(
             Path(settings_path).read_text(encoding="utf-8")
@@ -293,22 +225,24 @@ def _capture_dispatch_options(monkeypatch_env: dict, repo_root: Path | None = No
 
 
 def test_settings_tempfile_used(tmp_path):
-    """Mock the SDK call, dispatch a feature, assert the captured
-    ClaudeAgentOptions.settings is a filepath that exists, and its JSON contents
-    contain the documented sandbox shape (spec Req 5)."""
+    """Dispatch a feature against the frame double, assert the spawned argv
+    carries ``--settings <path>`` naming a file that exists, and its JSON
+    contents contain the documented sandbox shape (spec Req 5)."""
     # CORTEX_REPO_ROOT alongside the session id (the sibling pattern below):
     # dispatch resolves its sandbox-deny-list sidecar directory from the repo
     # root independently of tmp_path, so the session id alone leaves the
     # sidecar in the live cortex/lifecycle/sessions/ tree.
-    captured = _capture_dispatch_options(
+    captured = _capture_dispatch_spawn(
         {
             "LIFECYCLE_SESSION_ID": f"test-{tmp_path.name}",
             "CORTEX_REPO_ROOT": str(tmp_path),
         }
     )
 
-    settings_path = captured["options_kwargs"].get("settings")
-    assert settings_path is not None, "ClaudeAgentOptions.settings must be set"
+    settings_path = captured["settings_path"]
+    assert settings_path is not None, (
+        f"argv must carry --settings <path>; got {captured['argv']!r}"
+    )
     assert Path(settings_path).exists(), (
         f"Settings tempfile must exist on disk: {settings_path}"
     )
@@ -336,18 +270,24 @@ def test_settings_tempfile_used(tmp_path):
 # ---------------------------------------------------------------------------
 
 
-def test_dispatched_env_locks_tmpdir(tmp_path):
-    """Mock the SDK call; assert the captured env dict contains TMPDIR with a
+def test_dispatched_env_locks_tmpdir(tmp_path, monkeypatch):
+    """Assert the env handed to ``run_claude`` contains TMPDIR with a
     non-empty value (spec Req 5/Req 10 — locked into dispatched-agent env to
-    prevent unset-fallback to /tmp/)."""
-    captured = _capture_dispatch_options(
+    prevent unset-fallback to /tmp/).
+
+    The child env now inherits the parent environment, so TMPDIR is removed
+    from the parent first: otherwise an inherited TMPDIR would satisfy the
+    assertion even if dispatch stopped locking it.
+    """
+    monkeypatch.delenv("TMPDIR", raising=False)
+    captured = _capture_dispatch_spawn(
         {
             "LIFECYCLE_SESSION_ID": f"test-{tmp_path.name}",
             "CORTEX_REPO_ROOT": str(tmp_path),
         }
     )
 
-    env = captured["options_kwargs"].get("env")
+    env = captured["env"]
     assert isinstance(env, dict), f"Expected env dict, got {type(env)}"
     assert "TMPDIR" in env, f"env must contain TMPDIR; got keys: {list(env)}"
     tmpdir_value = env["TMPDIR"]
@@ -361,7 +301,7 @@ def test_dispatched_env_locks_tmpdir(tmp_path):
 
 def test_no_blob_injection(tmp_path):
     """Write a fixture .claude/settings.local.json containing hooks/env,
-    dispatch a feature, assert the captured options.settings JSON does NOT
+    dispatch a feature, assert the ``--settings`` file's JSON does NOT
     contain "hooks" or "env" keys after json.loads (spec Req 6)."""
     # Create a fixture .claude/settings.local.json in tmp_path.
     claude_dir = tmp_path / ".claude"
@@ -374,7 +314,7 @@ def test_no_blob_injection(tmp_path):
 
     # Run dispatch from tmp_path so _load_project_settings would naturally pick
     # up this fixture if it were still being force-injected.
-    captured = _capture_dispatch_options(
+    captured = _capture_dispatch_spawn(
         {
             "LIFECYCLE_SESSION_ID": f"test-{tmp_path.name}",
             "CORTEX_REPO_ROOT": str(tmp_path),
