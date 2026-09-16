@@ -1,12 +1,14 @@
-"""Agent SDK dispatch wrapper for pipeline task execution.
+"""Claude CLI dispatch wrapper for pipeline task execution.
 
-Wraps claude_agent_sdk.query() to provide effort/budget tier selection based
-on task complexity, progress streaming via state event logging, and structured
-error classification for the retry module.
+Spawns the operator's ``claude`` through :mod:`cortex_command.claude_stream`
+(``-p --output-format stream-json``, prompt on stdin) to provide effort/budget
+tier selection based on task complexity, progress streaming via state event
+logging, and structured error classification for the retry module.
 
-Model selection is deliberately absent: dispatches leave ``model`` unset and
+Model selection is deliberately absent: dispatches pass no ``--model`` and
 run on the CLI default. The model each dispatch actually used is read back off
-``AssistantMessage`` and reported on ``dispatch_complete`` for cost aggregation.
+the ``assistant`` frames and reported on ``dispatch_complete`` for cost
+aggregation.
 """
 
 from __future__ import annotations
@@ -22,24 +24,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal, Optional, get_args
 
-try:
-    from claude_agent_sdk import (
-        query,
-        ClaudeAgentOptions,
-        AssistantMessage,
-        ResultMessage,
-        TextBlock,
-        ToolUseBlock,
-        ToolResultBlock,
-        UserMessage,
-        CLIConnectionError,
-        ProcessError,
-    )
-
-    _SDK_AVAILABLE = True
-except ImportError:
-    _SDK_AVAILABLE = False
-
+from cortex_command import cli_resolver
+from cortex_command.claude_stream import ClaudeSpawnError, build_argv, build_env, run_claude
 from cortex_command.cli_resolver import resolve_claude_cli
 from cortex_command.pipeline.state import log_event
 
@@ -156,14 +142,14 @@ TIER_CONFIG: dict[str, dict] = {
     "complex": {"max_turns": 300, "max_budget_usd": 50.00},
 }
 
-# NOTE: cortex no longer selects a model for dispatched agents. `model` is left
-# unset on ClaudeAgentOptions so the dispatched agent runs on the CLI's own
-# default, and the model it actually ran on is read back off AssistantMessage
-# and recorded on `dispatch_complete` for the cost aggregators and dashboard.
+# NOTE: cortex no longer selects a model for dispatched agents. No `--model` is
+# passed, so the dispatched agent runs on the CLI's own default, and the model it
+# actually ran on is read back off the `assistant` frames and recorded on
+# `dispatch_complete` for the cost aggregators and dashboard.
 # Selection was previously a (complexity, criticality) matrix plus a
 # haiku -> sonnet -> opus retry ladder; both were removed deliberately.
 
-# 2D effort matrix: (complexity, criticality) -> effort level for ClaudeAgentOptions.
+# 2D effort matrix: (complexity, criticality) -> effort level passed as `--effort`.
 # Cell values were set for earlier models (spec: lifecycle/adopt-xhigh-effort-
 # default-for-overnight-lifecycle-implement) and have not been re-swept on the
 # current CLI default, where the vendor guidance is to start at "high" and sweep
@@ -276,8 +262,8 @@ class DispatchDiagnostics:
     """Captured failure diagnostics from a dispatched agent task.
 
     Threaded through the result carriers to the brain and onto the
-    task_output event the morning report reads. Populated only on the
-    exception error paths; None elsewhere.
+    task_output event the morning report reads. Populated on every failure
+    path; None on success.
 
     Attributes:
         child_stderr: Redacted/capped child stderr, else None.
@@ -300,11 +286,12 @@ class DispatchResult:
         error_type: Classification string if the task failed, else None.
             One of: agent_timeout, agent_test_failure, agent_refusal,
             agent_confused, task_failure, infrastructure_failure,
-            budget_exhausted, api_rate_limit, unknown.
+            budget_exhausted, api_rate_limit, api_unavailable,
+            effort_unsupported, turn_limit_exhausted, unknown.
         error_detail: Human-readable error detail string, else None.
-        cost_usd: Total cost reported by the SDK, else None.
-        diagnostics: Captured failure diagnostics, populated only on the
-            exception error paths, else None.
+        cost_usd: Total cost reported by the CLI's result frame, else None.
+        diagnostics: Captured failure diagnostics, populated on every
+            failure path, else None.
     """
 
     success: bool
@@ -332,6 +319,10 @@ ERROR_RECOVERY: dict[str, str] = {
     "infrastructure_failure": "pause_human",
     "budget_exhausted":       "pause_session",
     "api_rate_limit":         "pause_session",
+    # An API-wide fault (auth failure, provider error) fails every feature the
+    # same way, so the session halts once with the cause named rather than
+    # retrying each feature against a dead API.
+    "api_unavailable":        "pause_session",
     # #313 R4: a CLI `--effort` hard-rejection is a permanently-invalid flag.
     # Its recovery clamps effort once to `max` (universally accepted) instead of
     # blind-retrying the rejected value; see retry.py's clamp_effort arm.
@@ -347,7 +338,7 @@ ERROR_RECOVERY: dict[str, str] = {
 }
 
 # Keyword patterns used for content-based subtype detection.
-# Checked against lowercased combined text of (error message + agent output).
+# Checked against lowercased combined text of (assistant text + captured stderr).
 _TIMEOUT_PATTERNS = ("timeout", "timed out", "time out")
 _TEST_FAILURE_PATTERNS = (
     "test failed", "tests failed", "test failure", "assertion error",
@@ -463,9 +454,9 @@ def _is_turn_limit_stop(
     """Return True when a dispatch died because it ran out of turns.
 
     The CLI exits 1 when it hits ``--max-turns`` while the model still wants
-    to call a tool. The SDK surfaces that only as ``Command failed with exit
-    code 1`` with no child stderr, so the exception alone is indistinguishable
-    from a real crash. The reliable signature is the last ``ResultMessage``:
+    to call a tool, with no child stderr, so the exit code alone is
+    indistinguishable from a real crash. The reliable signature is the last
+    ``result`` frame:
     ``stop_reason == "tool_use"`` with ``num_turns`` at or past the configured
     ceiling — the CLI reports the turn that could not complete, so ``num_turns``
     is typically ``max_turns + 1``.
@@ -477,70 +468,114 @@ def _is_turn_limit_stop(
     return num_turns >= max_turns
 
 
-def classify_error(error: Exception, output: str = "") -> str:
-    """Classify an exception into a dispatch error type.
+def _as_int(value: Any) -> Optional[int]:
+    """Return ``value`` as an int, or None when it is absent or not numeric."""
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        return value
+    if isinstance(value, str):
+        try:
+            return int(value.strip())
+        except ValueError:
+            return None
+    return None
 
-    Performs two-pass detection: first checks the exception type, then
-    falls back to keyword scanning of the combined error message and agent
-    output for finer-grained subtypes within ProcessError.
+
+def classify_failure(
+    exit_code: Optional[int],
+    result: Optional[dict[str, Any]],
+    rate_limit: Optional[dict[str, Any]],
+    corpus: str,
+    max_turns: Optional[int],
+) -> Optional[str]:
+    """Classify a finished ``claude`` run into a dispatch error type.
+
+    Pure function over what the run left behind. Checks, in order:
+
+    1. Success — ``exit_code == 0`` with a result frame whose ``is_error`` is
+       falsy — returns None.
+    2. ``subtype == "error_max_budget_usd"`` → ``budget_exhausted``.
+    3. Turn-limit signature (:func:`_is_turn_limit_stop`) or
+       ``subtype == "error_max_turns"`` → ``turn_limit_exhausted``.
+    4. ``api_error_status == 429``, a rate-limit frame whose status is not
+       ``allowed*``, or a rate-limit phrase in the corpus → ``api_rate_limit``.
+    5. ``terminal_reason == "api_error"`` or ``api_error_status`` of 401, 403
+       or >= 500 → ``api_unavailable``.
+    6. Keyword scans → ``agent_timeout`` / ``agent_test_failure`` /
+       ``agent_refusal`` / ``agent_confused``; the ``--effort`` hard-reject
+       signature → ``effort_unsupported``.
+    7. Otherwise ``task_failure`` — including a non-zero exit with no result
+       frame.
 
     Args:
-        error: The exception raised during dispatch.
-        output: Optional accumulated agent output text.  Used for
-            content-based subtype detection (agent_refusal, agent_confused,
-            agent_test_failure).  Defaults to empty string.
+        exit_code: The child's exit code (None if it never reported one).
+        result: The last ``result`` frame, or None if none arrived.
+        rate_limit: The last ``rate_limit_event`` frame, or None.
+        corpus: Assistant text plus captured stderr. Only assistant text and
+            stderr belong here — system, hook and rate-limit frame text must
+            not, or their incidental words trip the keyword scans.
+        max_turns: The dispatch's configured turn ceiling.
 
     Returns:
-        A string error type for DispatchResult.error_type:
-
-        - "agent_timeout"      — wall-clock timeout; recovery: retry
-        - "agent_test_failure" — agent hit a test failure; recovery: escalate
-        - "agent_refusal"      — agent refused the task; recovery: pause_human
-        - "agent_confused"     — agent appears lost/confused; recovery: escalate
-        - "api_rate_limit"     — API rate limit hit; recovery: pause_session
-        - "task_failure"       — other ProcessError; recovery: retry
-        - "infrastructure_failure" — CLI unavailable; recovery: pause_human
-        - "unknown"            — anything else; recovery: retry
-
-    See also:
-        ERROR_RECOVERY: maps each error type to a recovery path string.
+        None on success, else an ``ERROR_RECOVERY`` key.
     """
-    # Hard-typed exceptions take precedence over content scanning.
-    if isinstance(error, asyncio.TimeoutError):
+    result = result if isinstance(result, dict) else None
+
+    if exit_code == 0 and result is not None and not result.get("is_error"):
+        return None
+
+    subtype = result.get("subtype") if result is not None else None
+    stop_reason = result.get("stop_reason") if result is not None else None
+    num_turns = _as_int(result.get("num_turns")) if result is not None else None
+    api_status = _as_int(result.get("api_error_status")) if result is not None else None
+    terminal_reason = result.get("terminal_reason") if result is not None else None
+
+    if subtype == "error_max_budget_usd":
+        return "budget_exhausted"
+
+    if _is_turn_limit_stop(stop_reason, num_turns, max_turns) or subtype == "error_max_turns":
+        return "turn_limit_exhausted"
+
+    corpus = (corpus or "").lower()
+
+    rate_limit_status: Any = None
+    if isinstance(rate_limit, dict):
+        info = rate_limit.get("rate_limit_info")
+        if isinstance(info, dict):
+            rate_limit_status = info.get("status")
+        if rate_limit_status is None:
+            rate_limit_status = rate_limit.get("status")
+    if (
+        api_status == 429
+        or (isinstance(rate_limit_status, str) and not rate_limit_status.startswith("allowed"))
+        or any(p in corpus for p in _RATE_LIMIT_PATTERNS)
+    ):
+        return "api_rate_limit"
+
+    if terminal_reason == "api_error" or (
+        api_status is not None and (api_status in (401, 403) or api_status >= 500)
+    ):
+        return "api_unavailable"
+
+    if any(p in corpus for p in _TIMEOUT_PATTERNS):
         return "agent_timeout"
+    if any(p in corpus for p in _TEST_FAILURE_PATTERNS):
+        return "agent_test_failure"
+    if any(p in corpus for p in _REFUSAL_PATTERNS):
+        return "agent_refusal"
+    if any(p in corpus for p in _CONFUSED_PATTERNS):
+        return "agent_confused"
 
-    if _SDK_AVAILABLE and isinstance(error, CLIConnectionError):
-        return "infrastructure_failure"
+    # An `--effort` hard-rejection (old claude, e.g. bundled 2.1.69) is a
+    # permanently-invalid flag — NOT a transient failure to blind-retry.
+    # Classify distinctly so the retry loop clamps once to `max` (#313 R4)
+    # rather than re-sending the rejected value until the budget burns. The
+    # rejection text reaches `corpus` through the captured child stderr.
+    if "option '--effort" in corpus and "is invalid" in corpus:
+        return "effort_unsupported"
 
-    if _SDK_AVAILABLE and isinstance(error, ProcessError):
-        # Build a single lowercase search corpus from exception text + output.
-        corpus = f"{error}".lower()
-        if output:
-            corpus = corpus + " " + output.lower()
-
-        if any(p in corpus for p in _TIMEOUT_PATTERNS):
-            return "agent_timeout"
-        if any(p in corpus for p in _TEST_FAILURE_PATTERNS):
-            return "agent_test_failure"
-        if any(p in corpus for p in _REFUSAL_PATTERNS):
-            return "agent_refusal"
-        if any(p in corpus for p in _CONFUSED_PATTERNS):
-            return "agent_confused"
-        if any(p in corpus for p in _RATE_LIMIT_PATTERNS):
-            return "api_rate_limit"
-
-        # An `--effort` hard-rejection (old claude, e.g. bundled 2.1.69) is a
-        # permanently-invalid flag — NOT a transient failure to blind-retry.
-        # Classify distinctly so the retry loop clamps once to `max` (#313 R4)
-        # rather than re-sending the rejected value until the budget burns. The
-        # rejection text reaches `corpus` via the stderr appended to `output` at
-        # the call site (ProcessError.stderr is an SDK placeholder, not read).
-        if "option '--effort" in corpus and "is invalid" in corpus:
-            return "effort_unsupported"
-
-        return "task_failure"
-
-    return "unknown"
+    return "task_failure"
 
 
 # ---------------------------------------------------------------------------
@@ -580,15 +615,15 @@ async def dispatch_task(
     attempt: int = 1,
     cycle: int | None = None,
 ) -> DispatchResult:
-    """Dispatch a task to a Claude agent via the Agent SDK.
+    """Dispatch a task to a Claude agent by spawning the ``claude`` CLI.
 
     Selects effort, budget, and turn limits based on the task's complexity
     tier and criticality level. Streams progress events to the event log
     and collects output text from assistant messages.
 
-    Does NOT select a model: ``ClaudeAgentOptions.model`` is left unset so the
-    dispatched agent runs on the CLI's own default. The model it actually ran
-    on is read back off the first ``AssistantMessage`` and reported on the
+    Does NOT select a model: no ``--model`` is passed, so the dispatched agent
+    runs on the CLI's own default. The model it actually ran on is read back
+    off the first ``assistant`` frame and reported on the
     ``dispatch_complete`` event.
 
     Args:
@@ -606,8 +641,8 @@ async def dispatch_task(
             _write_activity_event (non-blocking).
         effort_override: If provided, use this effort level directly instead of
             resolving from the complexity/criticality cell via ``_EFFORT_MATRIX``
-            and skill-based overrides.  Accepts any value accepted by
-            ClaudeAgentOptions ("low", "medium", "high", "xhigh", "max"); note
+            and skill-based overrides.  Accepts any value accepted by the
+            CLI's ``--effort`` ("low", "medium", "high", "xhigh", "max"); note
             that ``xhigh`` is supported only by Opus 4.7+/Fable. An unsupported
             ``--effort`` is rejected by the *dispatched CLI binary*, not the
             model (#313): old ``claude`` (<=2.1.69) hard-rejects it (exit != 0),
@@ -635,19 +670,10 @@ async def dispatch_task(
         and cost.
 
     Raises:
-        RuntimeError: If claude_agent_sdk is not installed.
         ValueError: If complexity or criticality is not a recognized value,
             if ``skill`` is not in the ``Skill`` Literal vocabulary, or if
             ``cycle`` is non-None for any skill other than ``review-fix``.
     """
-    if not _SDK_AVAILABLE:
-        raise RuntimeError(
-            "claude_agent_sdk is not installed — it ships with the optional "
-            "'overnight' extra (also in 'all'). Reinstall cortex-command with "
-            "that extra, e.g. "
-            "`uv tool install 'cortex-command[all] @ git+<repo-url>@<tag>'`."
-        )
-
     tier = TIER_CONFIG[complexity] if complexity in TIER_CONFIG else None
     if tier is None:
         raise ValueError(
@@ -669,13 +695,13 @@ async def dispatch_task(
         raise ValueError(f"cycle is only valid for skill='review-fix'; got skill={skill!r} with cycle={cycle!r}")
 
     effort = effort_override if effort_override is not None else resolve_effort(complexity, criticality, skill)
-    # Populated from the first AssistantMessage; reported on dispatch_complete.
+    # Populated from the first assistant frame; reported on dispatch_complete.
     observed_model: Optional[str] = None
 
     # Clear CLAUDECODE so the sub-agent doesn't hit the nested-session guard.
-    # The SDK merges options.env on top of os.environ (proven by existing CLAUDECODE
-    # override behavior). Forward ANTHROPIC_API_KEY if present so SDK subprocesses
-    # use API-key billing rather than falling back to subscription.
+    # This is an overlay: claude_stream.build_env lays it over the parent
+    # environment (dropping CLAUDECODE). Forward ANTHROPIC_API_KEY if present so
+    # the child uses API-key billing rather than falling back to subscription.
     # TMPDIR is locked into the dispatched-agent env per spec Req 5/Req 10 to
     # prevent the unset-fallback to /tmp/ that would land outside the per-feature
     # allowWrite list.
@@ -705,10 +731,7 @@ async def dispatch_task(
     # empty: the allow-list narrowly bounds writes to the worktree + the six
     # OUT_OF_WORKTREE_ALLOW_WRITERS, so a deny-set would be redundant. The JSON
     # is written to a per-dispatch tempfile under <session_dir>/sandbox-settings/
-    # and forwarded to the SDK via ClaudeAgentOptions(settings=str(tempfile_path)).
-    # The SDK transport (claude_agent_sdk/_internal/transport/subprocess_cli.py:111-163)
-    # detects this is a filepath (does not start with "{") and forwards as
-    # `claude --settings <path>`.
+    # and passed to the child as `claude --settings <path>` via build_argv.
     # Imports are deferred here to avoid the import cycle described at
     # module top.
     from cortex_command.overnight.sandbox_settings import (
@@ -796,25 +819,9 @@ async def dispatch_task(
         if len(_stderr_lines) < _MAX_STDERR_LINES:
             _stderr_lines.append(line)
 
-    options = ClaudeAgentOptions(
-        # `model` is deliberately unset — cortex does not choose one. The agent
-        # runs on the CLI default; what it actually ran on is captured from
-        # AssistantMessage below and reported on dispatch_complete.
-        max_turns=tier["max_turns"],
-        max_budget_usd=tier["max_budget_usd"],
-        cwd=str(worktree_path),
-        permission_mode="bypassPermissions",
-        allowed_tools=_ALLOWED_TOOLS,
-        system_prompt=system_prompt,
-        env=_env,
-        settings=str(_settings_tempfile_path),
-        effort=effort,
-        stderr=_on_stderr,
-        # Pin the best-available CLI (newer of system-vs-bundled) so the SDK
-        # does not run its bundled-first selection (#313). None ≡ field-absent
-        # ≡ today's bundled-first behavior, so degraded envs are unaffected.
-        cli_path=resolve_claude_cli(),
-    )
+    # Pin the best-available CLI (newer of system-vs-fallback, #313). There is
+    # no bundled binary to fall back on: None means no claude was found at all.
+    cli = resolve_claude_cli()
 
     if log_path:
         event_dict: dict[str, Any] = {
@@ -837,135 +844,224 @@ async def dispatch_task(
     output_parts: list[str] = []
     cost_usd: float | None = None
     _tool_name_map: dict[str, str] = {}
-    _budget_exhausted: bool = False
-    _budget_subtype: str = ""
-    # Retained past the message loop so the except handlers can tell a genuine
-    # crash from a turn-limit stop. The CLI exits 1 when it runs out of turns
-    # mid-tool-use, which reaches us only as the SDK's opaque "Command failed
-    # with exit code 1" — see _is_turn_limit_stop.
+    _last_result: Optional[dict[str, Any]] = None
+    _last_rate_limit: Optional[dict[str, Any]] = None
+    # Turn accounting from the last result frame; travels with every
+    # dispatch_error because an empty child stderr (the CLI's usual case on a
+    # turn-limit exit) leaves these as the only evidence of why it exited.
     _last_stop_reason: str | None = None
     _last_num_turns: int | None = None
+    _exit_code: Optional[int] = None
+
+    def _fail(error_type: str, error_detail: str) -> DispatchResult:
+        """Log dispatch_error and return a failed result carrying diagnostics."""
+        child_stderr = "\n".join(_stderr_lines)
+        if log_path:
+            log_event(log_path, {
+                "event": "dispatch_error",
+                "feature": feature,
+                "error_type": error_type,
+                "error_detail": error_detail,
+                "child_stderr": child_stderr,
+                "exit_code": _exit_code,
+                "cwd": str(worktree_path),
+                "num_turns": _last_num_turns,
+                "max_turns": tier["max_turns"],
+                "stop_reason": _last_stop_reason,
+            })
+        return DispatchResult(
+            success=False,
+            output="\n".join(output_parts),
+            error_type=error_type,
+            error_detail=error_detail,
+            cost_usd=cost_usd,
+            diagnostics=DispatchDiagnostics(
+                child_stderr=child_stderr,
+                exit_code=_exit_code,
+                cwd=str(worktree_path),
+            ),
+        )
+
+    if cli is None:
+        searched = ", ".join(["PATH", *cli_resolver._SYSTEM_FALLBACKS])
+        return _fail(
+            "infrastructure_failure",
+            f"claude CLI not found (searched {searched}); install Claude Code "
+            "so `claude` is available to cortex",
+        )
+
+    argv = build_argv(
+        cli,
+        max_turns=tier["max_turns"],
+        max_budget_usd=tier["max_budget_usd"],
+        permission_mode="bypassPermissions",
+        allowed_tools=_ALLOWED_TOOLS,
+        system_prompt=system_prompt,
+        settings=str(_settings_tempfile_path),
+        effort=effort,
+    )
 
     try:
-        async for message in query(prompt=task, options=options):
-            if isinstance(message, AssistantMessage):
-                # Record what the CLI actually ran on. First non-empty value
-                # wins; the SDK reports it per assistant message and it does
-                # not change mid-dispatch. Emitted as a one-shot event so the
-                # dashboard can show the model *while* the dispatch runs —
-                # dispatch_start cannot carry it, since nothing has replied yet.
-                if observed_model is None:
-                    observed_model = getattr(message, "model", None) or None
-                    if observed_model and log_path:
-                        log_event(log_path, {
-                            "event": "dispatch_model_observed",
+        async with run_claude(
+            argv,
+            prompt=task,
+            cwd=str(worktree_path),
+            env=build_env(_env),
+            on_stderr=_on_stderr,
+        ) as run:
+            async for frame in run.frames():
+                frame_type = frame.get("type")
+
+                if frame_type == "assistant":
+                    message = frame.get("message")
+                    if not isinstance(message, dict):
+                        message = {}
+                    content = message.get("content")
+                    blocks = [b for b in content if isinstance(b, dict)] if isinstance(content, list) else []
+
+                    # Record what the CLI actually ran on. First non-empty value
+                    # wins; the CLI reports it per assistant frame and it does
+                    # not change mid-dispatch. Emitted as a one-shot event so the
+                    # dashboard can show the model *while* the dispatch runs —
+                    # dispatch_start cannot carry it, since nothing has replied yet.
+                    if observed_model is None:
+                        _model = message.get("model")
+                        observed_model = _model if isinstance(_model, str) and _model else None
+                        if observed_model and log_path:
+                            log_event(log_path, {
+                                "event": "dispatch_model_observed",
+                                "feature": feature,
+                                "skill": skill,
+                                "attempt": attempt,
+                                "model": observed_model,
+                            })
+
+                    texts = [
+                        b.get("text") for b in blocks
+                        if b.get("type") == "text" and isinstance(b.get("text"), str)
+                    ]
+                    output_parts.extend(texts)
+
+                    if log_path:
+                        progress_event: dict = {
+                            "event": "dispatch_progress",
                             "feature": feature,
-                            "skill": skill,
-                            "attempt": attempt,
-                            "model": observed_model,
-                        })
+                            "message_type": "assistant",
+                        }
+                        first_text = texts[0] if texts else None
+                        if first_text:
+                            progress_event["content_preview"] = first_text[:200]
+                        log_event(log_path, progress_event)
 
-                for block in message.content:
-                    if isinstance(block, TextBlock):
-                        output_parts.append(block.text)
-
-                if log_path:
-                    progress_event: dict = {
-                        "event": "dispatch_progress",
-                        "feature": feature,
-                        "message_type": "assistant",
-                    }
-                    first_text = next(
-                        (block.text for block in message.content if isinstance(block, TextBlock)),
-                        None,
-                    )
-                    if first_text:
-                        progress_event["content_preview"] = first_text[:200]
-                    log_event(log_path, progress_event)
-
-                if activity_log_path is not None:
-                    for block in message.content:
-                        if isinstance(block, ToolUseBlock):
-                            _tool_name_map[block.id] = block.name
+                    if activity_log_path is not None:
+                        for block in blocks:
+                            if block.get("type") != "tool_use":
+                                continue
+                            tool_name = str(block.get("name") or "")
+                            tool_input = block.get("input")
+                            if block.get("id") is not None:
+                                _tool_name_map[block.get("id")] = tool_name
                             await _write_activity_event(activity_log_path, {
                                 "event": "tool_call",
-                                "tool": block.name,
-                                "input_summary": _extract_input_summary(block.name, block.input),
-                            })
-
-            elif isinstance(message, UserMessage):
-                if activity_log_path is not None:
-                    for block in message.content:
-                        if isinstance(block, ToolResultBlock):
-                            tool_name = _tool_name_map.get(block.tool_use_id, "")
-                            await _write_activity_event(activity_log_path, {
-                                "event": "tool_result",
                                 "tool": tool_name,
-                                "success": not (block.is_error or False),
+                                "input_summary": _extract_input_summary(
+                                    tool_name,
+                                    tool_input if isinstance(tool_input, dict) else {},
+                                ),
                             })
 
-            elif isinstance(message, ResultMessage):
-                cost_usd = message.total_cost_usd
-                _last_stop_reason = getattr(message, "stop_reason", None)
-                _last_num_turns = getattr(message, "num_turns", None)
-                if message.is_error:
-                    _budget_exhausted = True
-                    _budget_subtype = message.subtype or ""
-                    output_parts.append(f"[budget_exhausted: subtype={message.subtype}]")
+                elif frame_type == "user":
+                    if activity_log_path is not None:
+                        message = frame.get("message")
+                        content = message.get("content") if isinstance(message, dict) else None
+                        if isinstance(content, list):
+                            for block in content:
+                                if not isinstance(block, dict) or block.get("type") != "tool_result":
+                                    continue
+                                await _write_activity_event(activity_log_path, {
+                                    "event": "tool_result",
+                                    "tool": _tool_name_map.get(block.get("tool_use_id"), ""),
+                                    "success": not (block.get("is_error") or False),
+                                })
 
-                if log_path:
-                    # Truncation allow-list is intentionally a LOCAL set literal
-                    # (per spec Edge Cases) so future stop_reason values pass
-                    # through to dispatch_complete unchanged but do not generate
-                    # spurious truncation events.
-                    _truncation_reasons = {
-                        "max_tokens",
-                        "model_context_window_exceeded",
-                    }
-                    _stop_reason = getattr(message, "stop_reason", None)
-                    if _stop_reason in _truncation_reasons:
-                        log_event(log_path, {
-                            "event": "dispatch_truncation",
-                            "feature": feature,
-                            "stop_reason": _stop_reason,
-                            "model": observed_model,
-                            "effort": effort,
-                        })
-                    log_event(log_path, {
-                        "event": "dispatch_complete",
-                        "feature": feature,
-                        "cost_usd": cost_usd,
-                        "duration_ms": message.duration_ms,
-                        "num_turns": message.num_turns,
-                        "stop_reason": _stop_reason,
-                        # The model the CLI actually ran on (cortex no longer
-                        # picks it). None if no AssistantMessage arrived.
-                        "model": observed_model,
-                    })
+                elif frame_type == "result":
+                    # Keep the LAST result frame: frames can follow it, and the
+                    # run ends at process exit, not here.
+                    _last_result = frame
 
-                if activity_log_path is not None:
-                    await _write_activity_event(activity_log_path, {
-                        "event": "turn_complete",
-                        "turn": message.num_turns,
-                        "cost_usd": cost_usd,
-                    })
+                elif frame_type == "rate_limit_event":
+                    # Structured fields only — its text never enters the corpus.
+                    _last_rate_limit = frame
 
-        if _budget_exhausted:
-            error_detail = f"ResultMessage.is_error=True subtype={_budget_subtype}"
+                # Every other frame type (system, hooks, summaries) is ignored.
+
+            _exit_code = run.exit_code
+
+        if _last_result is not None:
+            cost_usd = _last_result.get("total_cost_usd")
+            _last_stop_reason = _last_result.get("stop_reason")
+            _last_num_turns = _last_result.get("num_turns")
+
             if log_path:
+                # Truncation allow-list is intentionally a LOCAL set literal
+                # (per spec Edge Cases) so future stop_reason values pass
+                # through to dispatch_complete unchanged but do not generate
+                # spurious truncation events.
+                _truncation_reasons = {
+                    "max_tokens",
+                    "model_context_window_exceeded",
+                }
+                if _last_stop_reason in _truncation_reasons:
+                    log_event(log_path, {
+                        "event": "dispatch_truncation",
+                        "feature": feature,
+                        "stop_reason": _last_stop_reason,
+                        "model": observed_model,
+                        "effort": effort,
+                    })
                 log_event(log_path, {
-                    "event": "dispatch_error",
+                    "event": "dispatch_complete",
                     "feature": feature,
-                    "error_type": "budget_exhausted",
-                    "error_detail": error_detail,
+                    "cost_usd": cost_usd,
+                    "duration_ms": _last_result.get("duration_ms"),
+                    "num_turns": _last_num_turns,
+                    "stop_reason": _last_stop_reason,
+                    # The model the CLI actually ran on (cortex no longer
+                    # picks it). None if no assistant frame arrived.
+                    "model": observed_model,
                 })
-            return DispatchResult(
-                success=False,
-                output="\n".join(output_parts),
-                error_type="budget_exhausted",
-                error_detail=error_detail,
-                cost_usd=cost_usd,
-            )
+
+            if activity_log_path is not None:
+                await _write_activity_event(activity_log_path, {
+                    "event": "turn_complete",
+                    "turn": _last_num_turns,
+                    "cost_usd": cost_usd,
+                })
+
+        corpus = "\n".join(output_parts)
+        if _stderr_lines:
+            corpus += "\n" + "\n".join(_stderr_lines)
+        error_type = classify_failure(
+            _exit_code, _last_result, _last_rate_limit, corpus.lower(), tier["max_turns"],
+        )
+
+        if error_type is not None:
+            if _last_result is not None:
+                subtype = _last_result.get("subtype")
+                if _last_result.get("is_error"):
+                    output_parts.append(f"[{error_type}: subtype={subtype}]")
+                error_detail = (
+                    f"claude exited {_exit_code}; result is_error={_last_result.get('is_error')} "
+                    f"subtype={subtype} terminal_reason={_last_result.get('terminal_reason')} "
+                    f"api_error_status={_last_result.get('api_error_status')} "
+                    f"stop_reason={_last_stop_reason} num_turns={_last_num_turns}"
+                )
+                _errors = _last_result.get("errors")
+                if _errors:
+                    error_detail += f" errors={str(_errors)[:500]}"
+            else:
+                error_detail = f"claude exited {_exit_code} with no result frame"
+            return _fail(error_type, error_detail)
 
         # #313 R5: a modern claude (>=2.1.186) warn-IGNORES an unsupported
         # --effort (exit 0, runs at default) instead of hard-rejecting. The
@@ -992,86 +1088,13 @@ async def dispatch_task(
             cost_usd=cost_usd,
         )
 
-    except (ProcessError, CLIConnectionError, asyncio.TimeoutError) as exc:
-        error_type = classify_error(exc, "\n".join(output_parts) + ("\n" + "\n".join(_stderr_lines) if _stderr_lines else ""))
-        if _is_turn_limit_stop(_last_stop_reason, _last_num_turns, tier["max_turns"]):
-            error_type = "turn_limit_exhausted"
-        error_detail = f"{type(exc).__name__}: {exc}"
-        # The real child stderr lives in _stderr_lines (already redacted/capped
-        # by _on_stderr), NOT in ProcessError.stderr — the SDK hardcodes the
-        # latter to a placeholder. exit_code is present on ProcessError and
-        # absent (None) on CLIConnectionError / TimeoutError.
-        child_stderr = "\n".join(_stderr_lines)
-        exit_code = getattr(exc, "exit_code", None)
-
-        if log_path:
-            log_event(log_path, {
-                "event": "dispatch_error",
-                "feature": feature,
-                "error_type": error_type,
-                "error_detail": error_detail,
-                "child_stderr": child_stderr,
-                "exit_code": exit_code,
-                "cwd": str(worktree_path),
-                # Turn accounting travels with every dispatch failure: when the
-                # child stderr is empty (the SDK's usual case here) these two
-                # numbers are the only evidence of why the CLI exited.
-                "num_turns": _last_num_turns,
-                "max_turns": tier["max_turns"],
-                "stop_reason": _last_stop_reason,
-            })
-
-        return DispatchResult(
-            success=False,
-            output="\n".join(output_parts),
-            error_type=error_type,
-            error_detail=error_detail,
-            cost_usd=cost_usd,
-            diagnostics=DispatchDiagnostics(
-                child_stderr=child_stderr,
-                exit_code=exit_code,
-                cwd=str(worktree_path),
-            ),
+    except ClaudeSpawnError as exc:
+        return _fail(
+            "infrastructure_failure",
+            f"could not start claude at {exc.cli_path!r}: {exc.error}; install "
+            "Claude Code or fix that binary so cortex can run it",
         )
 
     except Exception as exc:
         error_detail = f"{type(exc).__name__}: {exc}\n{traceback.format_exc()}"
-        child_stderr = "\n".join(_stderr_lines)
-        exit_code = getattr(exc, "exit_code", None)
-        # The SDK reports a turn-limit exit as a bare Exception out of its
-        # message reader, so this arm — not the typed one above — is where a
-        # review that ran out of turns actually lands.
-        error_type = (
-            "turn_limit_exhausted"
-            if _is_turn_limit_stop(
-                _last_stop_reason, _last_num_turns, tier["max_turns"]
-            )
-            else "unknown"
-        )
-
-        if log_path:
-            log_event(log_path, {
-                "event": "dispatch_error",
-                "feature": feature,
-                "error_type": error_type,
-                "error_detail": error_detail,
-                "child_stderr": child_stderr,
-                "exit_code": exit_code,
-                "cwd": str(worktree_path),
-                "num_turns": _last_num_turns,
-                "max_turns": tier["max_turns"],
-                "stop_reason": _last_stop_reason,
-            })
-
-        return DispatchResult(
-            success=False,
-            output="\n".join(output_parts),
-            error_type=error_type,
-            error_detail=error_detail,
-            cost_usd=cost_usd,
-            diagnostics=DispatchDiagnostics(
-                child_stderr=child_stderr,
-                exit_code=exit_code,
-                cwd=str(worktree_path),
-            ),
-        )
+        return _fail("unknown", error_detail)
