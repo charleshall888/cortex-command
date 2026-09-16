@@ -1,10 +1,10 @@
 [← Back to Agentic Layer](../agentic-layer.md)
 
-# Claude Code SDK Integration
+# Claude Code Integration
 
-**For:** Contributors and operators who want to understand how this project is wired to the Claude Code SDK.
+**For:** Contributors and operators who want to understand how this project is wired to Claude Code.
 
-The project uses the SDK in two structurally different ways: direct `Agent` tool calls embedded in skill instruction files (interactive), and the Python `claude_agent_sdk.query()` API called from the overnight execution pipeline (autonomous). These paths have different control points, different permission models, and different reasons for existing.
+The project dispatches agents in two structurally different ways: direct `Agent` tool calls embedded in skill instruction files (interactive), and headless `claude -p` processes spawned from the overnight execution pipeline (autonomous). These paths have different control points, different permission models, and different reasons for existing.
 
 > For a full analysis of current SDK usage patterns and evaluated trade-offs, see [`cortex/research/archive/claude-code-sdk-usage/research.md`](../../cortex/research/archive/claude-code-sdk-usage/research.md) (archived).
 
@@ -30,38 +30,29 @@ Skills use the `Agent` tool directly inside their SKILL.md instruction files. Th
 
 ---
 
-## Path B: Autonomous — Python `claude_agent_sdk.query()`
+## Path B: Autonomous — headless `claude -p`
 
-The overnight pipeline calls the SDK programmatically from Python, wrapping `query()` with model selection, budget enforcement, error classification, and activity logging. This path runs without human interaction.
+The overnight pipeline spawns the operator's own `claude` CLI from Python and wraps each run with budget enforcement, error classification, and activity logging. This path runs without human interaction. No Python SDK is involved.
 
-**Entry point:** `cortex_command/pipeline/dispatch.py`
+**Seam:** `cortex_command/claude_stream.py` builds the argv (`claude -p --output-format stream-json --verbose`), writes the prompt on stdin, and yields each stream-json line as a parsed dict. Callers own frame interpretation: `cortex_command/pipeline/dispatch.py` (`dispatch_task`) and `cortex_command/discovery.py` (the gate-brief sub-dispatch). The binary is the operator's `claude`, found by `cortex_command/cli_resolver.py` (`CORTEX_CLAUDE_CLI_PATH`, then `PATH`, then fixed install locations); if none is found the dispatch fails as `infrastructure_failure` rather than guessing.
 
-```python
-from claude_agent_sdk import (
-    query, ClaudeAgentOptions, AssistantMessage, ResultMessage,
-    TextBlock, ToolUseBlock, ToolResultBlock, UserMessage,
-    CLIConnectionError, ProcessError
-)
+**Flags per dispatch:**
 
-async for message in query(prompt=task, options=options):
-    # stream AssistantMessage / ResultMessage events
-```
+| Flag | Value |
+|------|-------|
+| `--model` | **Not passed.** cortex selects no model; the dispatch runs on the CLI default (→ ADR-0032) |
+| `--max-turns` | 150 / 200 / 300 (simple / moderate / complex) |
+| `--max-budget-usd` | $5 / $25 / $50 (simple / moderate / complex) |
+| `--permission-mode` | `bypassPermissions` — overnight agents run without permission prompts |
+| `--allowedTools` | `Read,Write,Edit,Bash,Glob,Grep` |
+| `--settings` | Path to the per-dispatch sandbox settings tempfile (see [pipeline.md](pipeline.md)) |
+| `--effort` | From `_EFFORT_MATRIX`, below |
 
-**`ClaudeAgentOptions` per dispatch:**
-
-| Option | Value |
-|--------|-------|
-| `model` | **Unset.** cortex selects no model; the dispatch runs on the CLI default (→ ADR-0032) |
-| `max_turns` | 150 / 200 / 300 (simple / moderate / complex) |
-| `max_budget_usd` | $5 / $25 / $50 (simple / moderate / complex) |
-| `permission_mode` | `"bypassPermissions"` — overnight agents run without permission prompts |
-| `allowed_tools` | `["Read", "Write", "Edit", "Bash", "Glob", "Grep"]` |
-
-**Model selection: none.** cortex does not choose a model for any dispatch — interactive or overnight. `ClaudeAgentOptions.model` is left unset, so each dispatch runs on the CLI's own default, and the dispatching agent picks the model where one is picked at all. The former *(complexity, criticality)* pipeline matrix, the *(role, criticality)* lifecycle matrix behind the `cortex-resolve-model` verb, and the `haiku → sonnet → opus` retry ladder were all removed together; see `adr/0032-cortex-selects-no-model` for what was traded away and why.
+**Model selection: none.** cortex does not choose a model for any dispatch — interactive or overnight. No `--model` flag is passed, so each dispatch runs on the CLI's own default, and the dispatching agent picks the model where one is picked at all. The former *(complexity, criticality)* pipeline matrix, the *(role, criticality)* lifecycle matrix behind the `cortex-resolve-model` verb, and the `haiku → sonnet → opus` retry ladder were all removed together; see `adr/0032-cortex-selects-no-model` for what was traded away and why.
 
 Max turns and budget still scale on the complexity axis.
 
-**Model observability.** Not choosing the model does not mean not recording it. `AssistantMessage` reports the model each dispatch actually ran on; `dispatch.py` captures the first non-empty value and emits it twice — once as a one-shot `dispatch_model_observed` event (so the dashboard can badge a dispatch that is still running) and again on `dispatch_complete` (so `pair_dispatch_events` can bucket it). `dispatch_start` carries no `model` key, because nothing has replied when it is written; the pairing falls back to the start event so metrics written before ADR-0032 still aggregate.
+**Model observability.** Not choosing the model does not mean not recording it. Each `assistant` frame reports the model each dispatch actually ran on; `dispatch.py` captures the first non-empty value and emits it twice — once as a one-shot `dispatch_model_observed` event (so the dashboard can badge a dispatch that is still running) and again on `dispatch_complete` (so `pair_dispatch_events` can bucket it). `dispatch_start` carries no `model` key, because nothing has replied when it is written; the pairing falls back to the start event so metrics written before ADR-0032 still aggregate.
 
 **Effort selection matrix (`_EFFORT_MATRIX`):**
 
@@ -105,31 +96,31 @@ These fire for every dispatch of those two skills. The opus gate that formerly r
 
 Because the running model is not known at resolve time, a cell requesting an unsupported effort is caught at the CLI boundary rather than by a pre-dispatch guard. That path is described next, and it was already the backstop before model selection was removed.
 
-**What actually rejects an unsupported `--effort` is the dispatched CLI binary, not the model (#313).** The SDK renders `effort` as a raw `--effort` flag, and the *binary* validates it: old `claude` (≤2.1.69, e.g. the version `claude-agent-sdk` bundled) **hard-rejects** an unsupported value (`error: option '--effort <level>' argument '…' is invalid`, exit ≠ 0); modern `claude` (≥2.1.186) **warn-ignores** it (`Warning: Unknown --effort value '…' — ignoring it`, exit 0, runs at the default effort). Neither "silently downgrades." Because the SDK's `_find_cli` prefers its bundled binary, cortex resolves the **best-available** CLI (`cortex_command/cli_resolver.py`, → ADR-0014) and pins it via `ClaudeAgentOptions(cli_path=…)`; an `--effort` hard-reject then clamps once to `max` (universally accepted) and a warn-ignore is surfaced as a `dispatch_effort_ignored` note — degradation is always loud, never silent.
+**What actually rejects an unsupported `--effort` is the dispatched CLI binary, not the model (#313).** `effort` goes to the child as a raw `--effort` flag, and the *binary* validates it: old `claude` (≤2.1.69) **hard-rejects** an unsupported value (`error: option '--effort <level>' argument '…' is invalid`, exit ≠ 0); modern `claude` (≥2.1.186) **warn-ignores** it (`Warning: Unknown --effort value '…' — ignoring it`, exit 0, runs at the default effort). Neither "silently downgrades." An `--effort` hard-reject clamps once to `max` (universally accepted) and a warn-ignore is surfaced as a `dispatch_effort_ignored` note — degradation is always loud, never silent.
 
 For the post-flip rollback monitoring procedure (querying `metrics.json` per-effort cost buckets, the >2× threshold for human investigation, and the matrix-flip revert path), see [overnight-operations.md](../overnight-operations.md).
 
 **Error classification and recovery:**
 
-Classification is heuristic — triggers are substring matches against lowercased agent output, not structured signals. Misclassification is possible, particularly for refusals (Claude's refusal language varies across model versions) and test failures (any output mentioning "pytest" matches, including success messages).
+Classification (`classify_failure`) reads the run's structured signals first — exit code, the final `result` frame's `is_error` / `subtype` / `api_error_status` / `terminal_reason`, and any `rate_limit_event` frame — and only then falls back to substring matches against lowercased assistant text plus captured stderr. The keyword arms are heuristic: refusal language varies across model versions, and any output mentioning "pytest" matches, including success messages.
 
 | Error type | Trigger | Recovery |
 |------------|---------|----------|
-| `agent_timeout` | `asyncio.TimeoutError` | retry |
+| `budget_exhausted` | `subtype == "error_max_budget_usd"` | pause session |
+| `turn_limit_exhausted` | `subtype == "error_max_turns"` or turn-limit stop | retry |
+| `api_rate_limit` | status 429, a non-`allowed` rate-limit frame, or a rate-limit phrase | pause session |
+| `api_unavailable` | `terminal_reason == "api_error"`, or status 401 / 403 / ≥500 | pause session |
+| `agent_timeout` | timeout phrase in output | retry |
 | `agent_test_failure` | "test failed", "pytest" in output | retry |
 | `agent_refusal` | "i cannot", "i will not" | pause for human |
 | `agent_confused` | "i'm not sure", "i don't understand" | retry |
-| `infrastructure_failure` | `CLIConnectionError` | pause for human |
-| `budget_exhausted` | `ResultMessage.is_error=True` | pause session |
-| `api_rate_limit` | "rate_limit_error" in message | pause session |
-| `task_failure` / `unknown` | `ProcessError`, other exceptions | retry |
+| `effort_unsupported` | `--effort` hard-reject in stderr | clamp effort to `max` |
+| `infrastructure_failure` | no `claude` found, or it could not be started | pause for human |
+| `task_failure` / `unknown` | any other failure / an unexpected exception | retry |
 
 There is no model escalation on retry — the ladder was removed with model selection (→ ADR-0032). A retry-classified failure re-dispatches with accumulated learnings; when attempts run out the loop pauses for a human.
 
-**Where `query()` is called:**
-
-- `cortex_command/pipeline/dispatch.py` — main implementation dispatch
-- `cortex_command/pipeline/conflict.py` — repair agent dispatch for merge conflicts (up to two attempts)
+**Where `claude` is spawned:** `dispatch_task` in `cortex_command/pipeline/dispatch.py` (every pipeline agent, including the merge-conflict repair agent in `conflict.py`, goes through it) and the gate-brief sub-dispatch in `cortex_command/discovery.py`.
 
 ---
 
@@ -151,14 +142,14 @@ The dated benchmark evidence that originally motivated these conclusions is pres
 
 ## Worktree Isolation
 
-Both paths use worktree isolation for parallel execution. The SDK's `isolation: "worktree"` parameter triggers a `WorktreeCreate` hook that provisions the worktree and branch.
+Both paths use worktree isolation for parallel execution. The `Agent` tool's `isolation: "worktree"` parameter triggers a `WorktreeCreate` hook that provisions the worktree and branch.
 
 **`claude/hooks/cortex-worktree-create.sh`** (registered on `WorktreeCreate` event):
 - Receives `{"cwd": "...", "name": "...", "session_id": "..."}` on stdin
 - Shells out to `cortex-worktree-resolve "$NAME"` (the single resolver chokepoint) to compute the worktree path — `<repo>/.claude/worktrees/$NAME` for same-repo dispatch — then creates it as a git worktree
 - Creates branch `worktree/$NAME` from HEAD
 - Symlinks `.venv` into the worktree for Python tooling
-- Writes absolute worktree path to stdout (required by SDK)
+- Writes absolute worktree path to stdout (required by Claude Code)
 
 **`claude/hooks/cortex-worktree-remove.sh`** (registered on `WorktreeRemove` event):
 - Cleans up the worktree directory
@@ -200,7 +191,7 @@ From `~/.claude/settings.json` (user-global; the project-local `claude/settings.
 
 Note: **recovery attempt counts are preserved across restarts.** A feature that exhausted its retry budget before the interrupt begins the next session with no remaining attempts and will be paused immediately after a single dispatch. If this is unexpected, reset `retries` manually in `overnight-state.json` before relaunching.
 
-The SDK's `resume: session_id` parameter is a different capability — it restores an agent's in-memory conversation context, which could reduce token waste if an agent was far into a complex task when interrupted. The project does not currently use it; `interrupt.py`'s state-machine reset is the baseline recovery mechanism.
+Claude Code session resume (`claude --resume <session_id>`) is a different capability — it restores an agent's in-memory conversation context, which could reduce token waste if an agent was far into a complex task when interrupted. The project does not currently use it; `interrupt.py`'s state-machine reset is the baseline recovery mechanism.
 
 ---
 
@@ -210,9 +201,9 @@ The SDK's `resume: session_id` parameter is a different capability — it restor
 
 **Python orchestration layer over Agent Teams.** The `cortex_command/pipeline/` and `cortex_command/overnight/` modules reinvent some of what Agent Teams provides (lead + worker pattern, parallel dispatch). The Python layer exists because it provides controls the Teams API doesn't expose: the 2D model selection matrix, per-tier budget limits, structured error classification, and repair agent escalation. Agent Teams is also still experimental. This trade-off should be revisited when Teams reaches stable and exposes equivalent control surfaces.
 
-**`bypassPermissions` with `Bash` access.** Overnight agents run with `permission_mode: "bypassPermissions"` and `Bash` in the allowed tool list. This means an overnight agent can execute arbitrary shell commands in its worktree without prompts. The asymmetry between Bash subprocesses and SDK in-process tool calls runs the OPPOSITE direction from what one might intuit: per Anthropic [#26616](https://github.com/anthropics/claude-code/issues/26616) and the official sandboxing docs at https://code.claude.com/docs/en/sandboxing, the sandbox CONSTRAINS Bash subprocess writes via OS-kernel enforcement (Seatbelt on macOS), while Write/Edit tools run in-process in the SDK and bypass the sandbox entirely — they are constrained only by the permission system. This is a deliberate trade-off for autonomous execution — prompts in an unattended session would stall the runner. Operators should be aware that agents operating on real codebases with `bypassPermissions + Bash` have broad execution access for in-process tool calls. Mitigation: agents run in isolated worktrees, not on the main branch directly; `bypassPermissions` is scoped to the Python pipeline path only (interactive skills inherit the parent session's permission model); per-spawn sandbox enforcement applies an OS-kernel deny-set to Bash-routed writes against critical git-state paths. See [`docs/overnight-operations.md` — Per-spawn sandbox enforcement](../overnight-operations.md#per-spawn-sandbox-enforcement) for the orchestrator deny-set, dispatch allow-set, and `CORTEX_SANDBOX_SOFT_FAIL` kill-switch.
+**`bypassPermissions` with `Bash` access.** Overnight agents run with `permission_mode: "bypassPermissions"` and `Bash` in the allowed tool list. This means an overnight agent can execute arbitrary shell commands in its worktree without prompts. The asymmetry between Bash subprocesses and in-process tool calls runs the OPPOSITE direction from what one might intuit: per Anthropic [#26616](https://github.com/anthropics/claude-code/issues/26616) and the official sandboxing docs at https://code.claude.com/docs/en/sandboxing, the sandbox CONSTRAINS Bash subprocess writes via OS-kernel enforcement (Seatbelt on macOS), while Write/Edit tools run in-process in the `claude` process and bypass the sandbox entirely — they are constrained only by the permission system. This is a deliberate trade-off for autonomous execution — prompts in an unattended session would stall the runner. Operators should be aware that agents operating on real codebases with `bypassPermissions + Bash` have broad execution access for in-process tool calls. Mitigation: agents run in isolated worktrees, not on the main branch directly; `bypassPermissions` is scoped to the Python pipeline path only (interactive skills inherit the parent session's permission model); per-spawn sandbox enforcement applies an OS-kernel deny-set to Bash-routed writes against critical git-state paths. See [`docs/overnight-operations.md` — Per-spawn sandbox enforcement](../overnight-operations.md#per-spawn-sandbox-enforcement) for the orchestrator deny-set, dispatch allow-set, and `CORTEX_SANDBOX_SOFT_FAIL` kill-switch.
 
-**`interrupt.py` over SDK session resumption.** The state-machine recovery on restart (resetting stuck features to pending) was purpose-built for the overnight use case and handles correctness without requiring session ID tracking. SDK resumption is a future optimization, not a correctness gap.
+**`interrupt.py` over session resumption.** The state-machine recovery on restart (resetting stuck features to pending) was purpose-built for the overnight use case and handles correctness without requiring session ID tracking. Session resumption is a future optimization, not a correctness gap.
 
 **`cortex overnight schedule` (launchd LaunchAgent) + detached Python fork over CronCreate.** The current scheduling mechanism uses macOS launchd LaunchAgents (see `cortex overnight schedule`) to fire `cortex overnight start` at a target time. At launch, `_spawn_runner_async` in `cortex_command/overnight/cli_handler.py` forks a detached Python process that operates without a controlling terminal. Output and state are surfaced via `cortex overnight status` and `cortex overnight logs <session-id>` rather than terminal attachment. CronCreate's process model (whether it produces a persistent, attachable session) is untested for overnight use.
 

@@ -75,7 +75,7 @@ uv tool install "cortex-command[all] @ git+https://github.com/charleshall888/cor
 
 This installs the CLI as a non-editable `uv tool` directly from the tagged git URL — no clone is required. The `cortex` binary lands on your `PATH` (run `uv tool update-shell` once if it does not). To pin to a specific tag, replace `$LATEST_TAG` with the tag literal (for example, `v1.0.2`). If you do not have `uv` yet, the `install.sh` bootstrap installs `uv` first and runs the same resolve-then-install command:
 
-> **Optional-dependency extras.** The base package is a lean CLI (just `pyyaml` + `psutil`); the heavier stacks are opt-in. `[all]` (used above and by the auto-installer) pulls everything. For a subset, use `[dashboard]` (the `cortex dashboard` web app) or `[overnight]` (the `cortex overnight` runner + pipeline dispatch, which pulls the Claude Agent SDK). A bare `uv tool install git+…@<tag>` with **no** extra installs only the base CLI — `cortex dashboard`/`cortex overnight` will then print an install hint rather than run.
+> **Extras.** The base install includes everything — the dashboard and the overnight runner. `[all]`, `[dashboard]`, and `[overnight]` are empty names kept so existing install commands keep working; with or without one, the install is the same. Overnight dispatch runs your own `claude` CLI, so Claude Code must be installed.
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/charleshall888/cortex-command/main/install.sh | sh
@@ -199,7 +199,7 @@ This path also enables `cortex-count-tokens` and `cortex-audit-doc`, which call 
 
 The overnight runner reads this file automatically when no `apiKeyHelper` is configured.
 
-> **Note:** `CLAUDE_CODE_OAUTH_TOKEN` is recognized by Claude Code CLI (`claude -p`, Agent SDK) but **not** by the Anthropic Python SDK. Standalone utilities like `cortex-count-tokens` and `cortex-audit-doc` require an API key (Option A).
+> **Note:** `CLAUDE_CODE_OAUTH_TOKEN` is recognized by Claude Code CLI (`claude -p`) but **not** by the Anthropic Python SDK. Standalone utilities like `cortex-count-tokens` and `cortex-audit-doc` require an API key (Option A).
 
 **Using both** — set `apiKeyHelper` in the work repo's `.claude/settings.local.json` and store the OAuth token at `~/.claude/personal-oauth-token`. The runner uses `apiKeyHelper` when present (work) and falls back to the OAuth token file when not (personal). See [docs/overnight-operations.md](overnight-operations.md#auth-resolution-apikeyhelper-and-env-var-fallback-order) for the full precedence chain.
 

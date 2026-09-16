@@ -12,7 +12,7 @@ The multi-agent area covers how the system spawns, isolates, and coordinates mul
 
 ### Agent Spawning
 
-- **Description**: Individual agents are spawned via the Claude Agent SDK (`claude_agent_sdk.query()`) with per-dispatch configuration controlling model, turn limit, budget, and tool access.
+- **Description**: Individual agents are spawned as the operator's `claude -p --output-format stream-json --verbose`, prompt on stdin, via `cortex_command/claude_stream.py`, with per-dispatch flags controlling turn limit, budget, effort, and tool access.
 - **Inputs**: Task description, complexity tier, criticality level, worktree path, feature context
 - **Outputs**: Agent execution result (exit report), stderr lines (capped at 100), cost accumulation
 - **Acceptance criteria**:
@@ -79,7 +79,7 @@ The multi-agent area covers how the system spawns, isolates, and coordinates mul
 
 ## Dependencies
 
-- Claude Agent SDK (`claude_agent_sdk.query()`, `ClaudeAgentOptions`)
+- The operator's `claude` CLI (Claude Code), resolved by `cortex_command/cli_resolver.py`
 - git (worktree management: `git worktree add`, `git worktree remove`, `git worktree prune`)
 - `lsof` (stale lock detection in worktree cleanup)
 - `ANTHROPIC_API_KEY` environment variable (forwarded to each agent)

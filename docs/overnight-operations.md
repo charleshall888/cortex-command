@@ -115,7 +115,7 @@ Forward-only phase transitions hold throughout: `planning → executing → comp
 
 ### Per-Task Agent Capabilities (allowed_tools)
 
-Every task-level agent dispatched by `cortex_command/pipeline/dispatch.py` is bound to a fixed tool allowlist at the SDK level. The list is passed as `allowed_tools=_ALLOWED_TOOLS` into `ClaudeAgentOptions` — enforcement is by omission: `Agent`, `Task`, `AskUserQuestion`, `WebFetch`, and `WebSearch` are simply absent, so the subprocess has no capability to invoke them. There is no separate deny list.
+Every task-level agent dispatched by `cortex_command/pipeline/dispatch.py` is bound to a fixed tool allowlist on the dispatched `claude` process. The list is passed as `--allowedTools` (from `_ALLOWED_TOOLS`) — enforcement is by omission: `Agent`, `Task`, `AskUserQuestion`, `WebFetch`, and `WebSearch` are simply absent, so the subprocess has no capability to invoke them. There is no separate deny list.
 
 ```python
 _ALLOWED_TOOLS = ["Read", "Write", "Edit", "Bash", "Glob", "Grep"]
@@ -125,10 +125,10 @@ Source of truth: `cortex_command/pipeline/dispatch.py` (`_ALLOWED_TOOLS`). A pyt
 
 Two corollaries of enforce-by-omission:
 
-- **No peer-agent spawning.** `Agent` and `Task` are withheld so dispatched workers cannot fan out to child agents; the orchestrator owns parallelism and agents never spawn peer agents. `cortex_command/overnight/prompts/repair-agent.md` reinforces this in prose, but the SDK-level bound is the load-bearing constraint.
+- **No peer-agent spawning.** `Agent` and `Task` are withheld so dispatched workers cannot fan out to child agents; the orchestrator owns parallelism and agents never spawn peer agents. `cortex_command/overnight/prompts/repair-agent.md` reinforces this in prose, but the process-level bound is the load-bearing constraint.
 - **No network I/O from tasks.** `WebFetch` and `WebSearch` are withheld. Anything a task needs from the network must be fetched by the orchestrator and written into the worktree before dispatch.
 
-`dispatch.py` also clears `CLAUDECODE` from the subprocess environment before launching the agent, so the SDK does not trip the nested-session guard when overnight is itself launched from a Claude Code session.
+`dispatch.py` also clears `CLAUDECODE` from the subprocess environment before launching the agent, so the dispatched `claude` does not trip the nested-session guard when overnight is itself launched from a Claude Code session.
 
 See [Security and Trust Boundaries](#security-and-trust-boundaries) for how `_ALLOWED_TOOLS` relates to `--dangerously-skip-permissions` (they are orthogonal).
 
@@ -362,7 +362,7 @@ The [Test Gate and integration_health](#test-gate-and-integration_health) subsec
 
 ### Review gating (tier × criticality)
 
-cortex selects no model for any dispatch (→ [ADR-0032](../cortex/adr/0032-cortex-selects-no-model.md)); what tier and criticality still drive is whether the review phase runs and how many repair attempts a failure gets. `ClaudeAgentOptions` plumbing lives in [sdk.md](internals/sdk.md).
+cortex selects no model for any dispatch (→ [ADR-0032](../cortex/adr/0032-cortex-selects-no-model.md)); what tier and criticality still drive is whether the review phase runs and how many repair attempts a failure gets. Dispatch flag plumbing lives in [sdk.md](internals/sdk.md).
 
 | Tier | Criticality | Review required? | Repair attempts |
 |------|-------------|------------------|-----------------|
@@ -378,7 +378,7 @@ The `simple` tier is absent from the table by construction, not by omission: `si
 
 The runner has **two distinct repair caps** with different numbers. They are intentionally *not unified* — the codepaths, artifacts, and recovery semantics differ enough that a single number would hide the divergence.
 
-- **Merge-conflict repair: 2 attempts, and only on an agent quality failure.** One attempt, then one retry if the agent left markers or wrote a deferral question, then give up and defer. An SDK exception or a test failure does *not* buy the second attempt. The second slot used to be spent climbing sonnet → opus rather than retrying at the same tier; with model selection gone (→ ADR-0032) it is a plain second attempt on the same git-index snapshot, so the historical caveat applies — a repeat attempt on an unchanged snapshot is a weaker bet than a test-failure retry. Codepath: `cortex_command/pipeline/conflict.py` and `cortex_command/pipeline/merge_recovery.py`.
+- **Merge-conflict repair: 2 attempts, and only on an agent quality failure.** One attempt, then one retry if the agent left markers or wrote a deferral question, then give up and defer. A failed dispatch or a test failure does *not* buy the second attempt. The second slot used to be spent climbing sonnet → opus rather than retrying at the same tier; with model selection gone (→ ADR-0032) it is a plain second attempt on the same git-index snapshot, so the historical caveat applies — a repeat attempt on an unchanged snapshot is a weaker bet than a test-failure retry. Codepath: `cortex_command/pipeline/conflict.py` and `cortex_command/pipeline/merge_recovery.py`.
 - **Test-failure repair: max 2 attempts.** Two full repair cycles for the integration test gate. Rationale: test failures often expose a different error on the second attempt (the first fix unblocks the next assertion), so a retry has meaningful information gain that a merge-conflict retry does not. Codepath: `cortex_command/overnight/integration_recovery.py`.
 
 Do not describe these as "the repair cap" in prose — collapsing them to one number misleads readers at 2am when observed behavior does not match.
@@ -415,7 +415,7 @@ Bucket key shape after Task 6 is `"<model>,<tier>,<effort>"` (e.g. `"opus,comple
 
 **Threshold that triggers human investigation: > 2× per-bucket mean cost over 2–3 overnight rounds.** A single round can spike on outliers (one truncated dispatch, one unusually deep reasoning chain); two-to-three consecutive rounds at >2× baseline mean for the same `(model, tier, skill, effort)` bucket is the signal that the flip is paying more than the quality boost is worth on this workload.
 
-**Rollback path.** Revert the matrix flip — the SDK upgrade can stay in place. Concretely: revert the commits that changed cell values in `_EFFORT_MATRIX` and the skill-override gate (the Task 2/3/4 commits in this implementation plan). The SDK pin in `pyproject.toml`, the `stop_reason` plumbing on `dispatch_complete` / `dispatch_truncation` events, and the per-effort `metrics.py` bucketing can all stay — they are observability infrastructure that has value independent of the effort policy and is what enabled the rollback decision in the first place.
+**Rollback path.** Revert the matrix flip. Concretely: revert the commits that changed cell values in `_EFFORT_MATRIX` and the skill-override gate (the Task 2/3/4 commits in this implementation plan). The `stop_reason` plumbing on `dispatch_complete` / `dispatch_truncation` events, and the per-effort `metrics.py` bucketing can all stay — they are observability infrastructure that has value independent of the effort policy and is what enabled the rollback decision in the first place.
 
 ### overnight-strategy.json contents and mutators
 
@@ -623,7 +623,7 @@ Debugging note: hooks exit 0 unconditionally and **have no log mechanism** — p
 Overnight runs autonomously against a live working tree on a developer workstation. The trust boundaries below cover overnight execution itself; the dashboard's boundaries are owned by [`docs/dashboard.md`](dashboard.md) and are not restated here.
 
 - **`--dangerously-skip-permissions`.** Overnight launches `claude` subprocesses with this flag, which disables the permission-prompt layer entirely. Threat model: any tool the subprocess is allowed to invoke runs without confirmation against the local filesystem and shell — sandbox configuration (the filesystem/network allowlist applied to the subprocess) becomes the critical security surface for autonomous execution.
-- **`_ALLOWED_TOOLS` — SDK-level tool bound.** Task agents dispatched by `cortex_command/pipeline/dispatch.py` are bound to `_ALLOWED_TOOLS` at the SDK layer, orthogonal to `--dangerously-skip-permissions`. Threat model: a compromised or confused task agent cannot reach `WebFetch`, `WebSearch`, `Agent`, `Task`, or `AskUserQuestion` — they are not loaded, not merely denied — so it cannot spawn peer agents or exfiltrate via the web even under skipped permissions.
+- **`_ALLOWED_TOOLS` — process-level tool bound.** Task agents dispatched by `cortex_command/pipeline/dispatch.py` are bound to `_ALLOWED_TOOLS` via `--allowedTools` on the dispatched `claude` process, orthogonal to `--dangerously-skip-permissions`. Threat model: a compromised or confused task agent cannot reach `WebFetch`, `WebSearch`, `Agent`, `Task`, or `AskUserQuestion` — they are not loaded, not merely denied — so it cannot spawn peer agents or exfiltrate via the web even under skipped permissions.
 - **Dashboard bind address and threat model.** Owned by [`docs/dashboard.md`](dashboard.md) — see its Known Limitations for the bind default, the authentication posture, and the exposure the opt-in carries.
 - **macOS keychain prompt as a session-blocking failure mode.** If authentication resolution (see [Internal APIs — Auth Resolution](#auth-resolution-apikeyhelper-and-env-var-fallback-order)) falls through to keychain-backed credentials, the first subprocess spawn may trigger a macOS keychain-access dialog. Threat model: the "runs while you sleep" premise breaks silently — the prompt blocks subprocess spawn until acknowledged, the round stalls, and no notification fires because the failure is pre-notification. Resolve by setting `ANTHROPIC_API_KEY` or configuring `apiKeyHelper` before the session starts.
 
@@ -643,7 +643,7 @@ Overnight spawns two distinct kinds of `claude` subprocess: the per-round orches
 
 - **`CORTEX_SANDBOX_SOFT_FAIL` kill-switch.** Set the env var `CORTEX_SANDBOX_SOFT_FAIL=1` to downgrade `sandbox.failIfUnavailable` from `true` to `false` for new spawns within the session. This is the user-facing recovery path for Anthropic open sandbox-runtime regressions [#53085](https://github.com/anthropics/claude-code/issues/53085) and [#53683](https://github.com/anthropics/claude-code/issues/53683). The orchestrator's own per-spawn settings JSON is built once at orchestrator-spawn and is not re-read mid-process; the env var is re-read at each per-feature dispatch's settings-builder invocation, so toggling between dispatches affects only subsequent spawns. The morning report unconditionally surfaces a `CORTEX_SANDBOX_SOFT_FAIL=1 was active for this session` header line whenever the env var was truthy at any builder invocation during the session.
 
-- **Threat-model boundary (Bash-only).** Sandbox enforcement covers Bash-tool subprocess writes via OS-kernel rules. It does NOT cover Write-tool or Edit-tool calls (which run in-process in the SDK and bypass the sandbox per Anthropic [#26616](https://github.com/anthropics/claude-code/issues/26616) and the official sandboxing docs at https://code.claude.com/docs/en/sandboxing) nor MCP-server-routed subprocess writes (MCP servers run unsandboxed at hook trust level). Telemetry on MCP writers is deferred to epic #162's child #164. The Write-then-Bash-execute composite vector (drop a script via Write, then `bash script.sh`) is coincidentally covered for git-state mutations because the deny-set targets the final filesystem write regardless of which tool initiated it.
+- **Threat-model boundary (Bash-only).** Sandbox enforcement covers Bash-tool subprocess writes via OS-kernel rules. It does NOT cover Write-tool or Edit-tool calls (which run in-process in the `claude` process and bypass the sandbox per Anthropic [#26616](https://github.com/anthropics/claude-code/issues/26616) and the official sandboxing docs at https://code.claude.com/docs/en/sandboxing) nor MCP-server-routed subprocess writes (MCP servers run unsandboxed at hook trust level). Telemetry on MCP writers is deferred to epic #162's child #164. The Write-then-Bash-execute composite vector (drop a script via Write, then `bash script.sh`) is coincidentally covered for git-state mutations because the deny-set targets the final filesystem write regardless of which tool initiated it.
 
 - **Operational story for sandbox-denial command failures.** When a Bash command attempts a write to a deny-set path, the kernel returns EPERM and the command exits non-zero with `Operation not permitted` in stderr. The orchestrator's tool-failure tracker records the failure under `${TMPDIR:-/tmp}/claude-tool-failures-${SESSION_KEY}/` (migrated from `/tmp/` so the tracker writes are themselves on the allow-set), and the morning report surfaces the failure count by tool. If denial is unexpected (e.g., a legitimate write to a path that should be allowed), confirm whether the path is on the documented allow-set in `docs/internals/pipeline.md` "Allowed write paths" and either migrate the writer to a covered location or open a ticket to extend the allow-set with a one-sentence rationale entry.
 
@@ -738,22 +738,22 @@ The module resolves Anthropic authentication in a strict 4-step fallback order b
 
 1. **`ANTHROPIC_API_KEY` already in the environment** — use it as-is and stop. This is the common CI/dev path (vector: `env_preexisting`).
 2. **`apiKeyHelper` configured in `~/.claude/settings.json` or `~/.claude/settings.local.json`** — execute the helper command and export its stdout as `ANTHROPIC_API_KEY`. This is the recommended path for machines that keep the key out of shell profiles (vector: `api_key_helper`).
-3. **No helper AND no `CLAUDE_CODE_OAUTH_TOKEN`** — try `~/.claude/personal-oauth-token`; if non-empty, export its contents as `CLAUDE_CODE_OAUTH_TOKEN`. This covers OAuth-style authentication for `claude -p` / SDK usage (vector: `oauth_file`).
+3. **No helper AND no `CLAUDE_CODE_OAUTH_TOKEN`** — try `~/.claude/personal-oauth-token`; if non-empty, export its contents as `CLAUDE_CODE_OAUTH_TOKEN`. This covers OAuth-style authentication for `claude -p` usage (vector: `oauth_file`).
 4. **Fall through to keychain-backed auth** — print a warning and proceed; the first subprocess spawn may block on a macOS keychain-access prompt (see [Security and Trust Boundaries](#security-and-trust-boundaries)). Vector: `none`.
 
-**Files**: `cortex_command/overnight/auth.py` (shared resolver — source of truth), `cortex_command/overnight/runner.py` (Python delegation), `cortex_command/pipeline/dispatch.py` (re-exports both `ANTHROPIC_API_KEY` and `CLAUDE_CODE_OAUTH_TOKEN` into SDK subprocesses).
+**Files**: `cortex_command/overnight/auth.py` (shared resolver — source of truth), `cortex_command/overnight/runner.py` (Python delegation), `cortex_command/pipeline/dispatch.py` (re-exports both `ANTHROPIC_API_KEY` and `CLAUDE_CODE_OAUTH_TOKEN` into the dispatched `claude` process).
 
 #### Overnight entry point: three-exit-code contract
 
 `cortex_command/overnight/runner.py` invokes the helper (the `cortex-auth` console script) in `--shell` mode and branches on the exit code:
 
 - **exit code 0** — vector resolved. Helper prints `export VAR=VALUE` to stdout; the runner parses and applies it to the subprocess environment. Warnings (if any) went to stderr.
-- **exit code 1** — no vector resolved. Helper printed a warning to stderr. The runner continues; the first SDK spawn may prompt for keychain access.
+- **exit code 1** — no vector resolved. Helper printed a warning to stderr. The runner continues; the first `claude` spawn may prompt for keychain access.
 - **exit code 2** — helper-internal failure (malformed `~/.claude/settings.json`, stdlib import regression, other deterministic defect inside the resolver itself). The runner logs `Error: auth helper internal failure` and exits immediately with status 2. User-environment issues (helper binary missing, helper timeout, helper non-zero exit) are NOT exit code 2 — those fall through to the next resolution step.
 
 #### Propagation
 
-`dispatch.py` forwards both variables into SDK subprocesses. Note the asymmetry — `CLAUDE_CODE_OAUTH_TOKEN` works only for `claude -p` and the SDK; standalone tools (including most scripts invoked from within a task) still need `ANTHROPIC_API_KEY`. If a worker subprocess reports auth errors but the orchestrator is fine, inspect which variable is reaching it.
+`dispatch.py` forwards both variables into the dispatched `claude` process. Note the asymmetry — `CLAUDE_CODE_OAUTH_TOKEN` works only for `claude -p`; standalone tools (including most scripts invoked from within a task) still need `ANTHROPIC_API_KEY`. If a worker subprocess reports auth errors but the orchestrator is fine, inspect which variable is reaching it.
 
 ### Lifecycle-archive recovery procedure
 

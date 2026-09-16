@@ -57,8 +57,8 @@ main() {
 	command -v uv >/dev/null 2>&1 || install_uv
 	log "resolved repo URL: $resolved_url"
 	log "install tag: $tag"
-	# `[all]` extra pulls the dashboard + overnight (Claude Agent SDK) stacks;
-	# a bare install without it would omit the runner's SDK. PEP 508 direct ref.
+	# `[all]` is an empty extra kept for compatibility; the base install carries
+	# the dashboard and overnight runner. PEP 508 direct ref.
 	run env UV_PYTHON_DOWNLOADS=automatic uv tool install "cortex-command[all] @ git+${resolved_url}@${tag}" --force
 	log "cortex CLI installed."
 	log "plugin auto-registration is not yet automated -- see docs/setup.md for manual steps."
