@@ -1,100 +1,107 @@
-# Review: remove-claude-agent-sdk-dependency (cycle 1)
+# Review: remove-claude-agent-sdk-dependency (cycle 2)
 
-Scope: `git diff 0112e5d8..HEAD` (22 commits, HEAD 657cb824). Test baseline was supplied by the orchestrator: 6 failures, all present before this change, and I did not re-run the suite. I also ran these checks myself:
+Scope: the rework range `657cb824..HEAD` (5 commits, HEAD 0bce90a6), plus the files the checklist points to. The cycle-1 review is archived at `review-cycle-1.md`.
 
-- The R16–R21 acceptance greps.
-- A wheel build plus `uv pip compile` for the bare, `[all]`, `[dashboard]` and `[overnight]` installs (R17).
-- `uv pip compile` against the latest tag and `@v5.2.0` (R26).
-- `sandbox_preflight` (R24).
-- A fresh no-extras venv that imports every non-test `cortex_command` module.
-- Seven targeted mutation checks in a scratch worktree, which has since been removed.
+Test baseline came from the orchestrator and I did not re-run it. At 0bce90a6, `just test` passed 7 of 8 recipes. The `tests` recipe had 6 failures, 2605 passes and 19 skips. The 6 failures are the same ones already present at 562179bb: 4 in `test_cli_background_install_hook.py` plus the two `.venv`-symlink tests. I confirmed this list in the log.
 
-## Stage 1: Spec compliance
+I also ran these targeted checks:
+- `classify_failure` called directly on three inputs.
+- An import of `integration_recovery` in the repo venv.
+- `sandbox_preflight`, which exited 0.
+- Greps for leftover SDK wording and extras wording outside the history trees.
+
+## Prior-Cycle Checklist
+
+1. **Both `install_core.py` rationale docstrings made a false extras claim — resolved.**
+   - Both docstrings now say `[all]` is declared empty under ADR-0039, and that the extra name is kept so the version-locked argv stays byte-identical. This matches the ADR's Decision.
+   - The diff touches only the docstring lines. The argv return values are unchanged, which keeps R23.
+   - None of the three R23 tests is among the baseline failures.
+
+2. **Other surfaces still described the SDK as the live mechanism — resolved for all four named sites.**
+   - `sandbox_settings.py`: the module docstring now names `--settings <tempfile>` for both spawn sites, with dispatch going through `claude_stream.build_argv`.
+   - `runner.py:110`: now says `--max-budget-usd` on the dispatched `claude`.
+   - `dispatch.py` (the resolver comment, now at line 826): now says "PATH, then known install locations". This matches `cli_resolver.py`, which no longer compares versions.
+   - `integration_recovery.py`: the `try/except ImportError` guard, the `_DISPATCH_AVAILABLE` flag and the "(SDK not installed)" string are all gone, and `dispatch_task` is now imported directly. The module imports cleanly, and `INTEGRATION_RECOVERY_FAILED` and `sys` are still used elsewhere in the file. The test's `patch.object(..., "_DISPATCH_AVAILABLE", True)` wrapper was dropped. The test still asserts that `dispatch_task` is invoked, so it still checks what it checked before.
+   - A sibling comment with the same stale claim remains in `runner.py:1589-1590`, and a doc page repeats the extras claim from item 1. Both are listed under Out-of-Scope Findings. Neither is one of the sites cycle 1 named.
+
+3. **R18: stale dashboard app and extras wording — resolved.**
+   - `docs/dashboard.md:23` now reads "The first `cortex dashboard` run adds **Cortex Dashboard** to `~/Applications`". That is accurate:
+     - The only non-test caller of `ensure_app()` is the dashboard verb, at `cli.py:543`.
+     - `macapp.py:19` says the same.
+     - ADR-0039's Trade-off says the app moved behind the first `cortex dashboard` run.
+   - The `projects.py` docstring now attributes the stdlib-only constraint to `cortex init` importing the module without the dashboard's dependencies. It no longer mentions a "dashboard extra".
+
+4. **R25: no recorded `--run-slow` pass — resolved.**
+   - `live-verification.md` now has an "Opt-in live test (spec R25)" section, dated 2026-09-16, against `claude` 2.1.273 on an authenticated machine.
+   - It records two runs: `1 skipped` without the flag, and `1 passed in 4.14s` with it.
+   - That covers both halves of R25's acceptance.
+
+5. **Recommendation: the corpus rate-limit phrase check ran before the keyword checks — resolved.**
+   - The phrase scan moved out of step 4. It now runs after the timeout, test, refusal and confused scans, and before the `--effort` hard-reject check.
+   - Step 4 keeps only the structured signals: `api_error_status == 429` and a non-`allowed*` rate-limit frame.
+   - I checked the results directly:
+     - `"I cannot proceed, rate limit concerns."` with no result frame → `agent_refusal`. At 657cb824 this input returned `api_rate_limit`, because the phrase check ran first. So the new test `test_rate_limit_phrase_in_assistant_text_yields_to_earlier_keywords` is not vacuous.
+     - `"429 Too Many Requests"` with no other keyword → `api_rate_limit`. The phrase fallback still works.
+     - A structured 429 on the result frame, even with a refusal keyword → `api_rate_limit`.
+   - The docstring's step list matches the new order.
+   - The phrase-only path is still covered by `tests/test_dispatch.py:78` and `:95`, and both pass in the baseline.
+
+## Requirement ratings
 
 | Req | Rating | Evidence |
 |---|---|---|
-| R1 one spawn seam | PASS | `claude_agent_sdk` count is 0 in `dispatch.py` and `discovery.py`. Both files import `claude_stream.run_claude`. The only `query(` hits are `_run_brief_query`, which is not an SDK call. |
-| R2 options reach CLI | PASS | `build_argv` emits every flag in the list. `test_argv_carries_every_dispatch_option` checks the flags against `TIER_CONFIG`. I checked the argv against the SDK 0.2.153 `_build_command`: no `--setting-sources` was ever sent by default, so settings, hooks and CLAUDE.md loading behave the same as before. |
-| R3 prompt on stdin | PASS | `_write_prompt` runs as a separate task and closes stdin. There are two tests: the >128 KiB byte-identical test and the no-positional-prompt test. |
-| R4 ≥1 MiB line cap | PASS | `STREAM_LIMIT` is 16 MiB, and an over-limit line is discarded with a warning. Mutation to 64 KiB made the 256 KiB test fail. |
-| R5 concurrent stderr drain | PASS | The drain task runs for the life of the process. Redaction and the byte/line caps in `_on_stderr` are unchanged. |
-| R6 env = parent − CLAUDECODE + overlay | PASS | `build_env` does this, and an overlay value of `""` is handled. Mutation (removing the empty-`CLAUDECODE` deletion) was caught. |
-| R7 run ends at process exit | PASS | Stdout is read to EOF, then `wait()` runs, and the last `result` frame is kept. Mutation (breaking at the first `result`) was caught. |
-| R8 unknown/non-JSON skipped | PASS | `_parse_frame` handles these cases, and a test covers them. |
-| R9 only assistant text in corpus | PASS | Other frame types are ignored and rate-limit data is read only from structured fields. Mutation (appending non-assistant frames to `output_parts`) was caught. |
-| R10 taxonomy preserved | PASS | `test_dispatch_spawn.py` drives every `ERROR_RECOVERY` key through `retry.retry_task` and checks the action taken. A set-equality test pins coverage. `effort_unsupported` checks that `--effort max` appears on the second argv. |
-| R11 unspawnable → infrastructure_failure | PASS | Both the `cli is None` path and `ClaudeSpawnError` return `infrastructure_failure`. The detail names the path and says "install Claude Code". The test uses the real `run_claude` with a nonexistent path. |
-| R12 API fault named and halts | PASS | `api_unavailable` was added to `ERROR_RECOVERY` and `_SESSION_HALT_ERROR_TYPES`. `runner.py` now imports that tuple instead of hardcoding the list, and there are new notify and report-banner branches. Tests (a), (b) and (c) exist. Test (c) runs dispatch → retry → `run_batch` → `state.paused_reason`, but proves the round-loop break by an AST check on `runner.run`, not by executing the loop. I accept that. |
-| R13 turn limit | PASS | `_is_turn_limit_stop` and a `subtype == "error_max_turns"` check, with a test. |
-| R14 diagnostics on every failure | PASS | Every failure return goes through `_fail`. Mutation (dropping diagnostics on the result-frame path) was caught. |
-| R15 live verification | PASS | `live-verification.md` records the kernel deny, the byte-identical target, the success result, and a budget run whose subtype is `error_max_budget_usd`. |
-| R16 dependency gone | PASS | `claude-agent-sdk` count is 0 in both `pyproject.toml` and `uv.lock`. |
-| R17 dashboard in base | PASS | Checked by running it. All four compiles resolve fastapi, uvicorn, jinja2, markdown and starlette, and none prints a "does not have an extra" warning. A control with `[bogus]` does print the warning. |
-| R18 dead guards gone, no app at init | PARTIAL | All three greps return 0, and `test_init_creates_no_app.py` fails when the `ensure_app()` call is restored (I checked). But `docs/dashboard.md:23` still says "`cortex init` and `cortex dashboard` add **Cortex Dashboard** to `~/Applications` when the dashboard extra is installed". Both halves of that are now false. `cortex_command/dashboard/projects.py:22-23` also still refers to "a base install that has no dashboard extra". |
-| R19 non-PATH fallbacks kept | PASS | The SDK grep returns 0. `test_non_path_fallback_used_when_not_on_path` fails when the fallback loop is removed (I checked). |
-| R20 no test touches the SDK | PASS | The git grep is empty and `_stubs.py` is deleted. One caveat: the repo `.venv` still has `claude_agent_sdk` 0.2.153 installed, because `uv run` does an inexact sync. So the local suite alone could not prove the code works without the SDK. I checked separately: every non-test module imports cleanly in a fresh venv built from the HEAD wheel with no extras. |
-| R21 SDK surfaces corrected | PARTIAL | Both acceptance greps are empty. However, several surfaces still describe the SDK or its extras as the live mechanism: (1) Both `install_core.py` rationale docstrings, which R21 names, were reworded into a new false claim: `plugins/cortex-core/install_core.py:365-368` and `plugins/cortex-overnight/install_core.py:528-532` still say the dashboard and overnight stacks "live behind optional `pyproject.toml` extras (so a bare install stays lean)" and that a no-extra reinstall "would silently strip" them. Under ADR-0039 the extras are empty. (2) `cortex_command/overnight/sandbox_settings.py:10-11` says dispatch passes settings through `ClaudeAgentOptions(settings=...)`. (3) `cortex_command/overnight/runner.py:110` says "``max_budget_usd`` on ``ClaudeAgentOptions``". (4) `cortex_command/overnight/integration_recovery.py:186-189` is an operator-facing string, "(SDK not installed); cannot dispatch repair agent", behind a `_DISPATCH_AVAILABLE` import guard. The spec's "SDK import guards … REMOVED" says this should be gone. (5) `cortex_command/pipeline/dispatch.py:449-450` says "newer of system-vs-fallback, #313", but the resolver no longer compares versions. |
-| R22 fresh-resolve guard | PASS | The step now runs `pip install . httpx packaging`, keeps the Starlette ≥1.0 assertion and the route smoke test, and has a rewritten comment. The stale sentence count is 0. |
-| R23 install argv unchanged | PASS | The diff touches only docstrings in both `install_core.py` files. The three named tests are not among the 6 baseline failures. |
-| R24 sandbox gate re-pointed | PASS | `claude_stream.py` is watched for `--settings` and `settings`. The dead patterns are gone. `uv run python3 -m cortex_command.sandbox_preflight` exits 0. `preflight.md` `commit_hash` is 840632b5, the parent of the commit that recorded it. |
-| R25 opt-in live test | PARTIAL | The test is collected and skipped without the flag ("opt-in via --run-slow"). No record shows it passing with `--run-slow`: the 579542e4 commit body is empty, and `live-verification.md` covers only Task 9. |
-| R26 scheduled resolve | PASS | Checked by running it. The `schedule:` and `workflow_dispatch:` triggers are present. `uv pip compile` against `@v5.3.0` (the latest tag) exits 0 and against `@v5.2.0` exits 1. The `scheduled resolve` registry entry is present in `project.md`. |
+| R1–R9, R11–R17, R19, R20, R22, R26 | PASS | Carried forward from cycle 1. These ratings hold while `claude_stream.py`, `cli_resolver.py`, `pyproject.toml`/`uv.lock` and the CI workflow are unchanged, and none of them is in the rework range. For R12 in particular, `_SESSION_HALT_ERROR_TYPES` and the runner's halt path are also untouched. |
+| R10 taxonomy preserved | PASS | Re-verified because `classify_failure` changed. Every `ERROR_RECOVERY` key is still reachable, and the `test_dispatch_spawn.py` set-equality and per-key retry tests pass in the baseline. The reorder only moves the phrase-only `api_rate_limit` path to after the keyword scans. |
+| R18 dead guards gone, no app at init | PASS | Re-rated. See checklist item 3. |
+| R21 SDK surfaces corrected | PARTIAL | Re-rated. All five cycle-1 sites are fixed, and both acceptance greps stayed empty (the rework adds no "agent sdk" or "SDK exception" text). Two surfaces of the same kind remain; see Out-of-Scope Findings. |
+| R23 install argv unchanged | PASS | Re-verified because both `install_core.py` files were touched. Only docstring lines changed, and the three named tests pass in the baseline. |
+| R24 sandbox gate re-pointed | PASS | Re-verified because `sandbox_settings.py` (a watched file) was edited. `preflight.md` was re-recorded with `pass: true` at `commit_hash` 43fb88ba, the parent of the commit that edited the watched file. That is the same shape cycle 1 accepted. `uv run python3 -m cortex_command.sandbox_preflight` exits 0 at HEAD. |
+| R25 opt-in live test | PASS | Re-rated. See checklist item 4. |
 
-No requirement failed, so Stage 2 ran.
+## Out-of-Scope Findings
 
-## Stage 2: Code quality
+1. **`cortex_command/overnight/runner.py:1589-1590` still describes the removed resolver and the SDK.** The orchestrator-spawn comment reads:
 
-- **Pattern consistency**: good.
-  - `claude_stream.py` is a stdlib-only leaf, like `cli_resolver.py`.
-  - Frame reads use `.get` throughout.
-  - Cleanup kills the child in steps: terminate, wait 5 s, kill. It does not use `start_new_session`, as the plan specified.
-  - The frame-level double takes the place of the `sys.modules` stub.
-  - `runner.py` now imports `_SESSION_HALT_ERROR_TYPES` instead of repeating the list, so the halt list cannot drift apart again.
-- **Error handling**:
-  - A spawn failure and a missing binary are handled separately.
-  - `CancelledError` is not swallowed, because the `unknown` arm catches `Exception` only.
-  - `discovery._run_brief_query` now raises on a non-zero exit instead of returning an empty brief.
-- **Classifier order widens session halts (recommendation, not a blocker)**:
-  - `classify_failure` now checks the corpus for rate-limit phrases ("rate limit", "too many requests") before the timeout, test, refusal and confused keyword checks. The old `classify_error` checked rate limits last.
-  - The corpus includes assistant text. So a failing feature whose agent mentions rate limiting now pauses the whole session as `api_rate_limit`. Example: a ticket that implements rate-limit handling.
-  - The plan specified this order, but the structured signals (`api_error_status == 429` and the `rate_limit_event` status) already cover real rate limits.
-  - Fix: limit the phrase check to stderr, or move it back after the keyword checks.
-- **Naming and docs consistency**: the `cli_resolver.py` module docstring says the path is "memoized for the process lifetime once found". The code also memoizes `None`, so a runner that starts before `claude` is installed never looks again. The old code behaved the same way, so this is not a regression, but the docstring should say so.
-- **Were the plan's verification steps executed?**
-  - Task 7's mutation check is recorded in the 7fa049f7 commit body.
-  - Task 11's mutation check is not recorded anywhere. I ran it and it was caught.
-  - Task 19's passing run with `--run-slow` is not recorded.
-  - Task 17's fresh-venv smoke test and the python-multipart fix (ccccb4dd) match the orchestrator's note. My fresh no-extras venv resolved python-multipart 0.0.32 and imported every module.
-- **Out-of-plan commit ccccb4dd**: justified. mcp used to pull in python-multipart transitively, and the Docs view's `Form(...)` route needs it. The new pyproject comment gives the reason.
+   ```
+   # #313: spawn the resolved best-available CLI (newer of system-vs-bundled)
+   # so the orchestrator and SDK workers run an identical claude; ...
+   ```
+
+   Both claims are now false:
+   - 5e50c91a dropped the SDK-bundled branch, so there is no system-vs-bundled comparison.
+   - There are no SDK workers.
+
+   This is the same stale claim the rework fixed in `dispatch.py`. R21 requires correcting every surface that describes the SDK as the live mechanism, so R21 stays PARTIAL.
+
+   A related point to consider while editing that comment:
+   - The comment's own `or "claude"` falls back to the bare name.
+   - The `cli_resolver.py` docstring says a `None` makes "the caller fail loudly rather than silently falling back to a bare `"claude"`".
+   - So the comment should at least not contradict the resolver's contract. The behavior predates this lifecycle.
+
+2. **`docs/internals/auto-update.md:88` repeats the false extras claim from checklist item 1.** It says "the `[all]` extra keeps the dashboard + overnight stacks that live behind optional extras". Under ADR-0039 those extras are empty. `docs/setup.md:78` and `CLAUDE.md` already give the corrected wording, so this page now contradicts both.
+
+I found nothing else. The rework introduced no regressions I could see:
+- The `integration_recovery` import is now unconditional, and the module imports without an import cycle.
+- The classifier change narrows session halts and does not widen them.
+- The baseline failures are unchanged.
+
+## Stage 2: Code quality (rework only)
+
+- **Pattern consistency**: the `integration_recovery` change removes a dead branch and does not replace it with anything, in line with deletion bias. The test simplification follows from that.
+- **Error handling**: the classifier order is now structured signals first, then keyword scans, then the phrase fallback. The docstring explains why.
+- **Verification recorded**: the R25 run is recorded, and the preflight re-record states its reason in `preflight.md`'s scope section.
+- **Carried from cycle 1, still open, non-blocking**: the `cli_resolver.py` docstring says the path is "memoized … once found", but the code also memoizes `None`. The rework did not touch this. It was a docstring note in cycle 1, not a checklist item.
 
 ## Requirements Drift
 
-**State**: detected
+**State**: none
 
-**Findings**:
-- The change adds `api_unavailable` as a third session-halting error type. `cortex/requirements/multi-agent.md` "Model Selection Matrix" still lists only `budget_exhausted` or `api_rate_limit` as pausing the entire session (line 64).
-- `cortex/requirements/pipeline.md` "Non-Functional Requirements" (line 148, Graceful degradation) names only budget exhaustion and rate limits as the causes that pause the session. It does not cover an API-wide auth or provider fault.
+**Findings**: None. Cycle 1's two drift lines are now in `cortex/requirements/multi-agent.md:65` and `cortex/requirements/pipeline.md:151`, and they match the implementation. The rework's only behavior change is the classifier reorder. It changes which failures classify as `api_rate_limit`, but the requirements only specify what `api_rate_limit` does (pause the session), not how it is detected.
 
-**Update needed**: cortex/requirements/multi-agent.md, cortex/requirements/pipeline.md
-
-## Suggested Requirements Update
-
-- **File**: cortex/requirements/multi-agent.md
-- **Section**: Model Selection Matrix
-- **Content**:
-  ```
-    - On `api_unavailable` (auth failure, `terminal_reason: "api_error"`, or API status 401/403/5xx on the result frame): pause the entire session (no new dispatches), with the cause named in the notification and the morning-report banner
-  ```
-
-- **File**: cortex/requirements/pipeline.md
-- **Section**: Non-Functional Requirements
-- **Content**:
-  ```
-  - **API-fault halt**: An API-wide fault (expired auth, provider error) classifies as `api_unavailable` and halts the session once via `_SESSION_HALT_ERROR_TYPES`, rather than retrying every feature against a dead API
-  ```
+**Update needed**: None
 
 ## Verdict
 
 ```json
-{"verdict": "CHANGES_REQUESTED", "cycle": 1, "issues": ["R21 PARTIAL: both install_core.py rationale docstrings (plugins/cortex-core/install_core.py:365-368, plugins/cortex-overnight/install_core.py:528-532) were reworded into a new false claim that dashboard/overnight stacks live behind extras and a no-extra reinstall strips them; the extras are empty (ADR-0039)", "R21 PARTIAL: remaining surfaces still describe the SDK as the live mechanism: overnight/sandbox_settings.py:10-11 (ClaudeAgentOptions(settings=...)), overnight/runner.py:110 (max_budget_usd on ClaudeAgentOptions), pipeline/dispatch.py:449-450 (newer of system-vs-fallback), and the operator-facing '(SDK not installed)' string behind the dead _DISPATCH_AVAILABLE guard in overnight/integration_recovery.py:186-189", "R18 PARTIAL: docs/dashboard.md:23 still says cortex init adds the app 'when the dashboard extra is installed' (both halves now false); dashboard/projects.py:22-23 docstring still says 'no dashboard extra'", "R25 PARTIAL: no recorded passing run of tests/test_claude_stream_live.py with --run-slow on an authenticated machine", "Recommendation: classify_failure now checks the corpus for rate-limit phrases before the other keyword checks, so assistant text mentioning 'rate limit' on a failing feature halts the whole session; limit the phrase check to stderr or move it after the keyword checks"], "requirements_drift": "detected"}
+{"verdict": "CHANGES_REQUESTED", "cycle": 2, "issues": ["R21 PARTIAL: cortex_command/overnight/runner.py:1589-1590 orchestrator-spawn comment still says the resolver picks the 'newer of system-vs-bundled' CLI 'so the orchestrator and SDK workers run an identical claude' — both false since 5e50c91a (same stale claim the rework fixed in dispatch.py)", "R21 PARTIAL: docs/internals/auto-update.md:88 still says 'the [all] extra keeps the dashboard + overnight stacks that live behind optional extras' — the same false claim fixed in both install_core.py docstrings; the extras are empty under ADR-0039"], "requirements_drift": "none"}
 ```

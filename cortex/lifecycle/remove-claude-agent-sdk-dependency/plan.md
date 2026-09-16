@@ -37,7 +37,7 @@ A new leaf module, `cortex_command/claude_stream.py`, owns spawning the operator
   - Fake CLI: a Python script driven by env vars (e.g. `FAKE_CLAUDE_FRAMES` path to an NDJSON file to echo, `FAKE_CLAUDE_STDERR_BYTES`, `FAKE_CLAUDE_EXIT`, `FAKE_CLAUDE_ECHO_STDIN_TO` path) — tests point `cli_path` at it via `sys.executable`-prefixed argv or a shebang. Frames recorded in `cortex/lifecycle/sessions/*/orchestrator-round-*.stdout.json` show real field shapes.
   - Required tests: argv contains every flag in R2 order-independently and no positional prompt; a >128 KiB prompt arrives byte-identical on the child's stdin (R3); a single 256 KiB `assistant` line parses (R4); >128 KiB on both stderr and stdout completes (R5); env contains parent `PATH` and `HOME`, lacks `CLAUDECODE`, contains every overlay key (R6); a `system` frame after `result` is yielded and the run ends at exit (R7); unknown type, non-JSON line, and type-less object are skipped without raising (R8); a non-existent `cli_path` raises `ClaudeSpawnError` (R11 spawn half).
 - **Verification**: `uv run pytest tests/test_claude_stream.py -q` — pass if all tests pass and the count collected is ≥ 8; `grep -c "claude_agent_sdk\|cortex_command.pipeline\|cortex_command.overnight" cortex_command/claude_stream.py` = 0.
-- **Status**: [ ] pending
+- **Status**: [x] done (df88b8a2 2026-09-16T16:00:18-04:00)
 
 ### Task 2: Add the frame-level test double
 - **Files**: `cortex_command/tests/_claude_double.py` (new)
@@ -46,7 +46,7 @@ A new leaf module, `cortex_command/claude_stream.py`, owns spawning the operator
 - **Complexity**: simple
 - **Context**: Builders return plain dicts matching real frames: `assistant_frame(text: str | None = None, *, model: str = "claude-test", tool_uses: list[tuple[id, name, input]] = ())` → `{"type": "assistant", "message": {"model": ..., "content": [{"type": "text", "text": ...}, {"type": "tool_use", "id", "name", "input"}]}}`; `tool_result_frame(tool_use_id, is_error=False)` → `{"type": "user", "message": {"content": [{"type": "tool_result", ...}]}}`; `result_frame(*, is_error=False, subtype="success", num_turns=1, total_cost_usd=0.01, stop_reason="end_turn", duration_ms=10, terminal_reason=None, api_error_status=None, errors=None, result=None)`; `system_frame(subtype="init", **fields)`; `rate_limit_frame(**fields)` (copy the real `rate_limit_event` shape from a recorded session stdout). `fake_run_claude(frames, *, exit_code=0, stderr_lines=(), spawn_error: Exception | None = None, capture: dict | None = None)` returns a callable with `run_claude`'s signature that records `argv`, `prompt`, `cwd`, `env` into `capture`. Must not import `claude_agent_sdk`.
 - **Verification**: `uv run python -c "from cortex_command.tests._claude_double import fake_run_claude, assistant_frame, result_frame, tool_result_frame, system_frame, rate_limit_frame"` exits 0; `grep -c claude_agent_sdk cortex_command/tests/_claude_double.py` = 0.
-- **Status**: [ ] pending
+- **Status**: [x] done (6574186a 2026-09-16T16:02:46-04:00)
 
 ### Task 3: Move `dispatch_task` onto the seam and rebuild error classification
 - **Files**: `cortex_command/pipeline/dispatch.py`
@@ -72,7 +72,7 @@ A new leaf module, `cortex_command/claude_stream.py`, owns spawning the operator
   - Diagnostics (R14): every failure return carries `DispatchDiagnostics(child_stderr, exit_code, cwd)` and logs `dispatch_error` with `num_turns`, `max_turns`, `stop_reason` — including the result-frame failure path that returns none today (`:961-968`).
   - Warn-ignore effort detection over `_stderr_lines` (`:976-987`) and `_on_stderr` redaction/caps (`:786-797`) are unchanged.
 - **Verification**: `grep -c "claude_agent_sdk" cortex_command/pipeline/dispatch.py` = 0; `grep -cE "\bquery\(" cortex_command/pipeline/dispatch.py` = 0; `grep -c '"api_unavailable": *"pause_session"' cortex_command/pipeline/dispatch.py` = 1; `uv run python -c "import cortex_command.pipeline.dispatch as d; assert 'api_unavailable' in d.ERROR_RECOVERY and callable(d.classify_failure)"` exits 0. Behavioural coverage is Task 7.
-- **Status**: [ ] pending
+- **Status**: [x] done (02ca8fe0 2026-09-16T16:52:27-04:00)
 
 ### Task 4: Make `api_unavailable` halt and name the session pause
 - **Files**: `cortex_command/overnight/feature_executor.py`, `cortex_command/overnight/runner.py`, `cortex_command/overnight/report.py`, `cortex_command/pipeline/retry.py`
@@ -81,7 +81,7 @@ A new leaf module, `cortex_command/claude_stream.py`, owns spawning the operator
 - **Complexity**: moderate
 - **Context**: The type string is `api_unavailable` (contract with Task 3). `feature_executor.py:76` `_SESSION_HALT_ERROR_TYPES` gains it (orchestrator.py imports that tuple at `:56` and needs no edit). `runner.py:3342` hardcodes `("budget_exhausted", "api_rate_limit")` — replace with the imported `_SESSION_HALT_ERROR_TYPES` so the lists cannot drift again; `runner.py:2704-2715` gains an `api_unavailable` notify branch ("Overnight session paused — the Claude API is unavailable (auth or provider error)…"). `report.py:598-609` gains a matching banner branch. `retry.py:401` comment names the three types. Check `runner.py` import graph before importing from `feature_executor` (lazy import inside the function if a cycle appears).
 - **Verification**: `grep -c "api_unavailable" cortex_command/overnight/feature_executor.py cortex_command/overnight/runner.py cortex_command/overnight/report.py` each ≥ 1; `grep -c '("budget_exhausted", "api_rate_limit")' cortex_command/overnight/runner.py` = 0; `uv run pytest cortex_command/overnight/tests -q` passes. End-to-end halt coverage is Task 7.
-- **Status**: [ ] pending
+- **Status**: [x] done (96f70afe 2026-09-16T15:59:11-04:00)
 
 ### Task 5: Move the gate-brief sub-dispatch onto the seam
 - **Files**: `cortex_command/discovery.py`, `tests/test_discovery_gate_brief.py`
@@ -90,7 +90,7 @@ A new leaf module, `cortex_command/claude_stream.py`, owns spawning the operator
 - **Complexity**: simple
 - **Context**: Remove the import guard `:585-594`, `_BRIEF_SDK_AVAILABLE`, and the `RuntimeError` at `:642-646`; rewrite the docstring at `:621-640`. Env overlay `:649-656` passes through `build_env`. Collect `text` blocks from `assistant` frames only. `_cmd_generate_brief`'s `except RuntimeError` arms (`:772-775`, `:~800`) print "SDK not available" — reword to name the real cause (e.g. "claude unavailable"). Existing tests stub `_run_brief_query` wholesale (`tests/test_discovery_gate_brief.py:558`, `:676`) and stay valid; add one test using `cortex_command.tests._claude_double.fake_run_claude` patched onto `discovery` that asserts a non-zero exit raises and assistant text is joined on success.
 - **Verification**: `grep -c "claude_agent_sdk" cortex_command/discovery.py` = 0; `grep -c "SDK not available" cortex_command/discovery.py` = 0; `uv run pytest tests/test_discovery_gate_brief.py -q` passes.
-- **Status**: [ ] pending
+- **Status**: [x] done (4fc9f2b1 2026-09-16T16:05:44-04:00)
 
 ### Task 6: Port the existing pipeline dispatch tests to the frame double
 - **Files**: `cortex_command/pipeline/tests/test_dispatch.py`
@@ -99,7 +99,7 @@ A new leaf module, `cortex_command/claude_stream.py`, owns spawning the operator
 - **Complexity**: complex
 - **Context**: 63 tests across `TestClassifyError` (`:61`), `TestErrorRecovery` (`:215`), `TestDispatchTaskSandboxSettings` (`:270`), `TestDispatchTaskBudgetExhausted` (`:514`), `TestDispatchTaskDiagnostics` (`:630`), `TestDispatchTaskStderrRedaction` (`:705`), `TestDispatchTaskValidation` (`:936`), `TestEffortWarnIgnore` (`:1292`); 13 `query` patch sites. Patch target is the name `dispatch.py` binds (`run_claude`). Leave `test_sdk_parser_extracts_stop_reason` (`:980`) and `test_effort_value_passthrough` (`:~1110`) and the module-level `_install_sdk_stub()` / `_sdk` reads (`:32-40`, `:261`) for Task 13 — they still pass while the SDK is installed. Budget-exhausted tests must now feed `subtype="error_max_budget_usd"`; a test that fed `is_error` with another subtype and expected `budget_exhausted` asserts the new classification instead. Do not weaken an assertion to make it pass — if behaviour changed by design, the new expectation must cite the spec requirement in the test docstring.
 - **Verification**: `grep -c '"query"' cortex_command/pipeline/tests/test_dispatch.py` = 0; `grep -c 'classify_error' cortex_command/pipeline/tests/test_dispatch.py` = 0; `uv run pytest cortex_command/pipeline/tests/test_dispatch.py -q` passes.
-- **Status**: [ ] pending
+- **Status**: [x] done (06c5528a 2026-09-16T16:09:52-04:00)
 
 ### Task 7: Pin the new classification, argv, and halt behaviour
 - **Files**: `cortex_command/pipeline/tests/test_dispatch_spawn.py` (new)
@@ -116,7 +116,7 @@ A new leaf module, `cortex_command/claude_stream.py`, owns spawning the operator
   - R14: result-frame failure and non-zero-exit failure both return non-None `diagnostics` with `exit_code` and `cwd` set.
   - Mutation check before marking done: revert one classifier branch (e.g. drop step 5) locally and confirm at least one test fails, then restore.
 - **Verification**: `uv run pytest cortex_command/pipeline/tests/test_dispatch_spawn.py -q` passes with ≥ 18 tests collected; the mutation check above is recorded in the task's commit message body (which branch was removed and which test failed).
-- **Status**: [ ] pending
+- **Status**: [x] done (7fa049f7 2026-09-16T16:08:46-04:00)
 
 ### Task 8: Port the remaining dispatch-coupled tests to the frame double
 - **Files**: `cortex_command/pipeline/tests/test_dispatch_instrumentation.py`, `tests/test_dispatch.py`
@@ -125,7 +125,7 @@ A new leaf module, `cortex_command/claude_stream.py`, owns spawning the operator
 - **Complexity**: moderate
 - **Context**: `test_dispatch_instrumentation.py:20-33` imports stub types off `sys.modules["claude_agent_sdk"]`; `tests/test_dispatch.py` uses `ProcessError` for classification (`:83-95`) and SDK messages in `TestBudgetExhaustedDispatchPath` (`:45`), `TestStderrAccumulatorIntegration` (`:97`), `TestDispatchErrorCapturesStderrAndExitCode` (`:142`), `test_settings_tempfile_used` (`:295`), `test_dispatched_env_locks_tmpdir` (`:339`), `test_no_blob_injection` (`:362`). Settings/env tests now assert on `capture["argv"]` (`--settings <path>`) and `capture["env"]`. Leave `test_no_typed_sandbox_field_attempted` (`:408`), `test_sdk_settings_param_accepts_filepath` (`:439`), and the module-level `_install_sdk_stub()` / `_sdk` lines for Task 13.
 - **Verification**: `uv run pytest cortex_command/pipeline/tests/test_dispatch_instrumentation.py tests/test_dispatch.py -q` passes; `grep -c '"query"' cortex_command/pipeline/tests/test_dispatch_instrumentation.py tests/test_dispatch.py` = 0 for both.
-- **Status**: [ ] pending
+- **Status**: [x] done (72bbe174 2026-09-16T16:07:46-04:00)
 
 ### Task 9: Verify a real sandboxed dispatch through the seam
 - **Files**: `cortex/lifecycle/remove-claude-agent-sdk-dependency/live-verification.md` (new)
@@ -134,7 +134,7 @@ A new leaf module, `cortex_command/claude_stream.py`, owns spawning the operator
 - **Complexity**: moderate
 - **Context**: Build argv with `build_argv` and a settings file from `cortex_command.overnight.sandbox_settings.build_sandbox_settings_dict(deny_paths=[<target>], allow_paths=[<workdir>], …)` written to a temp file; prompt asks the agent to write to the denied target via Bash. Record: the `operation not permitted` tool-result frame, target byte-identical before/after, the final `result` frame (`is_error`, `subtype`, `num_turns`, `stop_reason`, `total_cost_usd`), `claude --version`, and the `message.model` value. Second run: `--max-budget-usd 0.01` — record the actual `subtype` and `is_error` so Task 3's step 2 is confirmed against the real CLI (`research.md` Open Question 3). If the subtype differs from `error_max_budget_usd`, fix `classify_failure` and Task 7's fixture before closing this task. Also record any `rate_limit_event` frame's exact field names and reconcile Task 2's `rate_limit_frame`. Cost ≈ $0.30–0.60.
 - **Verification**: Interactive/session-dependent: needs an authenticated `claude` and a paid model call, so the implementer runs it and records the frames in `live-verification.md`; the automatable half is `just test` exiting 0 at the end of Phase 1.
-- **Status**: [ ] pending
+- **Status**: [x] done (f8ed87ac 2026-09-16T16:17:36-04:00)
 
 ### Task 10: Remove the SDK and move the dashboard stack into the base install
 - **Files**: `pyproject.toml`, `uv.lock`
@@ -143,7 +143,7 @@ A new leaf module, `cortex_command/claude_stream.py`, owns spawning the operator
 - **Complexity**: moderate
 - **Context**: `pyproject.toml:9-50`. Keep the starlette cap rationale comment (it still applies); delete the SDK and "no-extra reinstall would silently strip" prose. `all = []` rather than a self-reference (`research.md` Adversarial 15: a self-referencing `all` emitted no `Requires-Dist`). Regenerate with `uv lock`. R23 is a regression guard: do not touch either `install_core.py` argv line.
 - **Verification**: `grep -c "claude-agent-sdk" pyproject.toml uv.lock` = 0 for both; `uv build --wheel -o <scratch>` then, for each of `<wheel>`, `<wheel>[all]`, `<wheel>[dashboard]`, `<wheel>[overnight]` written to a requirements file, `uv pip compile <file> 2>&1` — pass if every output lists `fastapi`, `uvicorn`, `jinja2`, `markdown`, `starlette` and none contains `does not have an extra`; `uv run pytest tests/test_cortex_core_background_install.py tests/test_no_clone_install.py tests/test_mcp_auto_update_real_install.py -q` passes and `git diff HEAD -- plugins/cortex-core/install_core.py plugins/cortex-overnight/install_core.py | grep -c "cortex-command\[all\] @"` = 0.
-- **Status**: [ ] pending
+- **Status**: [x] done (524342bc 2026-09-16T16:18:48-04:00)
 
 ### Task 11: Stop creating the macOS app at `cortex init` and delete dead extra guards
 - **Files**: `cortex_command/init/handler.py`, `cortex_command/dashboard/macapp.py`, `cortex_command/cli.py`, `cortex_command/dashboard/tests/test_launcher.py`, `cortex_command/init/tests/test_init_creates_no_app.py` (new)
@@ -152,7 +152,7 @@ A new leaf module, `cortex_command/claude_stream.py`, owns spawning the operator
 - **Complexity**: simple
 - **Context**: `init/handler.py:397-408` — keep `projects.register_project(repo_root)`, drop the macapp import and call, reword the step comment. `macapp.py:146` guard and the module docstring line `:19` that justifies it; drop `importlib.util` if unused. `cli.py:489-499` — import `uvicorn` directly. `test_launcher.py:108` patches `find_spec`; delete that patch and any test asserting `None` when uvicorn is absent. Add `test_init_creates_no_app.py` (copy the tmp-repo handler fixture pattern from `cortex_command/init/tests/test_handler_ensure.py`) with a test that runs init with `HOME` pointed at a tmp dir on darwin (or with `macapp.app_path` monkeypatched to a tmp path) and asserts no bundle exists at `macapp.app_path()`.
 - **Verification**: `grep -c "requires the optional 'dashboard' extra" cortex_command/cli.py` = 0; `grep -c 'find_spec("uvicorn")' cortex_command/dashboard/macapp.py` = 0; `grep -c "ensure_app" cortex_command/init/handler.py` = 0; `uv run pytest cortex_command/dashboard/tests/test_launcher.py cortex_command/init/tests -q` passes; temporarily restoring the init `ensure_app()` call makes the new test fail (mutation check).
-- **Status**: [ ] pending
+- **Status**: [x] done (1f8e334e 2026-09-16T16:20:46-04:00)
 
 ### Task 12: Drop the SDK-bundled branch from the CLI resolver
 - **Files**: `cortex_command/cli_resolver.py`, `cortex_command/pipeline/tests/test_cli_resolver.py`
@@ -161,7 +161,7 @@ A new leaf module, `cortex_command/claude_stream.py`, owns spawning the operator
 - **Complexity**: simple
 - **Context**: `cli_resolver.py:73-89` goes; `:126-160` collapses (the probe-flake non-memoize rule only existed to arbitrate against the bundle — memoize the found path). Rewrite the module docstring (`:1-26`) around "find the operator's claude"; `None` now means "no claude installed" and callers fail loudly (Task 3). `_probe_version` / `_parse_cli_version` stay only if a caller remains — grep before deleting. In the tests, delete the bundled comparisons (`:32-60`, `:108`), keep override/memoize/none/parse tests, and add one: `PATH` set to a tmp dir without `claude`, `HOME` set to a tmp dir containing an executable `.local/bin/claude` → resolves to that path.
 - **Verification**: `grep -c "claude_agent_sdk\|bundled" cortex_command/cli_resolver.py` = 0; `uv run pytest cortex_command/pipeline/tests/test_cli_resolver.py cortex_command/overnight/tests/test_spawn_resolved_cli.py -q` passes and includes the `~/.local/bin/claude` fallback test.
-- **Status**: [ ] pending
+- **Status**: [x] done (5e50c91a 2026-09-16T16:20:49-04:00)
 
 ### Task 13: Remove the SDK stub and the real-SDK tests
 - **Files**: `cortex_command/tests/_stubs.py` (delete), `cortex_command/pipeline/tests/conftest.py`, `cortex_command/overnight/tests/conftest.py`, `cortex_command/overnight/tests/test_orchestrator.py`, `cortex_command/pipeline/tests/test_dispatch.py`, `cortex_command/pipeline/tests/test_dispatch_instrumentation.py`, `tests/test_dispatch.py`, `cortex_command/pipeline/tests/test_merge_sha_capture.py`, `cortex_command/pipeline/tests/test_recovery_paths.py`, `cortex_command/pipeline/tests/test_retry.py`, `cortex_command/pipeline/tests/test_review_dispatch.py`, `cortex_command/pipeline/tests/test_review_path_contract.py`
@@ -170,7 +170,7 @@ A new leaf module, `cortex_command/claude_stream.py`, owns spawning the operator
 - **Complexity**: moderate
 - **Context**: `_stubs.py` holds nothing but the SDK stub — delete the file. Conftests: `pipeline/tests/conftest.py:1-11`, `overnight/tests/conftest.py:3,31-35` (keep its other stubs). `_install_sdk_stub()` call sites: `test_dispatch.py:32-34`, `test_dispatch_instrumentation.py:20-22`, `test_merge_sha_capture.py:31-32`, `test_recovery_paths.py:29-31`, `test_retry.py:31-34`, `test_review_dispatch.py:26-27`, `test_review_path_contract.py:25-26`, `tests/test_dispatch.py:21-22`. Delete tests: `test_sdk_parser_extracts_stop_reason` and `test_effort_value_passthrough` in `pipeline/tests/test_dispatch.py` (`~:980-1180`), `test_no_typed_sandbox_field_attempted` and `test_sdk_settings_param_accepts_filepath` in `tests/test_dispatch.py` (`:400-479`, with their section comments). `test_orchestrator.py:23` docstring names the SDK — reword. If a test file relied on the stub's eviction of `dispatch` from `sys.modules`, confirm it still imports cleanly.
 - **Verification**: `git grep -c claude_agent_sdk -- 'cortex_command/**/tests/**' 'tests/**'` prints nothing; `test -e cortex_command/tests/_stubs.py` exits 1; `uv run pytest -q` passes.
-- **Status**: [ ] pending
+- **Status**: [x] done (b4d3373c 2026-09-16T16:29:18-04:00)
 
 ### Task 14: Correct SDK prose in requirements, docs, and install guidance
 - **Files**: `cortex/requirements/multi-agent.md`, `docs/internals/sdk.md`, `docs/internals/pipeline.md`, `docs/setup.md`, `docs/overnight-operations.md`, `install.sh`, `CLAUDE.md`
@@ -179,7 +179,7 @@ A new leaf module, `cortex_command/claude_stream.py`, owns spawning the operator
 - **Complexity**: moderate
 - **Context**: `multi-agent.md:15` (spawn mechanism → `claude -p --output-format stream-json --verbose`, prompt on stdin, via `cortex_command/claude_stream.py`) and `:82` (dependency → the operator's `claude` CLI). `docs/internals/sdk.md` is the policy-named owner of dispatch mechanics (`docs/policies.md:69`); keep the path, rewrite Path B (`:33-60`) around the seam and drop the claimed third call site in `conflict.py` (`:132` — `conflict.py` calls `dispatch_task`, not `query`). `docs/internals/pipeline.md:101,121` (settings passthrough is `--settings <path>`; the typed-field deviation paragraph becomes history — delete or reduce to one line). `docs/setup.md:73,78` (one install shape; extras are empty names kept for compatibility), `:202` (drop "Agent SDK"). `docs/overnight-operations.md:118,131,418,626,751,756` ("SDK level" / "SDK subprocesses" → the dispatched `claude` process). `install.sh:60-61`. `CLAUDE.md:5` — the `[all]` clause no longer pulls separate stacks; keep the install command. Docs policy: overnight docs link to `docs/internals/sdk.md` rather than restating. No test may pin this prose.
 - **Verification**: `git grep -il "agent sdk" -- cortex/requirements docs install.sh CLAUDE.md` prints nothing; `git grep -n "claude_agent_sdk\|ClaudeAgentOptions" -- docs cortex/requirements` prints nothing.
-- **Status**: [ ] pending
+- **Status**: [x] done (77f86e29 2026-09-16T16:20:45-04:00)
 
 ### Task 15: Correct SDK wording in code comments and operator strings
 - **Files**: `plugins/cortex-core/install_core.py`, `plugins/cortex-overnight/install_core.py`, `cortex_command/pipeline/__init__.py`, `cortex_command/pipeline/review_dispatch.py`, `cortex_command/lifecycle/review_brief.py`, `cortex_command/pipeline/conflict.py`, `cortex_command/pipeline/tests/test_repair_agent.py`, `cortex_command/dashboard/tests/test_ticket_feed.py`
@@ -188,7 +188,7 @@ A new leaf module, `cortex_command/claude_stream.py`, owns spawning the operator
 - **Complexity**: moderate
 - **Context**: `install_core.py` rationale comments at `plugins/cortex-core/install_core.py:~366-370` and `plugins/cortex-overnight/install_core.py:528-532` — comment text only; the argv lines stay byte-identical (R23). `pipeline/__init__.py:4`. `review_dispatch.py:39` and `review_brief.py:22,156` — reword the "free of the Claude Agent SDK" rationale to say the duplication is historical and tracked separately; do not merge the parsers (spec Non-Requirements). `conflict.py:364,396,429` — "SDK exception" → "dispatch failure" wording (e.g. `"(dispatch failed during the first repair dispatch)"`); update `test_repair_agent.py:5,301` comments and any assertion on the old string. `test_ticket_feed.py:469-499` — replace the `claude_agent_sdk` import block with a subprocess probe run under `env={"PATH": <tmp dir with no claude>, "HOME": <tmp>}` that imports `cortex_command.dashboard.ticket_feed` and builds a snapshot; rename the test accordingly.
 - **Verification**: `git grep -il "agent sdk" -- plugins/cortex-core/install_core.py plugins/cortex-overnight/install_core.py cortex_command/pipeline/__init__.py cortex_command/pipeline/review_dispatch.py cortex_command/lifecycle/review_brief.py cortex_command/dashboard/tests/test_ticket_feed.py` prints nothing; `git grep -n "SDK exception" -- cortex_command` prints nothing; `uv run pytest cortex_command/pipeline/tests/test_repair_agent.py cortex_command/dashboard/tests/test_ticket_feed.py -q` passes.
-- **Status**: [ ] pending
+- **Status**: [x] done (43fb88ba 2026-09-16T16:53:14-04:00)
 
 ### Task 16: Record ADR-0038 and ADR-0039 and mark what they supersede
 - **Files**: `cortex/adr/0038-cortex-spawns-the-operator-claude-directly.md` (new), `cortex/adr/0039-one-install-shape-with-the-dashboard-in-the-base.md` (new), `cortex/adr/0014-*.md`, `cortex/adr/0032-*.md`
@@ -197,7 +197,7 @@ A new leaf module, `cortex_command/claude_stream.py`, owns spawning the operator
 - **Complexity**: simple
 - **Context**: Follow `cortex/adr/README.md` for the three-criteria gate and frontmatter (`status: accepted`); header style of `cortex/adr/0037-*.md`. Re-check that 0038/0039 are still free (`ls cortex/adr`) before writing — renumber if another session took them. Context/Decision/Trade-off text comes from `spec.md:115-121`; do not restate the full spec.
 - **Verification**: `ls cortex/adr/0038-*.md cortex/adr/0039-*.md` lists both; `grep -c "0038" cortex/adr/0014-*.md` ≥ 1; `grep -c "0038" cortex/adr/0032-*.md` ≥ 1.
-- **Status**: [ ] pending
+- **Status**: [x] done (aebf8ab7 2026-09-16T16:19:07-04:00)
 
 ### Task 17: Point the CI fresh-resolve guard at the base install
 - **Files**: `.github/workflows/validate.yml`
@@ -206,7 +206,7 @@ A new leaf module, `cortex_command/claude_stream.py`, owns spawning the operator
 - **Complexity**: simple
 - **Context**: `validate.yml:87-103`: `pip install ".[dashboard]" httpx packaging` → `pip install . httpx packaging`; rewrite the comment block so it says the step now proves the base install carries the web stack (the anti-revert guard named at `cortex/requirements/project.md:54`); remove the "Dashboard deps now live in the" sentence.
 - **Verification**: `grep -c "Dashboard deps now live in the" .github/workflows/validate.yml` = 0; `grep -c 'pip install \. httpx packaging' .github/workflows/validate.yml` = 1; locally, `python -m venv <scratch>/v && <scratch>/v/bin/pip install . httpx packaging pytest && <scratch>/v/bin/pytest cortex_command/dashboard/tests/test_routes_smoke.py -q` passes.
-- **Status**: [ ] pending
+- **Status**: [x] done (3b992f4a 2026-09-16T16:21:16-04:00)
 
 ### Task 18: Re-point the sandbox gate and record a fresh preflight
 - **Files**: `cortex_command/sandbox_preflight.py`, `cortex/lifecycle/apply-per-spawn-sandboxfilesystemdenywrite-at-all-overnight-spawn-sites/preflight.md`
@@ -215,7 +215,7 @@ A new leaf module, `cortex_command/claude_stream.py`, owns spawning the operator
 - **Complexity**: moderate
 - **Context**: `SANDBOX_WATCHED_FILES` (`sandbox_preflight.py:29-49`). New entry: `"cortex_command/claude_stream.py": (r"--settings", r"settings")`. Preflight procedure: the existing `preflight.md` body (`test_command`, EPERM excerpt, `target_unmodified`) is the template — rerun the same denying-settings probe, this time through `claude_stream.build_argv` + `run_claude`, and write `commit_hash` = `git rev-parse HEAD` at run time and `claude_version` = `claude --version`. Any commit landing after the run invalidates `commit_hash` (E102), so run it last, immediately before this task's commit, and redo it if a sibling session commits first.
 - **Verification**: `grep -c "claude-agent-sdk\|SandboxSettings" cortex_command/sandbox_preflight.py` = 0; `grep -c "cortex_command/claude_stream.py" cortex_command/sandbox_preflight.py` = 1; with this task's changes staged, `uv run python3 -m cortex_command.sandbox_preflight; echo $?` prints `0`; the repo-wide R21 check `git grep -il "agent sdk" -- . ':!cortex/lifecycle' ':!cortex/backlog' ':!cortex/adr' ':!cortex/research' ':!CHANGELOG.md'` prints nothing; `uv run pytest -q` passes. The probe run itself is Interactive/session-dependent: it needs an authenticated `claude` and a paid call.
-- **Status**: [ ] pending
+- **Status**: [x] done (657cb824 2026-09-16T16:30:40-04:00)
 
 ### Task 19: Add an opt-in live test of the real CLI's frames
 - **Files**: `tests/test_claude_stream_live.py` (new)
@@ -224,7 +224,7 @@ A new leaf module, `cortex_command/claude_stream.py`, owns spawning the operator
 - **Complexity**: simple
 - **Context**: Marker and `--run-slow` wiring already exist (`pyproject.toml:158`, `tests/conftest.py:13-19`). Use `build_argv` with `max_turns=2`, `permission_mode="bypassPermissions"`, `effort="low"`, a tiny prompt. Assert: at least one frame with `type == "assistant"` whose `message.content` is a list and `message.model` is a non-empty string; exactly one last `type == "result"` frame carrying `stop_reason`, `num_turns`, `total_cost_usd`, `is_error`; `run.exit_code == 0`. Skip (not fail) when `resolve_claude_cli()` is None.
 - **Verification**: `uv run pytest tests/test_claude_stream_live.py -q -rs` reports 1 skipped with reason containing `--run-slow`; `uv run pytest tests/test_claude_stream_live.py --run-slow -q` passes on an authenticated machine (Interactive/session-dependent: paid model call).
-- **Status**: [ ] pending
+- **Status**: [x] done (579542e4 2026-09-16T16:19:27-04:00)
 
 ### Task 20: Add a scheduled check that the published install still resolves
 - **Files**: `.github/workflows/scheduled-resolve.yml` (new), `cortex/requirements/project.md`
@@ -233,7 +233,7 @@ A new leaf module, `cortex_command/claude_stream.py`, owns spawning the operator
 - **Complexity**: simple
 - **Context**: Latest tag via `git ls-remote --tags` sorted by version, highest `vX.Y.Z` (the method `CLAUDE.md:5` describes). Triggers: `schedule:` (daily cron) plus `workflow_dispatch:`. Scope statement in the workflow comment: resolution only — no wheel build, no console scripts. Registry: add a "scheduled resolve" survivor to `cortex/requirements/project.md:41`'s gate list, evidence = the 2026-09-16 yank that broke every `v5.2.0` install, failure = any pinned or bounded dependency of a published tag stops resolving.
 - **Verification**: `grep -c "schedule:" .github/workflows/scheduled-resolve.yml` ≥ 1; `grep -c "uv pip compile" .github/workflows/scheduled-resolve.yml` ≥ 1; `grep -c "scheduled resolve" cortex/requirements/project.md` ≥ 1; locally `echo 'cortex-command[all] @ git+https://github.com/charleshall888/cortex-command.git@<latest tag>' > <scratch>/r.txt && uv pip compile <scratch>/r.txt` exits 0, and the same against `@v5.2.0` exits non-zero.
-- **Status**: [ ] pending
+- **Status**: [x] done (8a98e4c0 2026-09-16T15:59:53-04:00)
 
 ## Risks
 - **`api_unavailable` is a new error-type name**, not a reuse of `api_rate_limit`. It adds a notify branch and a report banner. Folding auth and provider faults into `api_rate_limit` would be smaller but would name the wrong cause, which R12 forbids.
