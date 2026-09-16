@@ -109,7 +109,7 @@ async def _dispatch_simple(worktree: Path, **kwargs) -> "_dispatch_module.Dispat
 class TestClassifyError(unittest.TestCase):
     """Tests for classify_failure() covering all subtypes."""
 
-    # --- Run-level failure branches (formerly hard-typed SDK exceptions) ---
+    # --- Run-level failure branches (spawn errors and unexpected exceptions) ---
 
     def test_timeout_keyword_returns_agent_timeout(self):
         """Spec R10: the SDK's ``asyncio.TimeoutError`` arm is gone with the
