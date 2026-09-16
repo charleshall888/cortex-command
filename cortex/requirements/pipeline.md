@@ -148,6 +148,7 @@ The pipeline area covers the overnight execution framework: how sessions are orc
 - **Graceful degradation**: Budget exhaustion and rate limits pause the session rather than crashing it
 - **Audit trail**: `cortex/lifecycle/pipeline-events.log` provides an append-only JSONL record of all dispatch and merge events
 - **Orchestrator rationale convention**: When the orchestrator resolves an escalation or makes a non-obvious feature selection decision (e.g., skipping a feature, reordering rounds), the relevant events.log entry should include a `rationale` field explaining the reasoning. Routine forward-progress decisions do not require this field.
+- **API-fault halt**: An API-wide fault (expired auth, provider error) classifies as `api_unavailable` and halts the session once via `_SESSION_HALT_ERROR_TYPES`, rather than retrying every feature against a dead API
 
 ## Architectural Constraints
 

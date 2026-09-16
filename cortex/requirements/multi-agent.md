@@ -62,6 +62,7 @@ The multi-agent area covers how the system spawns, isolates, and coordinates mul
   - On `agent_timeout` or `task_failure`: retry with same model
   - On `agent_refusal` or `infrastructure_failure`: pause for human triage (no retry)
   - On `budget_exhausted` or `api_rate_limit`: pause the entire session (no new dispatches)
+  - On `api_unavailable` (auth failure, `terminal_reason: "api_error"`, or API status 401/403/5xx on the result frame): pause the entire session (no new dispatches), with the cause named in the notification and the morning-report banner
 - **Priority**: must-have
 
 ## Non-Functional Requirements
