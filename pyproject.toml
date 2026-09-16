@@ -6,25 +6,14 @@ build-backend = "hatchling.build"
 name = "cortex-command"
 dynamic = ["version"]
 requires-python = ">=3.12"
-# Base install = the lifecycle/backlog/commit/refine CLI. Lean by design
-# (pyyaml + psutil only) so a bare `uv tool install` pulls no web/agent stack.
-# The dashboard and overnight runner are opt-in extras below.
-#
-# IMPORTANT: the auto-installer (cortex-overnight MCP server + SessionStart
-# hooks, via install_core.py) installs `cortex-command[all]`, so overnight and
-# dashboard users get the full stack automatically — a no-extra reinstall would
-# silently strip the Claude Agent SDK the runner needs. Only a *manual* bare
-# `uv tool install` (no extras) is lean.
+# Base install = the whole CLI: lifecycle/backlog/commit/refine, the overnight
+# runner, and the dashboard web app. Overnight and pipeline dispatch spawn the
+# operator's own `claude` binary directly, so no agent stack is pulled in; the
+# dashboard's web stack is small enough to ship with every install.
 dependencies = [
     "psutil>=5.9,<8",
     "pyyaml>=6.0",
-]
-
-# Opt-in feature groups. Full install (what the auto-installer uses):
-#   uv tool install "cortex-command[all] @ git+https://github.com/charleshall888/cortex-command.git@<tag>"
-[project.optional-dependencies]
-# `cortex dashboard` — the agent monitoring web app.
-dashboard = [
+    # `cortex dashboard` — the agent monitoring web app.
     "fastapi<1.0",
     # Plain uvicorn (not [standard]): the dashboard uses no websockets/reload,
     # so uvloop/httptools/watchfiles/websockets would be pure install baggage.
@@ -36,20 +25,16 @@ dashboard = [
     # #6211/#15193), so the app owns this cap wherever starlette is pulled in.
     "starlette>=0.49.1,<2.0",
 ]
-# `cortex overnight` / pipeline dispatch — pulls the Claude Agent SDK (which
-# bundles a ~197 MB `claude` CLI plus the mcp subtree). Kept out of the base so
-# a bare install is not dominated by a binary the runner routes around
-# (cli_resolver prefers the system `claude`).
-overnight = [
-    # A range, not an exact pin: the publisher deletes old ~100 MB releases to
-    # free storage, and the 0.1.46 exact pin broke every install when it went.
-    "claude-agent-sdk>=0.2.153,<0.3",
-    # Same starlette cap governs the mcp/sse-starlette paths the SDK pulls in.
-    "starlette>=0.49.1,<2.0",
-]
-all = [
-    "cortex-command[dashboard,overnight]",
-]
+
+# Retained as empty extras so existing install strings keep resolving without a
+# "does not have an extra" warning — the auto-installer (install_core.py) still
+# installs `cortex-command[all]`, and operators may have `[dashboard]` or
+# `[overnight]` in their own commands. Everything they once gated is now in the
+# base dependencies above. `all` is a plain empty list, not a self-reference.
+[project.optional-dependencies]
+dashboard = []
+overnight = []
+all = []
 
 [project.scripts]
 cortex = "cortex_command.cli:main"
