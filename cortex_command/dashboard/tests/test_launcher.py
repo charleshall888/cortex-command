@@ -105,7 +105,6 @@ def fake_osacompile(home, monkeypatch):
     monkeypatch.setattr(macapp.sys, "platform", "darwin")
     monkeypatch.setattr(macapp, "_OSACOMPILE", sys.executable)
     monkeypatch.setattr(macapp, "build_app", _build)
-    monkeypatch.setattr(macapp.importlib.util, "find_spec", lambda name: object())
     monkeypatch.setattr(macapp.shutil, "which", lambda name: str(cortex))
     return compiled
 

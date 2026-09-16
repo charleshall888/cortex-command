@@ -394,17 +394,13 @@ def _run(args: argparse.Namespace) -> int:
     # at step 1.
     settings_merge.register(repo_root, cortex_target, home=home)
 
-    # Step 7a: list the repo for a bare `cortex dashboard`, and make the macOS
-    # launcher app when the dashboard extra is installed. Both are best-effort
-    # and silent on failure; init's own result does not depend on them.
-    from cortex_command.dashboard import macapp, projects
+    # Step 7a: list the repo for a bare `cortex dashboard`. Best-effort and
+    # silent on failure; init's own result does not depend on it. The macOS
+    # launcher app is created lazily by the first `cortex dashboard` run
+    # (cli.py), not here.
+    from cortex_command.dashboard import projects
 
     projects.register_project(repo_root)
-    if macapp.ensure_app() == "created":
-        print(
-            "Added the %s app to ~/Applications — open it to see this "
-            "project's dashboard." % macapp.APP_NAME
-        )
 
     # Step 7b (migration): expunge stale "cortex-worktrees"-prefixed entries
     # from a prior version of cortex that registered worktree-base paths in

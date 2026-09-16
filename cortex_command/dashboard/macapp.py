@@ -16,12 +16,11 @@ gone, or the applet script changed), and a stamp with no app means the
 operator threw the app away, which is respected rather than undone on the
 next launch.
 
-Stdlib only — ``cortex init`` calls :func:`ensure_app` on a base install.
+Stdlib only — the dashboard verb calls :func:`ensure_app` on its first run.
 """
 
 from __future__ import annotations
 
-import importlib.util
 import os
 import plistlib
 import shutil
@@ -134,16 +133,13 @@ def ensure_app() -> str | None:
     """Create or refresh the app when it is wanted; return what happened.
 
     Returns ``"created"``, ``"updated"``, or ``None`` when nothing changed or
-    the app does not apply here — not macOS, no dashboard extra installed, no
-    ``cortex`` on ``PATH``, opted out, or removed by the operator. Never
-    raises: callers are ``cortex init`` and the dashboard verb, and a missing
-    shortcut must not fail either.
+    the app does not apply here — not macOS, no ``cortex`` on ``PATH``,
+    opted out, or removed by the operator. Never raises: the caller is the
+    dashboard verb, and a missing shortcut must not fail it either.
     """
     if sys.platform != "darwin" or os.environ.get(OPT_OUT_ENV) == "0":
         return None
     if not Path(_OSACOMPILE).exists():
-        return None
-    if importlib.util.find_spec("uvicorn") is None:
         return None
     target = app_path()
     stamp_path = _stamp_path()
