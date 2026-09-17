@@ -175,6 +175,17 @@ def test_req3_non_four_digit_not_flagged(tmp_path: Path):
     assert "NNNN-slug" not in finding_tokens, f"NNNN-slug should not be flagged; findings: {report['findings']}"
 
 
+def test_req3_date_after_adr_is_not_a_number(tmp_path: Path):
+    """``ADR 2026-08-23`` is a date in prose, not a reference to ADR-2026."""
+    _write(tmp_path / "cortex/adr/0001-foo.md", "# ADR-0001 Foo\n")
+    _write(tmp_path / "docs/notes.md", "RETIRED AS AN ADR 2026-08-23, see ADR 0001.\n")
+
+    report = _audit(tmp_path)
+
+    numbers = [f.get("number") for f in report["findings"] if f.get("kind") == "unresolved"]
+    assert 2026 not in numbers, f"a date was read as ADR-2026; findings: {report['findings']}"
+
+
 # ---------------------------------------------------------------------------
 # req 4: repo-agnostic within the cortex convention
 # ---------------------------------------------------------------------------

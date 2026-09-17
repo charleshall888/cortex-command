@@ -58,10 +58,12 @@ from typing import Iterator
 # Constants / Token grammar
 # ---------------------------------------------------------------------------
 
-# Verbatim from spec Technical Constraints — do not normalize.
-# Matches prefix, space, and bracketed forms: ADR-NNNN, [ADR-NNNN], ADR NNNN
+# From spec Technical Constraints, plus one exclusion.
+# Matches prefix, space, and bracketed forms: ADR-NNNN, [ADR-NNNN], ADR NNNN.
+# A four-digit year that opens an ISO date is not a number: "RETIRED AS AN
+# ADR 2026-08-23" is prose, and read as a token it cited ADR-2026.
 _PREFIX_RE = re.compile(
-    r"(?<![0-9A-Za-z])\[?ADR[- ](?P<num>[0-9]{4})\]?(?![0-9A-Za-z])"
+    r"(?<![0-9A-Za-z])\[?ADR[- ](?P<num>[0-9]{4})\]?(?![0-9A-Za-z])(?!-[0-9]{2}-[0-9]{2})"
 )
 
 # Matches path forms: adr/NNNN or adr/NNNN-slug

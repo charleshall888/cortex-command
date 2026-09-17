@@ -302,6 +302,10 @@ def build_corpus(root: Path) -> Corpus:
             by_number[n] = path
 
     known = set(raws)
+    adr_words = {
+        path: _words(path.rsplit("/", 1)[-1][5:-3].replace("-", " ") + " " + _title_of(raw.body, path))
+        for path, raw in raws.items() if _adr_number(path) is not None
+    }
     nodes: dict[str, DocNode] = {}
     edges: dict[tuple[str, str, str], DocEdge] = {}
     map_row: dict[tuple[str, str], int] = {}
@@ -375,7 +379,7 @@ def build_corpus(root: Path) -> Corpus:
 
     # -- cites ---------------------------------------------------------------
     for path, raw in raws.items():
-        for dst, section in _cites_in(root, path, raw.text, known):
+        for dst, section in _cites_in(root, path, raw.text, known, adr_words):
             if dst == path:
                 continue
             key = (path, dst, "cites")
@@ -460,15 +464,22 @@ def build_corpus(root: Path) -> Corpus:
     return corpus
 
 
-def _cites_in(root: Path, src: str, text: str, known: set[str]) -> list[tuple[str, str | None]]:
+def _cites_in(
+    root: Path, src: str, text: str, known: set[str],
+    adr_words: dict[str, set[str]] | None = None,
+) -> list[tuple[str, str | None]]:
     """Every citation in *text*, in order, as ``(dst, section)``.
 
     Per line, so the enclosing H2 is known. Markdown links are consumed
     first, then bare paths, then ``ADR-NNNN`` tokens on what is left — each
     scanner masks its span so one mention is counted once. The structural
     forms — the ``**Parent doc**`` line and the two map sections — already
-    carry their own edge kinds and are not re-read as cites.
+    carry their own edge kinds and are not re-read as cites. A number two
+    ADR files share resolves by the words after the token (see
+    :func:`_adr_paths`), so one mention can yield more than one edge only
+    when those words cannot tell the files apart.
     """
+    adr_words = adr_words or {}
     out: list[tuple[str, str | None]] = []
     section: str | None = None
     for line in text.splitlines():
@@ -496,9 +507,49 @@ def _cites_in(root: Path, src: str, text: str, known: set[str]) -> list[tuple[st
             out.append((CONSTITUTION, section))
             masked = _mask(masked, m.start(), m.end())
         if "ADR" in masked or "adr/" in masked:
-            for token, num, slug in _extract_references(masked):
-                dst = _adr_path(num, slug, known)
-                out.append((dst, section))
+            refs = _extract_references(masked)
+            starts = sorted(_token_start(masked, token, i, refs) for i, (token, _n, _s) in enumerate(refs))
+            for i, (token, num, slug) in enumerate(refs):
+                at = _token_start(masked, token, i, refs)
+                later = [p for p in starts if p > at]
+                earlier = [p for p in starts if p < at]
+                after = masked[at + len(token): later[0] if later else len(masked)]
+                before = masked[earlier[-1] if earlier else 0: at]
+                for dst in _adr_paths(num, slug, known, adr_words, after, before):
+                    out.append((dst, section))
+    return out
+
+
+def _token_start(line: str, token: str, index: int, refs: list[tuple[str, int, str | None]]) -> int:
+    """Where the *index*-th reference's token sits: its nth occurrence on the line."""
+    nth = sum(1 for t, _n, _s in refs[:index] if t == token)
+    at = -1
+    for _ in range(nth + 1):
+        at = line.find(token, at + 1)
+    return max(at, 0)
+
+
+_WORD_RE = re.compile(r"[a-z0-9]+")
+_COMMON_WORDS = frozenset({
+    "acros", "after", "also", "been", "before", "both", "does", "each", "from",
+    "have", "into", "just", "more", "most", "must", "never", "only", "other",
+    "over", "rather", "same", "should", "some", "such", "than", "that", "their",
+    "them", "then", "there", "these", "they", "this", "under", "what", "when",
+    "where", "which", "while", "will", "with", "without", "would",
+})
+
+
+def _words(text: str) -> set[str]:
+    """Lower-case telling words: four letters or more, a trailing ``s``
+    folded, common words dropped so they cannot decide a duplicate."""
+    out = set()
+    for w in _WORD_RE.findall(text.lower()):
+        if len(w) < 4:
+            continue
+        if w.endswith("s") and len(w) > 4:
+            w = w[:-1]
+        if w not in _COMMON_WORDS:
+            out.add(w)
     return out
 
 
@@ -507,15 +558,40 @@ def _mask(text: str, a: int, b: int) -> str:
     return text[:a] + " " * (b - a) + text[b:]
 
 
-def _adr_path(num: int, slug: str | None, known: set[str]) -> str:
-    """The corpus path for an ADR reference, or a dangling stand-in."""
+def _adr_paths(
+    num: int, slug: str | None, known: set[str],
+    adr_words: dict[str, set[str]], after: str, before: str = "",
+) -> list[str]:
+    """The corpus path(s) an ADR reference names, or a dangling stand-in.
+
+    One file with the number: that file. Two or more — a number reused by
+    parallel branches — the slug picks when the reference spells one;
+    otherwise the words written after the token (``ADR-0093 — terrain is a
+    live consumer…``), then the words before it (``a mesh mount landing
+    (ADR-0093)``), pick the file whose slug and title share the most of
+    them, counting only words the candidates do not share. A reference that
+    names no telling word cites every candidate: the text really is
+    ambiguous, and choosing one silently hid the other.
+    """
     prefix = f"{ADR_DIR}/{num:04d}-"
-    for path in known:
-        if path.startswith(prefix):
-            return path
+    found = sorted(p for p in known if p.startswith(prefix))
+    if slug and f"{prefix}{slug}.md" in found:
+        return [f"{prefix}{slug}.md"]
+    if len(found) == 1:
+        return found
+    if found:
+        shared = set.intersection(*(adr_words.get(p, set()) for p in found))
+        for context in (after, before):
+            said = _words(context)
+            score = {p: len((adr_words.get(p, set()) - shared) & said) for p in found}
+            best = max(score.values())
+            winners = [p for p in found if score[p] == best]
+            if best and len(winners) == 1:
+                return winners
+        return found
     if slug:
-        return f"{prefix}{slug}.md"
-    return f"{ADR_DIR}/{num:04d}.md"
+        return [f"{prefix}{slug}.md"]
+    return [f"{ADR_DIR}/{num:04d}.md"]
 
 
 # ---------------------------------------------------------------------------

@@ -13,27 +13,39 @@ every box.
 The ladder
 ----------
 
-Four fixed columns, assigned by document kind and never by longest path::
+Three indents, assigned by document kind and never by longest path, then
+the decisions::
 
-    constitution | root + policy + config + readme | areas + glossary | ADRs
+    constitution
+      root + policy + config + readme
+        areas + glossary                  | ADR shelves
 
-An ADR is placed exactly once, on a *shelf* under the first governing
-non-ADR doc (index order) that cites it. The shelf owner's own box is
-pulled down to the top of its shelf so the row reads "this doc, and the
-decisions it leans on". ADRs no doc cites sit in a dashed pool at the foot
-of the column — the epic frame's undeclared-pool grammar, reused so absence
-reads as a finding. Long shelves collapse to :data:`SHELF_MAX` chips plus a
-``more`` label whose href lifts the cap for that shelf; the pool likewise
-under the ``expand`` key ``pool``.
+Every non-ADR doc gets a *band* of its own: a horizontal strip of the frame
+no other doc box shares. Bands run top to bottom by indent, then index
+order. Because no two doc boxes share a band, a horizontal run at a doc's
+own height crosses nothing, which is what lets the doc column be one column
+wide and leave the width to the shelves. Structural lines run a *rail* left
+of every box — one lane per source — leaving the source's left edge and
+entering the target's, so a root with nineteen areas draws one bus.
 
-Routing: an edge whose endpoints sit in adjacent columns is an ``elbow()``
-through the gutter between them. An edge spanning two or more columns
-cannot use a gutter midpoint — an intervening column of boxes is in the
-way — so it climbs its own gutter into a *top channel* above every box,
-crosses, and descends the gutter left of its target. One trunk per source:
-project.md citing nine ADRs draws one trunk that forks nine times, not nine
-near-parallel trunks. Same-column edges (supersedes, ADR → ADR) route in a
-reserved gutter right of the last column so they never cross a citation.
+A decision sits exactly once, on a *shelf* in its strongest citer's band: a
+grid of :data:`SHELF_COLS` chips framed beside the doc, with one line from
+the doc into the frame. The strongest citer is the governing doc that
+mentions the ADR most often, ties going to the doc citing the fewest ADRs
+(the more specific home), then index order. An *index* doc — the ADR
+README, which lists every decision — cites nothing here: a list is not a
+dependency, and counting it gave one doc most of the shelves. ADRs no other
+doc cites sit in a dashed pool under the last band, so absence reads as a
+finding. Long shelves collapse to :data:`SHELF_MAX` chips plus a ``more``
+label whose href lifts the cap for that shelf; the pool likewise under the
+``expand`` key ``pool``.
+
+A citation from any doc other than the shelf owner is not a line. It is a
+hover link: every node carries ``links``, the paths that light up when it is
+hovered — a doc's decisions wherever they sit, a decision's citers and its
+supersedes neighbours. Lines for those crossed the whole map and merged into
+a solid bar on a 112-ADR corpus; the owner line and the light carry the same
+facts without it.
 
 Parent edges are stored child → parent in the corpus but *drawn* parent →
 child with the arrowhead toward the child, which is also how ``maps-area``
@@ -57,6 +69,8 @@ from collections.abc import Iterable
 
 from cortex_command.dashboard.backlog.epic_layout import ARROW_INSET, elbow
 from cortex_command.dashboard.docs.model import (
+    MAP_CH,
+    MAP_CW,
     MAP_NH,
     MAP_NW,
     Corpus,
@@ -72,32 +86,32 @@ from cortex_command.dashboard.docs.model import (
 # --- geometry constants ----------------------------------------------------
 
 NW, NH = MAP_NW, MAP_NH
+CW, CH = MAP_CW, MAP_CH
 PAD = 26
-COL_GAP = 72           # gutter between columns; every lane lives in one
-ROW_GAP = 14           # between stacked doc boxes in columns 0–2
-ADR_GAP = 8            # between chips on a shelf or in the pool
+COL_GAP = 72           # strip: gutter between columns; every lane lives in one
+ROW_GAP = 14           # between one band and the next
+CHIP_GAP = 8           # between chips on a shelf or in the pool, both axes
 
-HEAD_H = 34            # column-label band above the channel
+INDENT = 20            # ladder: a doc box steps right this far per column
+RAIL_STEP = 8          # ladder: pitch between structural lanes in the left rail
+SHELF_GAP_X = 36       # ladder: from the widest doc box to the shelf chips
+
+HEAD_H = 34            # column-label band above the first doc
 LABEL_DY = 12          # column-label baseline inside the band
-TRUNK_STEP = 10        # vertical pitch between trunks in the top channel
-CHANNEL_PAD = 12       # clearance below the last trunk before the first box
 
-SHELF_LABEL_H = 20     # label band above a shelf's first chip
-SHELF_GAP = 22         # from the last chip of one shelf to the next label
+SHELF_COLS = 4
+SHELF_LABEL_H = 22     # label band above a shelf's frame
+SHELF_INSET = 8        # shelf frame overhang around its chips
 MORE_H = 22            # the ``+N more`` label's row
-POOL_GAP = 26          # from the last shelf to the pool box
-POOL_INSET = 10        # pool box overhang either side of the chips
+POOL_GAP = 26          # from the last band to the pool box
 POOL_HEAD_H = 30
 POOL_FOOT_H = 8
 
 LANE_MARGIN = 12       # first lane's offset from the gutter's left edge
 LANE_STEP_MAX = 12     # lanes never spread wider than this
-SUP_MARGIN = 22        # first supersedes lane, clear of the pool overhang
-SUP_STEP = 10
-SUP_TAIL = 8
 
-SHELF_MAX = 6
-POOL_MAX = 8
+SHELF_MAX = 16
+POOL_MAX = 12
 SIDE_MAX = 12
 
 MIN_FRAME_W = 320
@@ -112,8 +126,12 @@ COLUMN_OF = {
     "area": 2, "glossary": 2, "doc": 2,
     "adr": 3,
 }
-COLUMN_LABELS = ("CONSTITUTION", "ROOT + POLICY", "AREA DOCS", "DECISIONS")
+COLUMN_LABELS = ("DOCS", "DECISIONS")
 STRUCTURAL = ("parent", "maps-area", "global")
+
+#: Docs that list decisions rather than lean on them. Their cites are neither
+#: shelves nor hover links. Kept in step with ``corpus.ADR_README``.
+INDEX_DOCS = frozenset({"cortex/adr/README.md"})
 
 
 # --- shared helpers ----------------------------------------------------------
@@ -139,9 +157,9 @@ def _lanes(x0: int, keys: Iterable[str]) -> dict[str, int]:
     """One x per key inside a COL_GAP-wide gutter starting at *x0*.
 
     Evenly spaced from the gutter's left margin, never wider than
-    :data:`LANE_STEP_MAX` apart, and never past the right margin: the
-    right-hand column's pool box overhangs the gutter by
-    :data:`POOL_INSET`, and a lane must stay clear of it.
+    :data:`LANE_STEP_MAX` apart, and never past the right margin: a shelf
+    frame or the pool box overhangs the gutter right of the area column, and
+    a lane must stay clear of it.
     """
     keys = list(keys)
     if not keys:
@@ -155,57 +173,34 @@ def _route(
     ax: int, ay: int, acol: int,
     bx: int, by: int, bcol: int,
     lane_of: dict[tuple[int, str], int],
-    trunk_y: dict[str, int],
     key: str,
 ) -> str:
-    """SVG ``d`` from box A to box B whose vertical runs sit in known lanes.
+    """SVG ``d`` from box A (mid-height *ay*) to box B (mid-height *by*).
 
     *lane_of* is keyed by ``(gutter, key)`` where gutter ``g`` is the strip
-    right of column ``g``; *trunk_y* by *key*. Every case ends with a
-    horizontal into the target so the arrowhead marker sits flat:
+    right of column ``g``. Every case ends with a horizontal into the target
+    so the arrowhead marker sits flat. A run that crosses whole columns does
+    so at an endpoint's own height, which the caller guarantees is clear:
 
-    * adjacent, rightward: ``elbow()`` through gutter ``acol``;
-    * two or more columns rightward: up gutter ``acol`` to the trunk,
-      across the channel, down gutter ``bcol-1``;
-    * same column: out the right side, down the gutter right of the
-      column, back in to the target's right edge;
-    * leftward: the mirror images, entering the target's right edge.
+    * rightward: across at A's height, down gutter ``bcol-1``, into B's left
+      (the strip only ever crosses one gutter);
+    * same column: out the right side, down the gutter right of the column,
+      back in to the target's right edge;
+    * leftward: out A's left side, down gutter ``acol-1``, across at B's
+      height into B's right edge.
     """
-    amid, bmid = ay + NH // 2, by + NH // 2
     dc = bcol - acol
-    if dc == 1:
-        return elbow(ax + NW, amid, bx, bmid, lane_of[(acol, key)])
-    if dc >= 2:
-        return (
-            f"M {ax + NW} {amid} H {lane_of[(acol, key)]} V {trunk_y[key]} "
-            f"H {lane_of[(bcol - 1, key)]} V {bmid} H {bx - ARROW_INSET}"
-        )
+    if dc >= 1:
+        return elbow(ax + NW, ay, bx, by, lane_of[(bcol - 1, key)])
     if dc == 0:
         return (
-            f"M {ax + NW} {amid} H {lane_of[(acol, key)]} V {bmid} "
-            f"H {bx + NW + ARROW_INSET}"
-        )
-    if dc == -1:
-        return (
-            f"M {ax} {amid} H {lane_of[(bcol, key)]} V {bmid} "
+            f"M {ax + NW} {ay} H {lane_of[(acol, key)]} V {by} "
             f"H {bx + NW + ARROW_INSET}"
         )
     return (
-        f"M {ax} {amid} H {lane_of[(acol - 1, key)]} V {trunk_y[key]} "
-        f"H {lane_of[(bcol, key)]} V {bmid} H {bx + NW + ARROW_INSET}"
+        f"M {ax} {ay} H {lane_of[(acol - 1, key)]} V {by} "
+        f"H {bx + NW + ARROW_INSET}"
     )
-
-
-def _gutters_used(acol: int, bcol: int) -> tuple[int, ...]:
-    """Which gutters a route from column *acol* to *bcol* runs a vertical in."""
-    dc = bcol - acol
-    if dc == 1 or dc == 0:
-        return (acol,)
-    if dc >= 2:
-        return (acol, bcol - 1)
-    if dc == -1:
-        return (bcol,)
-    return (acol - 1, bcol)
 
 
 def _node_focus(path: str, focus: str | None, ins: set[str], outs: set[str]) -> str:
@@ -242,6 +237,7 @@ def _state(node: DocNode) -> str:
 
 def _map_node(
     corpus: Corpus, node: DocNode, x: int, y: int, focus: str,
+    chip: bool = False, links: tuple[str, ...] = (),
 ) -> MapNode:
     """Build the drawn node; ``←n →n`` counts are *cites* edges only, which
     is the same number the index page prints as ``cited by N``."""
@@ -261,6 +257,10 @@ def _map_node(
             e for e in corpus.out_edges(node.path, ("cites",)) if not e.dangling
         ]),
         ghost=not node.exists,
+        w=CW if chip else NW,
+        h=CH if chip else NH,
+        chip=chip,
+        links=links,
     )
 
 
@@ -278,6 +278,22 @@ def _empty(marker: str, verdict: str, total: int) -> MapLayout:
         total=total,
         empty=True,
     )
+
+
+def _grid_h(n: int) -> int:
+    """Height of *n* chips laid :data:`SHELF_COLS` wide, no outer gap."""
+    rows = -(-n // SHELF_COLS)
+    return rows * (CH + CHIP_GAP) - CHIP_GAP if rows else 0
+
+
+def _grid_w(n: int) -> int:
+    cols = min(n, SHELF_COLS)
+    return cols * (CW + CHIP_GAP) - CHIP_GAP if cols else 0
+
+
+def _grid_pos(x0: int, y0: int, i: int) -> tuple[int, int]:
+    r, c = divmod(i, SHELF_COLS)
+    return x0 + c * (CW + CHIP_GAP), y0 + r * (CH + CHIP_GAP)
 
 
 # --- the ladder --------------------------------------------------------------
@@ -324,19 +340,34 @@ def layout_ladder(
             drawn.add(e.src)
             drawn.add(e.dst)
 
-    def is_citer(n: DocNode) -> bool:
-        return n.governing and n.exists and n.kind != "adr"
+    def is_citer(p: str) -> bool:
+        n = nodes[p]
+        return n.governing and n.exists and n.kind != "adr" and p not in INDEX_DOCS
 
-    # Shelf ownership: the first governing non-ADR citer in index order.
+    doc_cites = [
+        e for e in edges
+        if e.kind == "cites" and nodes[e.dst].kind == "adr" and is_citer(e.src)
+    ]
+    breadth: dict[str, int] = {}
+    for e in doc_cites:
+        breadth[e.src] = breadth.get(e.src, 0) + 1
+
+    # Shelf ownership: most mentions, then the narrowest citer, then index order.
     owner: dict[str, str] = {}
-    for e in edges:
-        if e.kind != "cites" or e.dst not in drawn:
-            continue
-        if nodes[e.dst].kind != "adr" or not is_citer(nodes[e.src]):
+    for e in doc_cites:
+        if e.dst not in drawn:
             continue
         cur = owner.get(e.dst)
-        if cur is None or rank[e.src] < rank[cur]:
+        cand = (-e.count, breadth[e.src], rank[e.src])
+        if cur is None:
             owner[e.dst] = e.src
+            continue
+        best = max(
+            (x.count for x in doc_cites if x.src == cur and x.dst == e.dst), default=0,
+        )
+        if cand < (-best, breadth[cur], rank[cur]):
+            owner[e.dst] = e.src
+
     shelves: dict[str, list[str]] = {}
     pool: list[str] = []
     for p in order:
@@ -346,7 +377,6 @@ def layout_ladder(
             shelves.setdefault(owner[p], []).append(p)
         else:
             pool.append(p)
-    shelf_owners = sorted(shelves, key=lambda p: rank[p])
 
     lifted = set(expand)
     if focus is not None:
@@ -359,166 +389,188 @@ def layout_ladder(
         return "?expand=" + ",".join(sorted(lifted | {key}))
 
     shelf_vis: dict[str, list[str]] = {}
-    for o in shelf_owners:
-        members = shelves[o]
+    for o, members in shelves.items():
         capped = len(members) > SHELF_MAX and o not in lifted
         shelf_vis[o] = members[:SHELF_MAX] if capped else members
     pool_capped = len(pool) > POOL_MAX and "pool" not in lifted
     pool_vis = pool[:POOL_MAX] if pool_capped else pool
 
-    hidden = {p for o in shelf_owners for p in shelves[o] if p not in shelf_vis[o]}
+    hidden = {p for o in shelves for p in shelves[o] if p not in shelf_vis[o]}
     hidden |= {p for p in pool if p not in pool_vis}
     visible = drawn - hidden
     col_of = {p: _column(nodes[p]) for p in visible}
 
-    # Which edges are drawn, and in which direction the line runs. Structural
-    # kinds dedupe on the drawn (parent, child) pair; cites only from a
-    # non-ADR citer into the ADR column; supersedes as stored.
-    drawn_edges: list[tuple[str, str, DocEdge]] = []
+    # Which edges are lines. Structural kinds between doc boxes, deduped on the
+    # drawn (parent, child) pair; one cites line per shelf, owner → first chip.
+    lines: list[tuple[str, str, str, str, str]] = []   # frm, to, kind, src, dst
     seen_pairs: set[tuple[str, str]] = set()
     for e in edges:
+        if e.kind not in STRUCTURAL:
+            continue
         if e.src not in visible or e.dst not in visible:
             continue
-        if e.kind in STRUCTURAL:
-            frm, to = (e.dst, e.src) if e.kind == "parent" else (e.src, e.dst)
-            if (frm, to) in seen_pairs:
-                continue
-            seen_pairs.add((frm, to))
-        elif e.kind == "cites":
-            if nodes[e.dst].kind != "adr" or not is_citer(nodes[e.src]):
-                continue
-            frm, to = e.src, e.dst
-        elif e.kind == "supersedes":
-            frm, to = e.src, e.dst
-        else:
+        if col_of[e.src] > 2 or col_of[e.dst] > 2:
             continue
-        drawn_edges.append((frm, to, e))
+        frm, to = (e.dst, e.src) if e.kind == "parent" else (e.src, e.dst)
+        if (frm, to) in seen_pairs:
+            continue
+        seen_pairs.add((frm, to))
+        lines.append((frm, to, e.kind, e.src, e.dst))
 
-    # Lanes: per gutter, one x per source, in index order. Trunks: one y per
-    # source whose edges span two or more columns, in index order.
-    gutter_keys: dict[int, list[str]] = {}
-    trunk_keys: list[str] = []
-    for frm, to, _e in drawn_edges:
-        for g in _gutters_used(col_of[frm], col_of[to]):
-            keys = gutter_keys.setdefault(g, [])
-            if frm not in keys:
-                keys.append(frm)
-        if abs(col_of[to] - col_of[frm]) >= 2 and frm not in trunk_keys:
-            trunk_keys.append(frm)
-    trunk_keys.sort(key=lambda p: rank[p])
-    lane_of: dict[tuple[int, str], int] = {}
-    for g, keys in gutter_keys.items():
-        keys.sort(key=lambda p: rank[p])
-        if g >= 3:
-            for i, k in enumerate(keys):
-                lane_of[(g, k)] = _col_x(3) + NW + SUP_MARGIN + i * SUP_STEP
-        else:
-            for k, x in _lanes(_col_x(g) + NW, keys).items():
-                lane_of[(g, k)] = x
-    channel_h = (len(trunk_keys) * TRUNK_STEP + CHANNEL_PAD) if trunk_keys else 0
-    trunk_y = {k: PAD + HEAD_H + i * TRUNK_STEP for i, k in enumerate(trunk_keys)}
-    y_top = PAD + HEAD_H + channel_h
+    # Bands: every doc box in column order, then index order. A doc's column
+    # is an indent, not a grid column: bands never share a height, so the doc
+    # boxes can sit one under another and leave the width to the shelves.
+    band_docs = sorted(
+        (p for p in visible if col_of[p] <= 2), key=lambda p: (col_of[p], rank[p]),
+    )
+    for o in band_docs:
+        if o in shelf_vis:
+            lines.append((o, shelf_vis[o][0], "cites", o, shelf_vis[o][0]))
 
-    # Column 3 first: shelves in owner order, then the pool. Shelf tops are
-    # what the other columns align to.
+    # The rail: one lane per structural source, left of every box. A line
+    # leaves its source's left edge, runs the rail, and enters its target's
+    # left edge — both horizontals at an endpoint's own band.
+    band_rank = {p: i for i, p in enumerate(band_docs)}
+    rail_keys = sorted(
+        {frm for frm, _to, kind, _s, _d in lines if kind != "cites"},
+        key=lambda p: band_rank[p],
+    )
+    rail_x = {k: PAD + i * RAIL_STEP for i, k in enumerate(rail_keys)}
+    doc_x0 = PAD + (len(rail_keys) * RAIL_STEP + LANE_MARGIN if rail_keys else 0)
+
+    def doc_x(p: str) -> int:
+        return doc_x0 + col_of[p] * INDENT
+
+    x3 = doc_x0 + 2 * INDENT + NW + SHELF_GAP_X
+
     pos: dict[str, tuple[int, int]] = {}
+    chip: set[str] = set()
     labels: list[MapLabel] = []
     boxes: list[MapBox] = []
-    shelf_top: dict[str, int] = {}
-    x3 = _col_x(3)
-    y = y_top
-    for o in shelf_owners:
-        vis = shelf_vis[o]
-        members = shelves[o]
-        cited = len([
-            e for e in corpus.out_edges(o, ("cites",))
-            if not e.dangling and e.dst in nodes and nodes[e.dst].kind == "adr"
-        ])
-        text = f"{nodes[o].short} cites {cited}"
+    y = PAD + HEAD_H
+    for p in band_docs:
+        vis = shelf_vis.get(p)
+        if not vis:
+            pos[p] = (doc_x(p), y)
+            y += NH + ROW_GAP
+            continue
+        members = shelves[p]
+        cited = breadth.get(p, 0)
+        text = f"{nodes[p].short} · {len(members)} here"
         if cited != len(members):
-            text += f" · {len(members)} here"
-        labels.append(MapLabel(x=x3, y=y + SHELF_LABEL_H - 6, text=text, role="shelf"))
-        y += SHELF_LABEL_H
-        shelf_top[o] = y
-        for p in vis:
-            pos[p] = (x3, y)
-            y += NH + ADR_GAP
+            text += f" · cites {cited}"
+        labels.append(MapLabel(x=x3, y=y + SHELF_LABEL_H - 8, text=text, role="shelf"))
+        top = y + SHELF_LABEL_H
+        grid_top = top + SHELF_INSET
+        for i, a in enumerate(vis):
+            pos[a] = _grid_pos(x3, grid_top, i)
+            chip.add(a)
+        frame_h = _grid_h(len(vis)) + 2 * SHELF_INSET
+        boxes.append(MapBox(
+            x=x3 - SHELF_INSET, y=top, w=_grid_w(len(vis)) + 2 * SHELF_INSET,
+            h=frame_h, role="shelf",
+        ))
+        # the owner's middle sits level with the first chip row's middle
+        pos[p] = (doc_x(p), grid_top + CH // 2 - NH // 2)
+        bottom = max(top + frame_h, pos[p][1] + NH)
         if len(vis) < len(members):
             labels.append(MapLabel(
-                x=x3, y=y + MORE_H - 8,
+                x=x3, y=bottom + MORE_H - 6,
                 text=f"+{len(members) - len(vis)} more",
-                role="more", href=expand_href(o),
+                role="more", href=expand_href(p),
             ))
-            y += MORE_H + ADR_GAP
-        y += SHELF_GAP - ADR_GAP
+            bottom += MORE_H
+        y = bottom + ROW_GAP + 6
+
     pool_bottom = 0
     if pool:
-        py = y + (POOL_GAP if shelf_owners else 0)
+        py = y + (POOL_GAP if band_docs else 0)
         labels.append(MapLabel(
             x=x3, y=py + 18, text=f"cited by no doc · {len(pool)}", role="pool",
         ))
         cy = py + POOL_HEAD_H
-        for p in pool_vis:
-            pos[p] = (x3, cy)
-            cy += NH + ADR_GAP
+        for i, p in enumerate(pool_vis):
+            pos[p] = _grid_pos(x3, cy, i)
+            chip.add(p)
+        cy += _grid_h(len(pool_vis))
         if pool_capped:
             labels.append(MapLabel(
-                x=x3, y=cy + MORE_H - 8,
+                x=x3, y=cy + MORE_H - 4,
                 text=f"+{len(pool) - len(pool_vis)} more",
                 role="more", href=expand_href("pool"),
             ))
-            cy += MORE_H + ADR_GAP
-        ph = (cy - ADR_GAP - py) + POOL_FOOT_H
-        boxes.append(MapBox(x=x3 - POOL_INSET, y=py, w=NW + 2 * POOL_INSET, h=ph, role="pool"))
+            cy += MORE_H
+        ph = (cy - py) + POOL_FOOT_H
+        boxes.append(MapBox(
+            x=x3 - SHELF_INSET, y=py, w=max(_grid_w(len(pool_vis)), CW) + 2 * SHELF_INSET,
+            h=ph, role="pool",
+        ))
         pool_bottom = py + ph
 
-    # Columns 0–2 stack in index order; a shelf owner drops to its shelf.
-    for col in range(3):
-        cursor = y_top
-        for p in order:
-            if p not in visible or col_of[p] != col:
-                continue
-            ny = max(cursor, shelf_top.get(p, 0))
-            pos[p] = (_col_x(col), ny)
-            cursor = ny + NH + ROW_GAP
+    if band_docs:
+        labels.append(MapLabel(x=doc_x0, y=PAD + LABEL_DY, text=COLUMN_LABELS[0], role="column"))
+    if chip:
+        labels.append(MapLabel(x=x3, y=PAD + LABEL_DY, text=COLUMN_LABELS[1], role="column"))
 
-    used_cols = {col_of[p] for p in pos}
-    for col in sorted(used_cols):
-        labels.append(MapLabel(
-            x=_col_x(col), y=PAD + LABEL_DY, text=COLUMN_LABELS[col], role="column",
-        ))
+    # Hover links: a doc lights its decisions, a decision its citers and its
+    # supersedes neighbours. Index docs neither light nor are lit by cites.
+    link_sets: dict[str, set[str]] = {p: set() for p in pos}
+    for e in doc_cites:
+        if e.src in pos and e.dst in pos:
+            link_sets[e.src].add(e.dst)
+            link_sets[e.dst].add(e.src)
+    for e in edges:
+        if e.kind == "supersedes" and e.src in pos and e.dst in pos:
+            link_sets[e.src].add(e.dst)
+            link_sets[e.dst].add(e.src)
 
     # Focus is one-hop adjacency over the whole corpus, drawn or not.
     ins = {e.src for e in corpus.in_edges(focus)} if focus else set()
     outs = {e.dst for e in corpus.out_edges(focus)} if focus else set()
 
     map_nodes = [
-        _map_node(corpus, nodes[p], pos[p][0], pos[p][1], _node_focus(p, focus, ins, outs))
+        _map_node(
+            corpus, nodes[p], pos[p][0], pos[p][1], _node_focus(p, focus, ins, outs),
+            chip=p in chip, links=tuple(sorted(link_sets[p], key=lambda q: rank[q])),
+        )
         for p in order if p in pos
     ]
-    map_edges = [
-        MapEdge(
-            src=e.src, dst=e.dst, kind=e.kind,
-            d=_route(
-                pos[frm][0], pos[frm][1], col_of[frm],
-                pos[to][0], pos[to][1], col_of[to],
-                lane_of, trunk_y, frm,
-            ),
-            focus=_edge_focus(e, focus),
-        )
-        for frm, to, e in drawn_edges
-    ]
 
-    right = max((x + NW for x, _y in pos.values()), default=PAD)
+    def mid(p: str) -> int:
+        return pos[p][1] + (CH if p in chip else NH) // 2
+
+    def line_focus(kind: str, src: str, dst: str) -> str:
+        if focus is None:
+            return "none"
+        if kind == "cites":
+            if focus == src:
+                return "out"
+            return "in" if focus in shelves.get(src, ()) else "far"
+        return _edge_focus(DocEdge(src=src, dst=dst, kind=kind), focus)
+
+    map_edges: list[MapEdge] = []
+    for frm, to, kind, src, dst in lines:
+        if kind == "cites":
+            d = f"M {pos[frm][0] + NW} {mid(frm)} H {x3 - SHELF_INSET - ARROW_INSET}"
+        else:
+            d = (
+                f"M {pos[frm][0]} {mid(frm)} H {rail_x[frm]} V {mid(to)} "
+                f"H {pos[to][0] - ARROW_INSET}"
+            )
+        map_edges.append(MapEdge(
+            src=src, dst=dst, kind=kind, d=d, focus=line_focus(kind, src, dst),
+        ))
+
     right = max(
-        right,
-        max((x + SUP_TAIL for (g, _k), x in lane_of.items() if g >= 3), default=0),
-        (x3 + NW + POOL_INSET) if pool else 0,
+        max((x + (CW if p in chip else NW) for p, (x, _y) in pos.items()), default=PAD),
+        max((b.x + b.w for b in boxes), default=0),
         MIN_FRAME_W - PAD,
     )
     bottom = max(
-        max((y + NH for _x, y in pos.values()), default=y_top),
+        max((yy + (CH if p in chip else NH) for p, (_x, yy) in pos.items()),
+            default=PAD + HEAD_H),
         pool_bottom,
+        max((b.y + b.h for b in boxes), default=0),
         max((lb.y for lb in labels), default=0),
     )
 
@@ -624,9 +676,9 @@ def layout_neighbourhood(corpus: Corpus, focus: str) -> MapLayout:
         map_edges.append(MapEdge(
             src=e.src, dst=e.dst, kind=e.kind,
             d=_route(
-                pos[frm][0], pos[frm][1], col_of[frm],
-                pos[to][0], pos[to][1], col_of[to],
-                lane_of, {}, key,
+                pos[frm][0], pos[frm][1] + NH // 2, col_of[frm],
+                pos[to][0], pos[to][1] + NH // 2, col_of[to],
+                lane_of, key,
             ),
             focus=_edge_focus(e, focus),
         ))

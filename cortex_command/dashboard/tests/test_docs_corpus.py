@@ -260,6 +260,28 @@ def test_dangling_cites_get_no_node(corpus: Corpus) -> None:
     assert "cortex/adr/0099.md" not in corpus.nodes
 
 
+def test_shared_adr_number_resolves_by_nearby_words(tmp_path: Path) -> None:
+    mesh = "cortex/adr/0093-structure-mesh-mount.md"
+    flood = "cortex/adr/0093-terrain-is-a-live-consumer-of-the-flood-field.md"
+    _write(tmp_path, mesh, "---\nstatus: accepted\n---\n\n# Structures mount as real meshes\n")
+    _write(tmp_path, flood, "---\nstatus: accepted\n---\n\n# Terrain is a live consumer of the flood field\n")
+    _write(tmp_path, ALPHA, (
+        "# Alpha\n\n"
+        "The fix landed (ADR-0093 — terrain is a live consumer of the flood field).\n"
+    ))
+    _write(tmp_path, ZETA, "# Zeta\n\nBecause a mesh mount landing (ADR-0093) looks done.\n")
+    _write(tmp_path, GLOSSARY, "# Glossary\n\nADR-0093 is a known duplicate number.\n")
+    _write(tmp_path, PROJECT, "# Project\n\nRETIRED AS AN ADR 2026-08-23, not a citation.\n")
+    c = build_corpus(tmp_path)
+    cites = set(_edges(c, "cites"))
+    assert (ALPHA, flood) in cites and (ALPHA, mesh) not in cites
+    assert (ZETA, mesh) in cites and (ZETA, flood) not in cites
+    # no telling word: the mention is ambiguous, so it cites both files
+    assert {(GLOSSARY, mesh), (GLOSSARY, flood)} <= cites
+    # a date after "ADR" is not ADR-2026
+    assert not any("2026" in dst for src, dst in cites if src == PROJECT)
+
+
 def test_self_cites_dropped(corpus: Corpus) -> None:
     assert all(e.src != e.dst for e in corpus.edges)
     assert _edges(corpus, "cites").count((ADR3, ADR2)) == 1

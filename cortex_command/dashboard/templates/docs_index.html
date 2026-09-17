@@ -16,8 +16,7 @@
 
 <section class="section-primary">
   <span class="sec-num"><strong>§ 01</strong>map</span>
-  <h2>How the <em>governing docs</em> connect <span class="phase-tag">{{ ladder.drawn }} of {{ ladder.total }} drawn</span></h2>
-  <p class="sec-lede">Read left to right: the constitution, the root and its area docs, then the decisions each one cites. An ADR is placed once, under the first doc that cites it. ADRs no doc cites sit in the dashed pool — a finding, not a layout gap.</p>
+  <h2>Requirements <em>docs</em></h2>
   {# The wrapper is the swap target for the map's ``more`` links, which
      re-fetch the ladder alone with a wider ``expand`` set. #}
   <div id="docmap-wrap">
@@ -25,8 +24,7 @@
   </div>
   <p class="docmap__key">
     <span class="docmap__key-item docmap__key-item--parent">parent · maps-area · global</span>
-    <span class="docmap__key-item docmap__key-item--cites">cites</span>
-    <span class="docmap__key-item docmap__key-item--supersedes">supersedes</span>
+    <span class="docmap__key-item docmap__key-item--cites">shelf · hover for every cite</span>
     <span class="docmap__key-item docmap__key-item--box docmap__key-item--constitution">constitution · policy</span>
     <span class="docmap__key-item docmap__key-item--box docmap__key-item--requirements">requirements</span>
     <span class="docmap__key-item docmap__key-item--box docmap__key-item--accepted">accepted</span>

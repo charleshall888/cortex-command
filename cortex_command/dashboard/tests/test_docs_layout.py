@@ -9,9 +9,9 @@ and byte-stable output. Nothing here pins a verdict sentence.
 
 The hand corpus is built from ``model`` dataclasses with no disk: a
 constitution, a policy, a root, a config, a readme, three mapped areas plus
-a glossary, twelve ADRs (one shelf of exactly seven so the six-cap fires,
-one uncited so the pool exists, one superseded, one ghost successor), a
-dangling cite and an ADR-to-ADR cite that must never be drawn.
+a glossary, twelve ADRs (one uncited so the pool exists, one superseded,
+one ghost successor, ties that exercise shelf ownership), a dangling cite
+and an ADR-to-ADR cite that must never be drawn.
 """
 
 from __future__ import annotations
@@ -101,8 +101,8 @@ def hand_corpus() -> Corpus:
     e.append(DocEdge(src=PROJECT, dst=GLOSSARY, kind="global"))
     for area in (LIFECYCLE, BACKLOG, OBS, GLOSSARY):
         e.append(DocEdge(src=area, dst=PROJECT, kind="parent"))
-    # cites: CLAUDE owns 9; policies owns 8; project owns 1 and 3;
-    # lifecycle owns 2,4,5,6,7,12,13 (seven, so the six-cap fires)
+    # cites: project owns 1, 3, 8 (most mentions); CLAUDE owns 9 and backlog
+    # owns 4 (narrowest citer); lifecycle owns 2, 5, 6, 7, 12, 13
     e.append(DocEdge(src=POLICIES, dst=adr_path(8), kind="cites", section="Tone"))
     for n in (1, 3, 8):
         e.append(DocEdge(src=PROJECT, dst=adr_path(n), kind="cites", count=2))
@@ -140,12 +140,14 @@ def segments(d: str) -> list[tuple[int, int, int, int]]:
     return out
 
 
-def crosses_box(seg: tuple[int, int, int, int], bx: int, by: int) -> bool:
+def crosses_box(
+    seg: tuple[int, int, int, int], bx: int, by: int, bw: int = NW, bh: int = NH,
+) -> bool:
     """True when the segment passes through the *interior* of a box."""
     x1, y1, x2, y2 = seg
     lo_x, hi_x = min(x1, x2), max(x1, x2)
     lo_y, hi_y = min(y1, y2), max(y1, y2)
-    return lo_x < bx + NW and hi_x > bx and lo_y < by + NH and hi_y > by
+    return lo_x < bx + bw and hi_x > bx and lo_y < by + bh and hi_y > by
 
 
 class GeometryMixin:
@@ -161,14 +163,14 @@ class GeometryMixin:
             self.assertIsInstance(n.y, int)
             self.assertGreaterEqual(n.x, 0)
             self.assertGreaterEqual(n.y, 0)
-            self.assertLessEqual(n.x + NW, layout.width, n.path)
-            self.assertLessEqual(n.y + NH, layout.height, n.path)
+            self.assertLessEqual(n.x + n.w, layout.width, n.path)
+            self.assertLessEqual(n.y + n.h, layout.height, n.path)
         nodes = layout.nodes
         for i, a in enumerate(nodes):
             for b in nodes[i + 1:]:
                 overlap = (
-                    a.x < b.x + NW and a.x + NW > b.x
-                    and a.y < b.y + NH and a.y + NH > b.y
+                    a.x < b.x + b.w and a.x + a.w > b.x
+                    and a.y < b.y + b.h and a.y + a.h > b.y
                 )
                 self.assertFalse(overlap, f"{a.path} overlaps {b.path}")
         for e in layout.edges:
@@ -185,7 +187,7 @@ class GeometryMixin:
                     if n.path in (e.src, e.dst):
                         continue
                     self.assertFalse(
-                        crosses_box(seg, n.x, n.y),
+                        crosses_box(seg, n.x, n.y, n.w, n.h),
                         f"{e.kind} {e.src}->{e.dst} runs through {n.path}: {e.d}",
                     )
         for lb in layout.labels:
@@ -218,50 +220,94 @@ class LadderTests(GeometryMixin, unittest.TestCase):
         self.assertEqual(xs[PROJECT], xs[CONFIG])
         self.assertLess(xs[PROJECT], xs[LIFECYCLE])
         self.assertEqual(xs[LIFECYCLE], xs[GLOSSARY])
-        self.assertLess(xs[LIFECYCLE], xs[adr_path(1)])
-        self.assertEqual(len({n.x for n in self.layout.nodes if n.kind == "adr"}), 1)
+        # every structural line runs the rail left of every box
+        left = min(n.x for n in self.layout.nodes)
+        for e in self.layout.edges:
+            if e.kind != "cites":
+                self.assertLess(segments(e.d)[1][0], left, e.d)
+        adr_xs = [n.x for n in self.layout.nodes if n.kind == "adr"]
+        self.assertGreater(min(adr_xs), xs[LIFECYCLE] + NW)
+        self.assertTrue(all(n.chip for n in self.layout.nodes if n.kind == "adr"))
+        self.assertFalse(any(n.chip for n in self.layout.nodes if n.kind != "adr"))
 
-    def test_shelf_collapses_at_seven(self):
-        drawn = {n.path for n in self.layout.nodes}
-        lifecycle_shelf = [2, 4, 5, 6, 7, 12, 13]
-        shown = [n for n in lifecycle_shelf if adr_path(n) in drawn]
-        self.assertEqual(len(shown), SHELF_MAX)
-        self.assertNotIn(adr_path(13), drawn)
-        more = [lb for lb in self.layout.labels if lb.role == "more"]
+    def test_doc_bands_are_exclusive(self):
+        # no two doc boxes share any height: that is what keeps every
+        # horizontal run at a doc's own height clear of other boxes
+        docs = sorted((n for n in self.layout.nodes if not n.chip), key=lambda n: n.y)
+        for a, b in zip(docs, docs[1:]):
+            self.assertLessEqual(a.y + a.h, b.y, f"{a.path} shares a band with {b.path}")
+
+    def _long_shelf(self) -> Corpus:
+        c = hand_corpus()
+        for n in range(20, 21 + SHELF_MAX):
+            c.nodes[adr_path(n)] = adr(n)
+            c.edges.append(DocEdge(src=LIFECYCLE, dst=adr_path(n), kind="cites"))
+        return c
+
+    def test_shelf_collapses_past_the_cap(self):
+        lay = layout_ladder(self._long_shelf())
+        self.assert_frame_sound(lay)
+        drawn = {n.path for n in lay.nodes}
+        self.assertNotIn(adr_path(20 + SHELF_MAX), drawn)
+        more = [lb for lb in lay.labels if lb.role == "more"]
         self.assertEqual(len(more), 1)
         self.assertIn(LIFECYCLE, more[0].href or "")
         self.assertTrue(more[0].href.startswith("?expand="))
-        # no edge into the hidden chip
-        self.assertFalse(any(e.dst == adr_path(13) for e in self.layout.edges))
 
     def test_expand_lifts_the_cap(self):
-        lay = layout_ladder(self.corpus, expand=frozenset({LIFECYCLE}))
+        lay = layout_ladder(self._long_shelf(), expand=frozenset({LIFECYCLE}))
         self.assert_frame_sound(lay)
         drawn = {n.path for n in lay.nodes}
-        self.assertIn(adr_path(13), drawn)
+        self.assertIn(adr_path(20 + SHELF_MAX), drawn)
         self.assertEqual([lb for lb in lay.labels if lb.role == "more"], [])
-        self.assertTrue(any(e.dst == adr_path(13) for e in lay.edges))
 
     def test_focus_on_hidden_adr_lifts_its_shelf(self):
-        lay = layout_ladder(self.corpus, focus=adr_path(13))
+        target = adr_path(20 + SHELF_MAX)
+        lay = layout_ladder(self._long_shelf(), focus=target)
         here = [n for n in lay.nodes if n.focus == "here"]
-        self.assertEqual([n.path for n in here], [adr_path(13)])
+        self.assertEqual([n.path for n in here], [target])
 
-    def test_shelf_ownership_is_first_citer(self):
-        ys = {n.path: n.y for n in self.layout.nodes}
-        # CLAUDE owns 9; policies (index before project) owns 8; project owns
-        # 1 and 3. The owner's box aligns to its shelf's first chip.
-        self.assertEqual(ys[CLAUDE], ys[adr_path(9)])
-        self.assertEqual(ys[POLICIES], ys[adr_path(8)])
-        self.assertLess(ys[adr_path(9)], ys[adr_path(8)])
-        self.assertEqual(ys[PROJECT], min(ys[adr_path(1)], ys[adr_path(3)]))
-        self.assertLess(ys[adr_path(8)], ys[adr_path(1)])
-        self.assertLess(ys[adr_path(3)], ys[adr_path(2)])
-        self.assertEqual(ys[LIFECYCLE], ys[adr_path(2)])
-        shelf = [lb for lb in self.layout.labels if lb.role == "shelf"]
-        self.assertEqual(len(shelf), 4)
-        self.assertTrue(shelf[0].text.startswith("CLAUDE.md cites 1"))
-        self.assertTrue(shelf[1].text.startswith("policies.md cites 1"))
+    def test_shelf_ownership_is_strongest_citer(self):
+        pos = {n.path: n for n in self.layout.nodes}
+
+        def shelf_of(p: str) -> str:
+            owners = [e.src for e in self.layout.edges if e.kind == "cites"]
+            frame = [b for b in self.layout.boxes if b.role == "shelf"
+                     and b.y <= pos[p].y < b.y + b.h]
+            self.assertEqual(len(frame), 1, p)
+            mids = {o: pos[o].y + pos[o].h // 2 for o in owners}
+            return next(o for o, m in mids.items() if frame[0].y <= m < frame[0].y + frame[0].h)
+
+        # project mentions 1, 3 and 8 twice: most mentions wins over policies
+        # and lifecycle; CLAUDE and backlog cite one ADR each, so the narrow
+        # citer wins the tie with lifecycle's ten.
+        for n in (1, 3, 8):
+            self.assertEqual(shelf_of(adr_path(n)), PROJECT, n)
+        self.assertEqual(shelf_of(adr_path(9)), CLAUDE)
+        self.assertEqual(shelf_of(adr_path(4)), BACKLOG)
+        for n in (2, 5, 6, 7, 12, 13):
+            self.assertEqual(shelf_of(adr_path(n)), LIFECYCLE, n)
+        # the owner's middle is level with its first chip row's middle
+        for e in self.layout.edges:
+            if e.kind == "cites":
+                o, first = pos[e.src], pos[e.dst]
+                self.assertEqual(o.y + o.h // 2, first.y + first.h // 2, e.src)
+
+    def test_index_doc_owns_no_shelf(self):
+        c = hand_corpus()
+        index = "cortex/adr/README.md"
+        c.nodes[index] = doc(index, "policy", "ADR index")
+        for n in list(range(1, 11)) + [12, 13]:
+            c.edges.append(DocEdge(src=index, dst=adr_path(n), kind="cites", count=3))
+        lay = layout_ladder(c)
+        self.assert_frame_sound(lay)
+        self.assertFalse(any(e.src == index for e in lay.edges))
+        pos = {n.path: n for n in lay.nodes}
+        self.assertEqual(pos[index].links, ())
+        self.assertNotIn(index, pos[adr_path(1)].links)
+        # ADR-0010 is cited by nothing but the index: still the pool
+        pool = [b for b in lay.boxes if b.role == "pool"][0]
+        self.assertTrue(pool.y <= pos[adr_path(10)].y < pool.y + pool.h)
 
     def test_pool_holds_the_uncited_and_the_ghost(self):
         pool_boxes = [b for b in self.layout.boxes if b.role == "pool"]
@@ -270,16 +316,16 @@ class LadderTests(GeometryMixin, unittest.TestCase):
         pos = {n.path: n for n in self.layout.nodes}
         for p in (adr_path(10), adr_path(11)):
             n = pos[p]
-            self.assertTrue(box.x <= n.x and n.x + NW <= box.x + box.w, p)
-            self.assertTrue(box.y <= n.y and n.y + NH <= box.y + box.h, p)
+            self.assertTrue(box.x <= n.x and n.x + n.w <= box.x + box.w, p)
+            self.assertTrue(box.y <= n.y and n.y + n.h <= box.y + box.h, p)
         self.assertFalse(box.y <= pos[adr_path(1)].y <= box.y + box.h)
         pool_labels = [lb for lb in self.layout.labels if lb.role == "pool"]
         self.assertEqual(len(pool_labels), 1)
         self.assertIn("2", pool_labels[0].text)
 
-    def test_pool_caps_at_eight_and_expands(self):
+    def test_pool_caps_and_expands(self):
         c = hand_corpus()
-        for n in range(20, 31):
+        for n in range(20, 20 + POOL_MAX + 3):
             c.nodes[adr_path(n)] = adr(n)
         lay = layout_ladder(c)
         self.assert_frame_sound(lay)
@@ -289,7 +335,10 @@ class LadderTests(GeometryMixin, unittest.TestCase):
         self.assertEqual(len(more), 1)
         lifted = layout_ladder(c, expand=frozenset({"pool"}))
         self.assert_frame_sound(lifted)
-        self.assertEqual(len([n for n in lifted.nodes if n.in_count == 0 and n.kind == "adr"]), 13)  # 10, ghost 11, 20–30
+        self.assertEqual(
+            len([n for n in lifted.nodes if n.in_count == 0 and n.kind == "adr"]),
+            POOL_MAX + 3 + 2,   # 10, ghost 11, and the added ones
+        )
 
     def test_ghosts_draw_as_missing(self):
         pos = {n.path: n for n in self.layout.nodes}
@@ -303,11 +352,13 @@ class LadderTests(GeometryMixin, unittest.TestCase):
 
     def test_edge_kinds_drawn(self):
         kinds = {e.kind for e in self.layout.edges}
-        self.assertEqual(kinds, {"parent", "maps-area", "global", "cites", "supersedes"})
-        # adr → adr cites are counts, never lines
-        self.assertFalse(any(
-            e.kind == "cites" and e.src.startswith("cortex/adr/") for e in self.layout.edges
-        ))
+        self.assertEqual(kinds, {"parent", "maps-area", "global", "cites"})
+        # one cites line per shelf, from its owner, never from an ADR
+        cites = [e for e in self.layout.edges if e.kind == "cites"]
+        shelves = [b for b in self.layout.boxes if b.role == "shelf"]
+        self.assertEqual(len(cites), len(shelves))
+        self.assertEqual(len({e.src for e in cites}), len(cites))
+        self.assertFalse(any(e.src.startswith("cortex/adr/") for e in cites))
         # a pair joined by both parent and maps-area draws one blue line
         blue = [(e.src, e.dst) for e in self.layout.edges if e.kind in ("parent", "maps-area")]
         pairs = {frozenset(p) for p in blue}
@@ -316,28 +367,27 @@ class LadderTests(GeometryMixin, unittest.TestCase):
         self.assertFalse(any(e.dst == DANGLING for e in self.layout.edges))
         self.assertFalse(any(n.path == DANGLING for n in self.layout.nodes))
 
-    def test_multi_column_edges_use_the_top_channel(self):
-        top = min(n.y for n in self.layout.nodes)
-        trunks = [e for e in self.layout.edges if e.kind == "cites" and e.src in (PROJECT, POLICIES, CLAUDE)]
-        self.assertTrue(trunks)
-        for e in trunks:
+    def test_owner_lines_are_straight_into_their_frame(self):
+        shelves = [b for b in self.layout.boxes if b.role == "shelf"]
+        for e in self.layout.edges:
+            if e.kind != "cites":
+                continue
             segs = segments(e.d)
-            self.assertEqual(len(segs), 5, e.d)
-            _x1, y1, _x2, y2 = segs[2]
+            self.assertEqual(len(segs), 1, e.d)
+            x1, y1, x2, y2 = segs[0]
             self.assertEqual(y1, y2)
-            self.assertLess(y1, top, e.d)
-        # one trunk per source: every project.md trunk shares its channel y
-        ys = {segments(e.d)[2][1] for e in trunks if e.src == PROJECT}
-        self.assertEqual(len(ys), 1)
+            self.assertTrue(any(b.y < y1 < b.y + b.h and x2 < b.x for b in shelves), e.d)
 
-    def test_supersedes_routes_right_of_the_adr_column(self):
-        right = max(n.x + NW for n in self.layout.nodes)
-        sup = [e for e in self.layout.edges if e.kind == "supersedes"]
-        self.assertEqual(len(sup), 2)
-        for e in sup:
-            _x1, _y1, lane_x, _y2 = segments(e.d)[0]
-            self.assertGreater(lane_x, right)
-        self.assertGreater(self.layout.width, right + PAD)
+    def test_hover_links(self):
+        pos = {n.path: n for n in self.layout.nodes}
+        # lifecycle lights ADR-0001 although project.md owns it
+        self.assertIn(adr_path(1), pos[LIFECYCLE].links)
+        self.assertEqual(set(pos[adr_path(4)].links), {LIFECYCLE, BACKLOG})
+        # supersedes neighbours light each other; adr → adr cites do not
+        self.assertIn(adr_path(3), pos[adr_path(2)].links)
+        self.assertNotIn(adr_path(4), pos[adr_path(3)].links)
+        self.assertIn(adr_path(11), pos[adr_path(10)].links)
+        self.assertEqual(pos[OBS].links, ())
 
     def test_focus_classes(self):
         lay = layout_ladder(self.corpus, focus=LIFECYCLE)
@@ -354,7 +404,7 @@ class LadderTests(GeometryMixin, unittest.TestCase):
         self.assertNotIn((LIFECYCLE, PROJECT), ef)
         self.assertEqual(ef[(PROJECT, LIFECYCLE)], "in")
         self.assertEqual(ef[(LIFECYCLE, adr_path(2))], "out")
-        self.assertEqual(ef[(POLICIES, adr_path(8))], "far")
+        self.assertEqual(ef[(PROJECT, adr_path(1))], "far")
         self.assertTrue(all(n.focus == "none" for n in self.layout.nodes))
         self.assertTrue(all(e.focus == "none" for e in self.layout.edges))
 
@@ -364,7 +414,7 @@ class LadderTests(GeometryMixin, unittest.TestCase):
 
     def test_column_labels(self):
         cols = [lb for lb in self.layout.labels if lb.role == "column"]
-        self.assertEqual(len(cols), 4)
+        self.assertEqual(len(cols), 2)
         self.assertEqual([lb.x for lb in cols], sorted(lb.x for lb in cols))
 
     def test_empty_for_one_node(self):
@@ -407,7 +457,7 @@ class LadderTests(GeometryMixin, unittest.TestCase):
         self.assertFalse(lay.empty)
         self.assert_frame_sound(lay)
         self.assertEqual(lay.boxes, [])
-        self.assertEqual(len([lb for lb in lay.labels if lb.role == "column"]), 3)
+        self.assertEqual(len([lb for lb in lay.labels if lb.role == "column"]), 1)
 
     def test_deterministic(self):
         a = layout_ladder(hand_corpus(), focus=LIFECYCLE, expand=frozenset({"pool"}))

@@ -7,12 +7,15 @@
    on ``/docs`` and the neighbourhood strip on ``/docs/{path}`` — the layout
    decides the shape, the template only knows the grammar.
 
-   A node is a ``<foreignObject>`` of the size ``model.MAP_NW × MAP_NH`` holding
+   A node is a ``<foreignObject>`` of the size the layout gave it (a doc box or a
+   smaller decision chip) holding
    an ordinary anchor; CSS wraps and clamps the title inside a box whose
    dimensions were already decided. The href stays real and stays first: a
    middle-click, a cmd-click, keyboard Enter and a browser with no JS all reach
    the doc. The ``data-d-*`` attributes feed the hover card without a fetch —
-   every value here was computed for this map already.
+   every value here was computed for this map already. ``data-links`` names the
+   nodes the map lights when this one is hovered, which is how a citation that
+   is not a line is still visible.
 
    Three arrowhead markers per map — one per stroke colour — namespaced by the
    layout's ``marker_id``. A shared id makes every map after the first depend
@@ -89,9 +92,9 @@
     {% endfor %}
 
     {% for n in layout.nodes %}
-    <foreignObject x="{{ n.x }}" y="{{ n.y }}" width="{{ MAP_NW }}" height="{{ MAP_NH }}">
+    <foreignObject x="{{ n.x }}" y="{{ n.y }}" width="{{ n.w }}" height="{{ n.h }}">
       <a xmlns="http://www.w3.org/1999/xhtml" href="{{ n.href }}{{ repo_query }}"
-         class="dn dn--{{ n.kind }}{% if n.status %} dn--{{ n.status }}{% endif %} dn--{{ n.focus }}{% if n.ghost %} dn--ghost{% endif %} js-doc"
+         class="dn dn--{{ n.kind }}{% if n.status %} dn--{{ n.status }}{% endif %} dn--{{ n.focus }}{% if n.ghost %} dn--ghost{% endif %}{% if n.chip %} dn--chip{% endif %} js-doc"
          aria-label="{{ n.short }} {{ n.title }}"
          data-doc="{{ n.path }}"
          data-d-title="{{ n.title }}"
@@ -99,7 +102,8 @@
          data-d-status="{{ n.status or '' }}"
          data-d-short="{{ n.short }}"
          data-d-in="{{ n.in_count }}"
-         data-d-out="{{ n.out_count }}">
+         data-d-out="{{ n.out_count }}"{% if n.links %}
+         data-links="{{ n.links | join(' ') }}"{% endif %}>
         <span class="dn__head">{{ n.short }}<span class="dn__state">{{ n.state }}</span></span>
         <span class="dn__title">{{ n.title }}</span>
         <span class="dn__deg">←{{ n.in_count }} →{{ n.out_count }}</span>

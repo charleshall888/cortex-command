@@ -160,6 +160,8 @@ class Corpus:
 
 #: Node box size, shared by the ladder and the neighbourhood strip.
 MAP_NW, MAP_NH = 220, 56
+#: A decision chip on a ladder shelf: shelves are grids of these.
+MAP_CW, MAP_CH = 166, 42
 
 
 @dataclass(frozen=True)
@@ -177,6 +179,10 @@ class MapNode:
     in_count: int
     out_count: int
     ghost: bool = False
+    w: int = MAP_NW                # a decision chip on a ladder shelf is smaller
+    h: int = MAP_NH
+    chip: bool = False
+    links: tuple[str, ...] = ()    # paths lit when this node is hovered: a doc's decisions, a decision's citers
 
 
 @dataclass(frozen=True)
@@ -203,7 +209,7 @@ class MapBox:
     y: int
     w: int
     h: int
-    role: str                      # ``pool``
+    role: str                      # ``pool`` | ``shelf``
 
 
 @dataclass
