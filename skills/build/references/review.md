@@ -36,7 +36,7 @@ Read `verdict`, `cycle`, `requirements_drift`. The verb resolves verdict × cycl
 
 ## 3a. Auto-apply requirements drift
 
-`"detected"` → before §4, parse `## Suggested Requirements Update` (`File` / `Section` / `Content`), append `Content` at the end of the named `Section` in the target file, report what changed. Missing or unparseable → re-dispatch the reviewer to append it in the brief's format, cap 2 retries. Still failing → the drift-apply has **breached**: do not block verdict processing; carry `--breach --retries 2` into §4 so it surfaces in the morning report.
+`"detected"` → before §4, run `cortex-lifecycle-apply-drift --feature <name>` and report its `entries`. Any state but `applied` → re-dispatch the reviewer with the verb's `message` to fix the section in the brief's format, cap 2 retries. Still failing → the drift-apply has **breached**: do not block verdict processing; carry `--breach --retries 2` into §4 so it surfaces in the morning report.
 
 ## 4. Transition
 

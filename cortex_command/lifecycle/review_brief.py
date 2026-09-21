@@ -233,6 +233,19 @@ def decide_test_baseline(changed_paths: Iterable[str], feature: str) -> str:
     return REUSE_BASELINE
 
 
+# The requirements skill's Synthesize step carries the same rules in its own
+# prose; this copy reaches the reviewer, who never loads that skill.
+REQUIREMENTS_WRITING_RULES = """Write requirements text in plain English:
+
+- Short, active sentences. One idea per sentence or bullet.
+- Common words that carry the idea: "a test that can fail", not "a demonstrated falsifier".
+- The project's own terms from `cortex/requirements/glossary.md`; define any other term once.
+- State the rule, then at most one clause of why. No history: no dates, no "amended", no "previously".
+- Bold marks a rule lead only. No CAPS, no stacked emphasis.
+- Name constants and files; do not quote values that live in code. Keep exact names, commands, and numbers
+  that are the rule."""
+
+
 def _output_shape_section(review_path: str) -> str:
     """The output-shape prescription both modes carry.
 
@@ -251,14 +264,21 @@ Write your review to `{review_path}`. It carries a `## Requirements Drift` secti
 
 Requirements drift is an *observation* that does not affect the verdict: `none` when the implementation
 matches the requirements and adds no unreflected behavior, `detected` when it introduces or changes behavior
-they do not capture. When you are uncertain, log `detected` — a false positive auto-applies a small update, a
-false negative silently hides drift.
+they do not capture. Log `detected` only when you can name the requirement text that is now wrong, or the new
+behavior that has no rule. When you are uncertain, log `none` and say why under Findings — every `detected`
+edits a doc that each later lifecycle phase reads.
 
-On `detected`, add a `## Suggested Requirements Update` section, one entry per drifted file, each naming:
+On `detected`, add a `## Suggested Requirements Update` section, one entry per change, each naming:
 
 - **File**: the requirements file path
 - **Section**: an existing heading in that file
-- **Content**: the exact 1–3 lines to append, written as they should appear rather than described.
+- **Replace**: the existing text this change replaces, quoted exactly — or `None` only for a new rule that no
+  existing text covers
+- **With**: the 1–3 lines that take its place, written as they should appear — or `None` to delete
+
+Edit the rule in place; do not add a second line beside a rule the section already states.
+
+{REQUIREMENTS_WRITING_RULES}
 
 End the file with the Verdict JSON block in the fenced form the review phase's contract prescribes, using
 exactly the field names `verdict`, `cycle`, `issues` and `requirements_drift` — not "overall" / "result" /

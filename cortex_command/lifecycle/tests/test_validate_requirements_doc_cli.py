@@ -218,3 +218,110 @@ def test_cli_never_raises_and_always_exits_zero(tmp_path, capsys) -> None:
     assert rc == 0
     obj = json.loads(capsys.readouterr().out)
     assert obj["state"] == "error"
+
+
+# ---------------------------------------------------------------------------
+# size-budget — a doc is read whole at every phase, so its bytes are capped
+# ---------------------------------------------------------------------------
+
+
+def _size_check(result: dict) -> dict:
+    return next(c for c in result["checks"] if c["name"] == "size-budget")
+
+
+def test_area_doc_over_default_ceiling_fails(tmp_path) -> None:
+    from cortex_command.lifecycle.requirements_budget import DEFAULT_BYTE_CEILING
+
+    p = tmp_path / "area.md"
+    p.write_text(_VALID_AREA_DOC + "x" * DEFAULT_BYTE_CEILING, encoding="utf-8")
+    result = vd.validate_requirements_doc(p, "area")
+    assert result["state"] == "fail"
+    check = _size_check(result)
+    assert check["pass"] is False
+    assert check["ceiling_bytes"] == DEFAULT_BYTE_CEILING
+
+
+def test_size_budget_line_raises_the_ceiling(tmp_path) -> None:
+    from cortex_command.lifecycle.requirements_budget import DEFAULT_BYTE_CEILING
+
+    body = _VALID_AREA_DOC.replace(
+        "# Requirements: area\n", "# Requirements: area\n\n> Size budget: 90,000 bytes\n", 1
+    )
+    p = tmp_path / "area.md"
+    p.write_text(body + "x" * DEFAULT_BYTE_CEILING, encoding="utf-8")
+    result = vd.validate_requirements_doc(p, "area")
+    assert result["state"] == "pass"
+    assert _size_check(result)["ceiling_bytes"] == 90000
+
+
+def test_size_budget_applies_to_project_scope(tmp_path) -> None:
+    p = tmp_path / "project.md"
+    p.write_text(_VALID_PROJECT_DOC, encoding="utf-8")
+    assert _size_check(vd.validate_requirements_doc(p, "project"))["pass"] is True
+
+
+# ---------------------------------------------------------------------------
+# compact-preserves — a compaction must not lose an anchor or a State tag
+# ---------------------------------------------------------------------------
+
+_BASE = """# Requirements: area
+
+## Overview
+
+### Sync
+
+**State:** shipped
+
+- **Retry**: the client calls `retry_call` three times.
+- **Retry again**: amended 2026-01-01, see `old_helper`.
+"""
+
+
+def test_compact_check_passes_and_reports_what_was_dropped() -> None:
+    new = _BASE.replace("- **Retry again**: amended 2026-01-01, see `old_helper`.\n", "")
+    check = vd.compact_check(_BASE, new)
+    assert check["pass"] is True
+    assert check["dropped_rule_leads"] == ["Retry again"]
+    assert check["dropped_identifiers"] == ["old_helper"]
+    assert check["bytes"]["new"] < check["bytes"]["base"]
+
+
+def test_compact_check_fails_on_a_lost_heading() -> None:
+    check = vd.compact_check(_BASE, _BASE.replace("### Sync\n", "### Synchronisation\n"))
+    assert check["pass"] is False
+    assert check["missing_headings"] == ["### Sync"]
+
+
+def test_compact_check_fails_on_a_lost_state_tag() -> None:
+    check = vd.compact_check(_BASE, _BASE.replace("**State:** shipped\n", ""))
+    assert check["pass"] is False
+    assert check["state_tags"] == {"base": 1, "new": 0}
+
+
+def test_compact_base_reads_the_doc_from_git(tmp_path) -> None:
+    import subprocess
+
+    def git(*args: str) -> None:
+        subprocess.run(
+            ["git", "-c", "user.email=t@t", "-c", "user.name=t", *args],
+            cwd=tmp_path, check=True, capture_output=True,
+        )
+
+    git("init", "-q")
+    doc = tmp_path / "area.md"
+    doc.write_text(_VALID_AREA_DOC + "\n### Extra\n", encoding="utf-8")
+    git("add", "area.md")
+    git("commit", "-q", "-m", "base")
+    doc.write_text(_VALID_AREA_DOC, encoding="utf-8")
+    result = vd.validate_requirements_doc(doc, "area", compact_base="HEAD")
+    assert result["state"] == "fail"
+    check = next(c for c in result["checks"] if c["name"] == "compact-preserves")
+    assert check["missing_headings"] == ["### Extra"]
+
+
+def test_unknown_compact_base_is_an_error_state_not_a_traceback(tmp_path, capsys) -> None:
+    doc = tmp_path / "area.md"
+    doc.write_text(_VALID_AREA_DOC, encoding="utf-8")
+    rc = vd.main(["--path", str(doc), "--scope", "area", "--compact-base", "nope"])
+    assert rc == 0
+    assert json.loads(capsys.readouterr().out)["state"] == "error"

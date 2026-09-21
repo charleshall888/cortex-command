@@ -54,6 +54,7 @@ import sys
 from pathlib import Path
 from typing import List, Optional, Set, Tuple
 
+from cortex_command.lifecycle import requirements_budget
 from cortex_command.common import (
     CortexProjectRootError,
     _resolve_user_project_root,
@@ -94,6 +95,12 @@ DOC_MISSING_NOTE_TEMPLATE = (
 # per-area report here would train operators to ignore the whole signal.
 UNMAPPED_NOTE_TEMPLATE = (
     "no area doc is mapped for {areas} — expected for areas that have none"
+)
+
+
+OVER_BUDGET_TEMPLATE = (
+    "OVER-BUDGET: {path} is {size} bytes, over its {ceiling}-byte ceiling — "
+    "compact it with /cortex-core:requirements compact"
 )
 
 
@@ -354,6 +361,30 @@ def resolve(
     return lines, note, coverage
 
 
+def size_report(project_root: Path, lines: List[str]) -> List[str]:
+    """One ``OVER-BUDGET:`` warning per listed doc over its byte ceiling.
+
+    Every listed doc is read whole at each phase that calls this verb, so an
+    oversized doc is paid for many times per lifecycle. A doc within budget
+    prints nothing — the line would cost context on every call and ask for no
+    action. Stderr only; stdout stays the bare path list consumers iterate.
+    """
+    warnings: List[str] = []
+    for relpath in lines:
+        if relpath.endswith(SKIPPED_SUFFIX):
+            continue
+        try:
+            text = (project_root / relpath).read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            continue
+        size, ceiling = requirements_budget.measure(text)
+        if size > ceiling:
+            warnings.append(
+                OVER_BUDGET_TEMPLATE.format(path=relpath, size=size, ceiling=ceiling)
+            )
+    return warnings
+
+
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="cortex-load-requirements",
@@ -392,6 +423,8 @@ def main(argv: Optional[List[str]] = None) -> int:
         sys.stdout.write("\n".join(lines) + "\n")
     if note is not None:
         sys.stderr.write(note + "\n")
+    for size_line in size_report(project_root, lines):
+        sys.stderr.write(size_line + "\n")
     sys.stderr.write(COVERAGE_MARKER_PREFIX + coverage + "\n")
     return 0
 

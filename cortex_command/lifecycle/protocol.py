@@ -41,6 +41,10 @@ from typing import Any, Literal, Mapping
 # 3: next serves ``enter_command`` (the pre-bound Step-2 entry, #402) on resume
 #    and new envelopes; prose consuming it requires >= 3 (older wheels serve no
 #    such field, so the plugin floor moves to 3 in the same commit).
+# 4: the reviewer brief's drift entry is File / Section / Replace / With, and
+#    review prose applies it through ``cortex-lifecycle-apply-drift`` (#507).
+#    Prose predating it hand-appends a ``Content`` field the brief no longer asks
+#    for; a wheel predating it has no such verb.
 #
 # Governance note: ``cortex-lifecycle-review-brief`` (cortex_command/lifecycle/
 # review_brief.py) is protocol-governed the same as any other served verb. Its
@@ -49,7 +53,7 @@ from typing import Any, Literal, Mapping
 # floor bump — move PROTOCOL_VERSION and the plugin expectation range together
 # in the same commit, per the module docstring above. Introducing the verb
 # itself did not change any served payload shape, so it did not bump the floor.
-PROTOCOL_VERSION = 3
+PROTOCOL_VERSION = 4
 
 # --- Wheel-side compat evaluator (R7 substrate) ---------------------------------
 #

@@ -19,7 +19,7 @@
 #
 # Both sides advance together in this repo; a parity test asserts the wheel's
 # PROTOCOL_VERSION lies within [min, max] at HEAD.
-# min=3: the Step-2 prose runs the served `enter_command` verbatim (#402);
-# a wheel older than 3 serves no such field.
-min=3
-max=3
+# min=4: §3a runs `cortex-lifecycle-apply-drift` on the brief's Replace/With
+# drift entries (#507); a wheel older than 4 has neither.
+min=4
+max=4

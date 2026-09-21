@@ -89,6 +89,11 @@ VERBS: list[tuple[str, str, str]] = [
         "cortex_command.lifecycle.review_brief:main",
         "bin/cortex-lifecycle-review-brief",
     ),
+    (
+        "cortex-lifecycle-apply-drift",
+        "cortex_command.lifecycle.apply_drift:main",
+        "bin/cortex-lifecycle-apply-drift",
+    ),
 ]
 
 

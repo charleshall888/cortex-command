@@ -291,7 +291,7 @@ def _extract_drift_files(review_md: Path) -> list[str]:
 
     Returns the recorded repo-relative path(s) verbatim (one per section, in
     document order); ``[]`` when no such section exists. The format follows
-    ``review.md`` §4a (``File`` / ``Section`` / ``Content``); review.md permits
+    ``apply_drift`` (``File`` / ``Section`` / ``Replace`` / ``With``); review.md permits
     one section per drifted requirements file.
     """
     if not review_md.is_file():

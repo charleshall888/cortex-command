@@ -617,3 +617,43 @@ def test_verb_writes_no_events_log(tmp_path):
     # no stray events.log created elsewhere under the repo
     found = list(tmp_path.rglob("events.log"))
     assert found == [events], f"unexpected events.log files: {found}"
+
+
+# ---------------------------------------------------------------------------
+# Size warning — every listed doc is read whole, so an oversized one is named
+# ---------------------------------------------------------------------------
+
+def test_over_budget_doc_warns_on_stderr_only(tmp_path):
+    from cortex_command.lifecycle.requirements_budget import DEFAULT_BYTE_CEILING
+
+    slug = _write_repo(
+        tmp_path,
+        conditional=[("pipeline", "cortex/requirements/pipeline.md")],
+        areas=["pipeline"],
+    )
+    big = tmp_path / "cortex/requirements/pipeline.md"
+    big.write_text("x" * (DEFAULT_BYTE_CEILING + 1), encoding="utf-8")
+    proc = _run(tmp_path, "--feature", slug)
+    warnings = [l for l in proc.stderr.splitlines() if l.startswith("OVER-BUDGET:")]
+    assert len(warnings) == 1 and "pipeline.md" in warnings[0]
+    assert str(DEFAULT_BYTE_CEILING + 1) in warnings[0]
+    # stdout stays the bare path list
+    assert proc.stdout.splitlines() == [
+        "cortex/requirements/project.md",
+        "cortex/requirements/pipeline.md",
+    ]
+
+
+def test_doc_under_a_raised_ceiling_does_not_warn(tmp_path):
+    from cortex_command.lifecycle.requirements_budget import DEFAULT_BYTE_CEILING
+
+    slug = _write_repo(
+        tmp_path,
+        conditional=[("pipeline", "cortex/requirements/pipeline.md")],
+        areas=["pipeline"],
+    )
+    big = tmp_path / "cortex/requirements/pipeline.md"
+    big.write_text(
+        "# R\n\n> Size budget: 90000 bytes\n" + "x" * DEFAULT_BYTE_CEILING, encoding="utf-8"
+    )
+    assert "OVER-BUDGET" not in _run(tmp_path, "--feature", slug).stderr
