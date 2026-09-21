@@ -201,6 +201,15 @@
     { kind: "tool", pct: 10, label: "more test output" },
   ]; // → 66% — past the door, into the red
 
+  const TREE_CAPS = [
+    "",
+    "",
+    "a bad leaf — redo one ticket",
+    "a bad trunk — everything above inherits it",
+    "know the trunk — not every leaf",
+    "",
+  ];
+
   function setRail(sec, n) {
     [1, 2, 3, "b2", "b3"].forEach((i) => {
       const el = sec.querySelector("#pipe-" + i);
@@ -419,57 +428,83 @@
       if (b === 1) state.wp3.posts.clean.classList.add("lit"); // the plank waits for Friday
     },
 
-    /* the crossing plays first (b1 plot · b2 run · b3 hand-off), then the
-       rail forks at the interview: road A (tickets) plays at b4–7, road B (the
-       long run) at b8–10 */
+    /* the crossing plays first (b1 plot · b2 run), then the interview
+       (b3 cloud · b4 questions · b5 the doc). The roads are the next scene. */
     "sc-prism": (sec, b) => {
       const cloud = sec.querySelector(".cloud");
       const bubbles = [...sec.querySelectorAll(".qbubble")];
-      const tickets = [...sec.querySelectorAll(".prism-tickets .ticket")];
       if (b === 0) {
-        sec.classList.remove("plotted", "run", "railed", "path-a", "path-b", "run-on", "landed");
+        sec.classList.remove("plotted", "run", "railed", "past-top");
         cloud.classList.remove("sharp", "condensed");
         bubbles.forEach((q) => q.classList.remove("on"));
-        tickets.forEach((t) => t.classList.remove("on"));
-        sec.querySelectorAll(".prism-tickets .badge-clip").forEach((c) => c.classList.remove("stamped"));
-        sec.querySelector(".ticket.callback").classList.remove("lit");
         sec.querySelector(".prism-mid .doc").classList.remove("on");
-        sec.classList.remove("past-top", "past-mid");
       }
       if (b === 1) sec.classList.add("plotted"); // the bearing draws — one ruler stroke
       if (b === 2) sec.classList.add("run"); // both wakes, identical timing — the gap is pure geometry
       if (b === 3) {
-        sec.classList.add("railed"); // the sea folds; the rail takes the stage
+        sec.classList.add("railed"); // the sea folds; the interview takes the stage
         setRail(sec, 1);
       }
-      if (b === 4) sec.classList.add("path-a"); // road B steps aside while road A plays
-      if (b === 5) {
+      if (b === 4) {
         bubbles.forEach((q, i) => setTimeout(() => q.classList.add("on"), 300 + i * 900));
         setTimeout(() => cloud.classList.add("sharp"), 1400);
       }
-      if (b === 6) {
+      if (b === 5) {
         cloud.classList.add("condensed");
         sec.classList.add("past-top");
         sec.querySelector(".prism-mid .doc").classList.add("on");
-        setRail(sec, 2);
       }
-      if (b === 7) {
-        sec.classList.add("past-mid");
-        tickets.forEach((t) => t.classList.add("on"));
-        stampTickets(sec);
-        setRail(sec, 3); // tickets land — the pipeline reaches "one ticket, one fresh window"
-        setTimeout(() => sec.querySelector(".ticket.callback").classList.add("lit"), 2200);
+    },
+
+    /* three roads: b0 the fork · b1 tickets (the middle road) ·
+       b2–4 the long run · b5 by hand · b6 all three, weighed */
+    "sc-roads": (sec, b) => {
+      const tickets = [...sec.querySelectorAll(".prism-tickets .ticket")];
+      const light = (road) => sec.querySelectorAll(".pipe-step[data-road]").forEach((el) => el.classList.toggle("lit", el.dataset.road === road));
+      if (b === 0) {
+        sec.classList.remove("path-a", "path-b", "path-c", "run-on", "landed", "weighed");
+        tickets.forEach((t) => t.classList.remove("on"));
+        sec.querySelectorAll(".prism-tickets .badge-clip").forEach((c) => c.classList.remove("stamped"));
+        sec.querySelector(".ticket.callback").classList.remove("lit");
+        light(null);
       }
-      if (b === 8) {
+      if (b === 1) {
+        sec.classList.add("path-a"); // the outer roads step aside while the middle one plays
+        light("a");
+        setTimeout(() => tickets.forEach((t) => t.classList.add("on")), 900);
+        setTimeout(() => stampTickets(sec), 900);
+        setTimeout(() => sec.querySelector(".ticket.callback").classList.add("lit"), 3100);
+      }
+      if (b === 2) {
         sec.classList.remove("path-a");
-        sec.classList.add("path-b"); // road A folds out, road B unfolds
-        setRail(sec, "b2");
+        sec.classList.add("path-b"); // tickets fold out, the long run unfolds
+        light("b");
       }
-      if (b === 9) {
-        sec.classList.add("run-on");
-        setRail(sec, "b3");
+      if (b === 3) sec.classList.add("run-on");
+      if (b === 4) sec.classList.add("landed"); // near the spot, not on it: redirects and rework
+      if (b === 5) {
+        sec.classList.remove("path-b");
+        sec.classList.add("path-c"); // the long run folds out, by hand unfolds
+        light("c");
       }
-      if (b === 10) sec.classList.add("landed"); // near the spot, not on it: redirects and rework
+      if (b === 6) {
+        sec.classList.add("weighed"); // the rail steps off: the table's rows are the roads
+      }
+    },
+
+    /* the tree: every beat is one geometry change, and the caption slot is
+       fixed-height so nothing reflows when its text swaps */
+    "sc-trunk": (sec, b) => {
+      if (b === 0) sec.classList.remove("grown", "leaf-drop", "cracked", "known", "roads");
+      if (b === 1) sec.classList.add("grown");
+      if (b === 2) sec.classList.add("leaf-drop");
+      if (b === 3) sec.classList.add("cracked");
+      if (b === 4) {
+        sec.classList.remove("cracked");
+        sec.classList.add("known");
+      }
+      if (b === 5) sec.classList.add("roads");
+      document.getElementById("tree-cap").textContent = TREE_CAPS[b] || "";
     },
 
     /* one state change per keypress: the doc's move to the target stand is

@@ -687,7 +687,7 @@ body.dawn .hud-dock { opacity: 0; } /* the dawn dock is the picture now */
 #sc-prism { gap: 1.2rem; padding-top: 2.5vh; padding-bottom: 2.5vh; }
 #sc-prism .scene-title { font-size: clamp(1.4rem, 2.7vw, 2.1rem); }
 #sc-prism .handoff-block:not(.on), #sc-prism .handoff-cap:not(.on) { height: 0; overflow: hidden; margin: 0; }
-#sc-prism .prism-stage:not(.on) { max-height: 0; opacity: 0; overflow: hidden; margin: 0; } /* grows in, so the rail glides up instead of snapping */
+#sc-prism .prism-stage:not(.on), #sc-roads .prism-stage:not(.on) { max-height: 0; opacity: 0; overflow: hidden; margin: 0; } /* grows in, so the rail glides up instead of snapping */
 
 /* ---------- the crossing: the first 20% steers the rest ----------
    Presenter-gated: b1 draws the bearing, b2 runs both wakes with IDENTICAL
@@ -765,47 +765,75 @@ path.ps-miss { stroke: var(--zone-red); }
 .pipe-step.lit { border-color: var(--ochre); color: var(--parchment); }
 .pipe-cmd { font-style: normal; color: var(--ochre-deep); margin-left: 0.6em; font-size: 0.9em; }
 .pipe-step.lit .pipe-cmd { color: var(--ochre); }
-.pipe-cmd-inline { margin: 0 0.15em; }
-.pipe-arrow { opacity: 0.6; }
 
-/* the fork (b3): one interview, two roads. A grid so both roads start at the
-   same x; each connector is 36×22 units at 0.1em, rows are 2.2em tall and
-   0.9em apart, so road B's curve starts on road A's node (y = 11 − 22 − 9 = −20).
-   Road B is zero-width in the grid, so the rail centers on road A — the road
-   that stays on screen through b4–7. */
-#sc-prism .pipe-rail { display: grid; grid-template-columns: auto 3.6em auto; align-items: center; justify-content: center; gap: 0; }
-#pipe-1 { grid-row: 1; grid-column: 1; }
+/* the fork (three roads, b0): one interview, three roads. A grid so every
+   road starts at the same x; each connector is 36×22 units at 0.1em, rows are
+   2.2em tall and 0.9em apart, so the outer roads' curves start on the middle
+   road's node (y = 11 ∓ 22 ∓ 9 → −20 from below, 42 from above). The outer
+   roads are zero-width in the grid, so the rail centers on the middle road.
+   Top to bottom: by hand · tickets · the long run — most of you → least. */
+#sc-roads { gap: 1.2rem; padding-top: 2.5vh; padding-bottom: 2.5vh; }
+#sc-roads .scene-title { font-size: clamp(1.4rem, 2.7vw, 2.1rem); }
+/* one chip per road, named as the weigh table names it. A road's name carries
+   meaning, so it never drops below --parch-dim while all three are offered;
+   a road that stays on screen while another plays steps back to faint. */
+#sc-roads .pipe-rail { font-size: 0.92rem; max-height: 9em; transition: opacity 0.3s ease, max-height 0.6s cubic-bezier(0.6, 0, 0.3, 1) 0.2s, margin 0.6s cubic-bezier(0.6, 0, 0.3, 1) 0.2s; }
+#sc-roads .pipe-step[data-road] { color: var(--parch-dim); border-color: var(--parch-faint); }
+#sc-roads .pipe-step[data-road].lit { color: var(--parchment); border-color: var(--ochre); }
+#sc-roads[class*="path-"] .pipe-step[data-road]:not(.lit) { color: var(--parch-faint); border-color: var(--rule); }
+#sc-roads[class*="path-"] .pipe-step[data-road]:not(.lit) .pipe-cmd { color: var(--parch-faint); }
+/* weighed: the table's rows ARE the roads, so the rail steps off */
+#sc-roads.weighed .pipe-rail { opacity: 0; max-height: 0; margin: 0 0 -1.2rem; overflow: hidden; }
+#sc-roads .pipe-rail { display: grid; grid-template-columns: auto 3.6em auto; align-items: center; justify-content: center; gap: 0; }
+#road-1 { grid-row: 2; grid-column: 1; }
 .fork-link { grid-column: 2; width: 3.6em; height: 2.2em; overflow: visible; }
-.fl-a { grid-row: 1; }
-.fl-b { grid-row: 2; }
+.fl-c { grid-row: 1; }
+.fl-a { grid-row: 2; }
+.fl-b { grid-row: 3; }
 .pipe-row { grid-column: 3; display: flex; align-items: center; gap: 1.2vw; height: 2.2em; white-space: nowrap; }
-.pr-a { grid-row: 1; }
-.pr-b { grid-row: 2; width: 0; overflow: visible; }
+.pr-c { grid-row: 1; width: 0; overflow: visible; }
+.pr-a { grid-row: 2; }
+.pr-b { grid-row: 3; width: 0; overflow: visible; }
 .fork-node { fill: var(--ochre); }
-/* keyframes, not transitions: the rail comes out of display:none on this
+/* keyframes, not transitions: the scene comes out of display:none on this
    same beat, and a transition has no "before" to start from */
 .fork-link path { fill: none; stroke: var(--parch-faint); stroke-width: 1.5px; vector-effect: non-scaling-stroke; stroke-dasharray: 100; transition: stroke 0.6s ease; }
-#sc-prism.railed .fl-a path { animation: draw-in 0.5s cubic-bezier(0.3, 0, 0.35, 1) 0.9s backwards; }
-#sc-prism.railed .fl-b path { animation: draw-in 0.6s cubic-bezier(0.3, 0, 0.35, 1) 1.1s backwards; }
+#sc-roads .fl-a path { animation: draw-in 0.5s cubic-bezier(0.3, 0, 0.35, 1) 0.7s backwards; }
+#sc-roads .fl-c path { animation: draw-in 0.6s cubic-bezier(0.3, 0, 0.35, 1) 0.9s backwards; }
+#sc-roads .fl-b path { animation: draw-in 0.6s cubic-bezier(0.3, 0, 0.35, 1) 1.1s backwards; }
 @keyframes draw-in { from { stroke-dashoffset: 100; } }
-#sc-prism.railed .pr-a { animation: fork-row-in 0.6s cubic-bezier(0.16, 1, 0.3, 1) 1.2s backwards; }
-#sc-prism.railed .pr-b { animation: fork-row-in 0.6s cubic-bezier(0.16, 1, 0.3, 1) 1.5s backwards; }
+#sc-roads .pr-a { animation: fork-row-in 0.6s cubic-bezier(0.16, 1, 0.3, 1) 1s backwards; }
+#sc-roads .pr-c { animation: fork-row-in 0.6s cubic-bezier(0.16, 1, 0.3, 1) 1.3s backwards; }
+#sc-roads .pr-b { animation: fork-row-in 0.6s cubic-bezier(0.16, 1, 0.3, 1) 1.6s backwards; }
 @keyframes fork-row-in { from { opacity: 0; transform: translateX(-10px); } }
-#sc-prism.path-a .fl-a path, #sc-prism.path-b .fl-b path { stroke: var(--ochre); }
-/* road B steps aside while road A plays: fade first, then close the gap */
-.fl-b, .pr-b { margin-top: 0.9em; max-height: 2.2em; transition: max-height 0.55s cubic-bezier(0.6, 0, 0.3, 1), margin-top 0.55s cubic-bezier(0.6, 0, 0.3, 1), opacity 0.45s ease 0.5s; }
-#sc-prism.path-a .fl-b, #sc-prism.path-a .pr-b { max-height: 0; margin-top: 0; opacity: 0; transition: opacity 0.3s ease, max-height 0.55s cubic-bezier(0.6, 0, 0.3, 1) 0.25s, margin-top 0.55s cubic-bezier(0.6, 0, 0.3, 1) 0.25s; }
+#sc-roads.path-a .fl-a path, #sc-roads.path-b .fl-b path, #sc-roads.path-c .fl-c path { stroke: var(--ochre); }
+/* a road steps aside while another plays: fade first, then close the gap.
+   The middle road never folds; the far road folds while a near one plays. */
+.fl-b, .pr-b { margin-top: 0.9em; }
+.fl-c, .pr-c { margin-bottom: 0.9em; }
+.fl-b, .pr-b, .fl-c, .pr-c { max-height: 2.2em; transition: max-height 0.55s cubic-bezier(0.6, 0, 0.3, 1), margin 0.55s cubic-bezier(0.6, 0, 0.3, 1), opacity 0.45s ease 0.5s; }
+#sc-roads.path-a .fl-b, #sc-roads.path-a .pr-b, #sc-roads.path-c .fl-b, #sc-roads.path-c .pr-b,
+#sc-roads.path-a .fl-c, #sc-roads.path-a .pr-c, #sc-roads.path-b .fl-c, #sc-roads.path-b .pr-c { max-height: 0; margin: 0; opacity: 0; transition: opacity 0.3s ease, max-height 0.55s cubic-bezier(0.6, 0, 0.3, 1) 0.25s, margin 0.55s cubic-bezier(0.6, 0, 0.3, 1) 0.25s; }
 
-/* the ticket stage folds out when road B takes the stage */
+/* an outer road plays alone: it takes the middle row, so the rail reads as
+   one straight line — the interview, then the road being walked. A swap, not
+   a slide: the row changes grid cells, which cannot transition. */
+#sc-roads.path-b .pr-a, #sc-roads.path-c .pr-a, #sc-roads.path-b .pr-c, #sc-roads.path-c .pr-b,
+#sc-roads.path-b .fl-b, #sc-roads.path-b .fl-c, #sc-roads.path-c .fl-b, #sc-roads.path-c .fl-c { display: none; }
+#sc-roads.path-b .pr-b, #sc-roads.path-c .pr-c { grid-row: 2; width: auto; margin: 0; max-height: 2.2em; opacity: 1; animation: road-swap-in 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.15s backwards; }
+#sc-roads.path-b .fl-a path, #sc-roads.path-c .fl-a path { stroke: var(--ochre); }
+@keyframes road-swap-in { from { opacity: 0; transform: translateX(-10px); } }
+
+/* the ticket stage shows only while the middle road plays */
 .prism-stage { max-height: 40rem; transition: max-height 0.7s cubic-bezier(0.6, 0, 0.3, 1), opacity 0.35s ease; }
-#sc-prism.path-b .prism-stage { max-height: 0; opacity: 0; overflow: hidden; margin-top: -1.2rem; }
+#sc-roads:not(.path-a) .prism-stage { max-height: 0; opacity: 0; overflow: hidden; margin-top: -1.2rem; }
 
 /* road B, the long run: a 0fr→1fr grid row grows it to its real height */
 .fold { display: grid; grid-template-rows: 0fr; width: 100%; transition: grid-template-rows 0.7s cubic-bezier(0.6, 0, 0.3, 1); }
 .fold > .fold-in { min-height: 0; overflow: hidden; opacity: 0; transition: opacity 0.3s ease; }
 .fold.on { grid-template-rows: 1fr; }
 .fold.on > .fold-in { opacity: 1; transition: opacity 0.6s ease 0.45s; }
-#sc-prism .run-stage:not(.on) { margin-top: -1.2rem; }
+#sc-roads .run-stage:not(.on) { margin-top: -1.2rem; }
 .run-stage .fold-in { display: flex; flex-direction: column; align-items: center; gap: 0.7rem; }
 .run-handoff { display: flex; align-items: center; gap: 1.4rem; margin-top: 0.3rem; }
 .run-doc { width: clamp(190px, 18vw, 230px); padding: 0.8rem 0.95rem 0.95rem; gap: 0.45rem; }
@@ -821,13 +849,13 @@ path.ps-miss { stroke: var(--zone-red); }
 /* one stage bright at a time: the hand-off folds away once the night runs */
 .run-handoff, .run-cap { max-height: 16rem; }
 .run-handoff, .run-cap { transition: opacity 0.35s ease, max-height 0.6s cubic-bezier(0.6, 0, 0.3, 1) 0.2s, margin 0.6s cubic-bezier(0.6, 0, 0.3, 1) 0.2s; }
-#sc-prism.run-on .run-handoff, #sc-prism.run-on .run-cap { opacity: 0; max-height: 0; margin: 0 0 -0.7rem; overflow: hidden; }
+#sc-roads.run-on .run-handoff, #sc-roads.run-on .run-cap { opacity: 0; max-height: 0; margin: 0 0 -0.7rem; overflow: hidden; }
 
 /* the night grows in as the hand-off folds out (both 0.6–0.7s), so the
    stage height hands over instead of jumping; its drawing is keyframed and
    starts once the room can see it (+0.6s) */
 .run-night > .fold-in { display: flex; flex-direction: column; align-items: center; gap: 0.4rem; }
-.run-night svg { width: min(74vw, 800px); display: block; overflow: visible; }
+.run-night svg { width: min(80vw, 900px); display: block; overflow: visible; }
 .rn-label { font-family: var(--mono); font-size: 15px; fill: var(--parch-dim); }
 .rn-sub-label { font-size: 13px; fill: var(--parch-faint); }
 .rn-frame { fill: var(--night-lift); stroke: var(--ochre-deep); stroke-width: 1.5; }
@@ -879,19 +907,118 @@ path.ps-miss { stroke: var(--zone-red); }
 .run-night .rn-land { animation: fade-from-0 0.4s ease 6.9s backwards; }
 .run-night .rn-land-label { animation: fade-from-0 0.4s ease 7s backwards; transition: opacity 0.3s ease; }
 .run-night .rn-done { animation: fade-from-0 0.3s ease calc(var(--t) + 1.65s) backwards; }
-#sc-prism.landed .rn-land-label { opacity: 0; }
+#sc-roads.landed .rn-land-label { opacity: 0; }
 /* b10: it lands near the spot, not on it */
-#sc-prism.landed .rn-rework { opacity: 1; animation: grow-x 0.5s ease-out 0.9s backwards; }
-#sc-prism.landed .rn-rework-2 { animation-delay: 1.9s; }
-#sc-prism.landed .rn-loop { opacity: 1; animation: draw-in 0.8s ease 0.3s backwards; }
-#sc-prism.landed .rn-loop-head { opacity: 1; animation: fade-from-0 0.2s ease 1.05s backwards; }
-#sc-prism.landed .rn-rework-label { opacity: 1; animation: fade-from-0 0.5s ease 1.1s backwards; }
-#sc-prism.landed .rn-land { stroke: var(--zone-red); transition: stroke 0.5s ease 0.3s; }
+#sc-roads.landed .rn-rework { opacity: 1; animation: grow-x 0.5s ease-out 0.9s backwards; }
+#sc-roads.landed .rn-rework-2 { animation-delay: 1.9s; }
+#sc-roads.landed .rn-loop { opacity: 1; animation: draw-in 0.8s ease 0.3s backwards; }
+#sc-roads.landed .rn-loop-head { opacity: 1; animation: fade-from-0 0.2s ease 1.05s backwards; }
+#sc-roads.landed .rn-rework-label { opacity: 1; animation: fade-from-0 0.5s ease 1.1s backwards; }
+#sc-roads.landed .run-night .rn-land { stroke: var(--zone-red); transition: stroke 0.5s ease 0.3s; }
 
-.run-trade { display: flex; flex-direction: column; gap: 0.35rem; font-size: 0.82rem; color: var(--parch-dim); }
-#sc-prism .run-trade:not(.on) { display: none; }
-.run-trade.on { animation: settle-in 0.6s ease-out both; }
-.run-trade b { display: inline-block; min-width: 8.5em; margin-right: 0.8em; text-align: right; font-weight: 500; color: var(--parchment); }
+/* a stage folds back out once its road is done (beats only ever add .on) */
+#sc-roads.path-c .run-stage, #sc-roads.weighed .run-stage, #sc-roads.weighed .hand-stage { grid-template-rows: 0fr; margin-top: -1.2rem; }
+#sc-roads.path-c .run-stage > .fold-in, #sc-roads.weighed .run-stage > .fold-in, #sc-roads.weighed .hand-stage > .fold-in { opacity: 0; transition: opacity 0.3s ease; }
+#sc-roads .hand-stage:not(.on), #sc-roads .weigh:not(.on) { margin-top: -1.2rem; }
+
+/* by hand: the long run's own instrument, read differently. One press, ~6s:
+   six short turns; after each one your pin lands, and a dot of what you know
+   drops into the project. Turn four goes wrong — the next pin catches it. */
+.hand-stage > .fold-in { display: flex; flex-direction: column; align-items: center; gap: 0.4rem; }
+.hand-stage svg { width: min(80vw, 900px); display: block; overflow: visible; }
+.hand-stage:not(.on) svg * { animation: none !important; }
+.hn-pin line { stroke: var(--ochre); stroke-width: 1.5; }
+.hn-pin circle { fill: var(--ochre); }
+.hn-pin { transform-box: fill-box; transform-origin: 50% 100%; }
+.hn-dot { fill: var(--ochre); opacity: 0; }
+.hn-proj { fill: var(--night-lift); stroke: var(--ochre-deep); stroke-width: 1.5; }
+.hn-line { fill: var(--parch-dim); transform-box: fill-box; transform-origin: 0 50%; }
+.hn-wrong { fill: var(--zone-red); transform-box: fill-box; transform-origin: 0 50%; }
+.hn-say { font-size: 13px; fill: var(--parchment); }
+.hn-stop { fill: #d0735e; }
+.hn-lead { fill: none; stroke: var(--parch-faint); stroke-width: 1; }
+.hn-land { stroke: var(--ochre); }
+@keyframes result-down { from { opacity: 0; transform: none; } 10% { opacity: 1; transform: none; } 85% { opacity: 1; } to { opacity: 0; transform: translateY(34px); } }
+.hand-stage .rn-frame, .hand-stage .hn-proj { animation: fade-from-0 0.5s ease 0.5s backwards; }
+.hand-stage .rn-goal { animation: grow-x 0.4s ease 0.7s backwards; }
+.hand-stage .hn-turn .rn-chunk { animation: grow-x 0.3s ease-out var(--t) backwards; }
+.hand-stage .hn-wrong { animation: grow-x 0.2s ease-out calc(var(--t) + 0.2s) backwards; }
+.hand-stage .hn-pin { animation: tick-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) calc(var(--t) + 0.35s) backwards; }
+.hand-stage .hn-say, .hand-stage .hn-lead { animation: fade-from-0 0.4s ease calc(var(--t) + 0.45s) backwards; }
+.hand-stage .hn-dot { animation: result-down 0.5s cubic-bezier(0.4, 0, 0.6, 1) calc(var(--t) + 0.5s) backwards; }
+.hand-stage .hn-line { animation: grow-x 0.35s ease-out calc(var(--t) + 0.95s) backwards; }
+.hand-stage .hn-room { animation: fade-from-0 0.5s ease 5.9s backwards; }
+.hand-stage .rn-out { animation: draw-in 0.4s ease 6.1s backwards; }
+.hand-stage .hn-land { animation: fade-from-0 0.4s ease 6.4s backwards; }
+.hand-stage .hn-land-label { animation: fade-from-0 0.4s ease 6.5s backwards; }
+
+/* all three, weighed: three bar lengths only, the word on every bar — an
+   ordering, not a measurement. Length carries it; colour is backup. */
+.weigh > .fold-in { display: flex; flex-direction: column; align-items: center; gap: 1.8rem; }
+.weigh-grid { display: grid; grid-template-columns: auto 10.5em 10.5em auto; column-gap: 1.8em; row-gap: 1.1em; align-items: center; font-size: 0.95rem; color: var(--parch-dim); margin-top: 0.4rem; }
+.weigh-grid b { font-weight: 500; color: var(--parchment); text-align: right; }
+.weigh-grid .wh { color: var(--parch-faint); font-size: 0.72rem; letter-spacing: 0.1em; }
+.wbar { display: flex; align-items: center; gap: 0.6em; color: var(--parchment); }
+.wbar i { display: block; height: 0.6em; width: calc(var(--n) * 2.2em); border-radius: 2px; background: var(--parch-dim); transform-origin: 0 50%; }
+.wbar.tok i { background: var(--ochre); }
+.weigh.on .wbar i { animation: grow-x 0.5s ease-out 0.9s backwards; }
+.wwhen { white-space: nowrap; }
+
+/* ---------- the trunk: where to be involved ----------
+   One silhouette: a solid trunk (the brightest shape on the slide), tapered
+   limbs a step dimmer, filled leaves. Words live in ONE column on the right:
+   part name, its examples, and at the last beat the road in the examples'
+   slot. Every state change is geometry or colour on a solid shape — a leaf
+   drops, the trunk reddens and the red climbs, the canopy becomes one
+   outline — so it survives a projector. */
+#sc-trunk { gap: 1rem; padding-top: 2.5vh; padding-bottom: 2.5vh; }
+#sc-trunk .scene-title { font-size: clamp(1.4rem, 2.7vw, 2.1rem); }
+.tree-stage { display: flex; flex-direction: column; align-items: center; gap: 0.6rem; width: min(88vw, 960px); }
+#tree-svg { width: 100%; max-height: 58vh; display: block; overflow: visible; }
+.tree-cap { min-height: 1.6em; text-align: center; color: var(--parchment); font-size: 0.95rem; }
+.tr-root { fill: none; stroke: var(--parch-faint); stroke-width: 2.5; stroke-linecap: round; opacity: 0.7; }
+.tr-trunk { fill: var(--parchment); transition: fill 0.7s ease, filter 0.7s ease; }
+.tr-grain { fill: none; stroke: var(--night); stroke-width: 1.2; stroke-linecap: round; opacity: 0.2; }
+.tr-limb { fill: var(--parch-dim); transition: fill 0.5s ease; }
+/* b1: the canopy grows out of the trunk's crown, then the leaves land */
+.tr-wood-up { transform-box: view-box; transform-origin: 306px 218px; transform: scale(0); transition: transform 1.3s cubic-bezier(0.2, 0.7, 0.2, 1); }
+#sc-trunk.grown .tr-wood-up { transform: none; }
+.tr-leaf { fill: var(--zone-green); transform: rotate(var(--a)); opacity: 0; transition: opacity 0.45s ease, transform 0.9s ease, fill 0.6s ease; }
+.tr-leaf.tr-l2 { fill: #6fa888; }
+#sc-trunk.grown .tr-leaf:not(.tr-new) { opacity: 1; transition-delay: var(--d), 0s, 0s; }
+.tr-col { transition: opacity 0.6s ease; }
+.tr-col-leaf, .tr-col-limb, .tr-road, .tr-outline { opacity: 0; transition: opacity 0.6s ease; }
+#sc-trunk.grown .tr-col-leaf, #sc-trunk.grown .tr-col-limb { opacity: 1; transition-delay: 1.6s; }
+.tr-label { font-family: var(--serif); font-size: 26px; fill: var(--parchment); }
+.tr-eg { font-family: var(--mono); font-size: 14.5px; fill: var(--parch-dim); transition: opacity 0.4s ease; }
+.tr-road { font-family: var(--mono); font-size: 16px; fill: var(--ochre); }
+.tr-leader { fill: none; stroke: var(--parch-faint); stroke-width: 1; }
+.tr-dot { fill: var(--parch-faint); }
+.tr-col-trunk .tr-dot { fill: var(--night); stroke: var(--parch-faint); stroke-width: 1; }
+/* b2: a bad leaf — it reddens, drops, and a new one grows; nothing else moves */
+.tr-fall { transition: transform 1.3s cubic-bezier(0.5, 0, 0.8, 0.6) 1s, opacity 0.5s ease; }
+#sc-trunk.leaf-drop .tr-bad { fill: var(--zone-red); transition-delay: 0.2s; }
+#sc-trunk.leaf-drop .tr-fall { transform: translate(-34px, 234px) rotate(55deg); }
+#sc-trunk.leaf-drop .tr-new { opacity: 1; transition: opacity 0.7s ease 2.7s; }
+/* b3: a bad trunk — it reddens, the crack climbs, the red runs up every limb, every leaf droops */
+.tr-crack { fill: none; stroke: var(--night); stroke-width: 3; stroke-linejoin: round; stroke-dasharray: 100; stroke-dashoffset: 100; opacity: 0; }
+#sc-trunk.cracked .tr-trunk { fill: var(--zone-red); }
+#sc-trunk.cracked .tr-crack { opacity: 1; stroke-dashoffset: 0; transition: stroke-dashoffset 1.2s ease 0.3s; }
+#sc-trunk.cracked .tr-limb { fill: var(--zone-red); transition: fill 0.7s ease 1.5s; }
+#sc-trunk.cracked .tr-branch { transition-delay: 2.1s; }
+#sc-trunk.cracked .tr-leaf:not(.tr-bad) { fill: var(--zone-red); transform: rotate(calc(var(--a) * 0.4 + 54deg)); transition-delay: 0s, 2.7s, 2.7s; }
+/* b4: what you keep in your head — the trunk lit; the canopy, one outline */
+.tr-outline { fill: none; stroke: var(--parch-dim); stroke-width: 1.5; stroke-dasharray: 7 7; }
+#sc-trunk.known .tr-outline { opacity: 1; transition-delay: 0.5s; }
+#sc-trunk.known .tr-canopy { opacity: 0.5; transition: opacity 0.6s ease; }
+#sc-trunk.known .tr-fall { opacity: 0; } /* the fallen leaf is swept: one story on screen at a time */
+#sc-trunk.known .tr-trunk { fill: var(--ochre); filter: drop-shadow(0 0 14px rgba(232, 168, 101, 0.45)); }
+#sc-trunk.known:not(.roads) .tr-col-leaf, #sc-trunk.known:not(.roads) .tr-col-limb { opacity: 0.4; transition-delay: 0s; }
+/* b5: each part's road takes its examples' slot */
+#sc-trunk.roads .tr-eg { opacity: 0; }
+#sc-trunk.roads .tr-road { opacity: 1; transition-delay: 0.4s; }
+#sc-trunk .thesis:not(.on) { visibility: hidden; }
+#sc-trunk .thesis { font-size: clamp(1.1rem, 2.1vw, 1.6rem); }
 
 /* the handoff payoff: a ticket is all a fresh window needs */
 .handoff-block { display: flex; align-items: center; gap: 2.5vw; }

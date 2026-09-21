@@ -25,7 +25,7 @@
 <meta name="twitter:description" content="Working well with coding agents: keep your context window lean, spawn more agents, keep your workspace clean." />
 <meta name="twitter:image" content="https://charleshall888.github.io/cortex-command/training/og-image.png" />
 <meta name="twitter:image:alt" content="Context Is the Game: working well with coding agents." />
-<link rel="stylesheet" href="lib/deck.css?v=67" />
+<link rel="stylesheet" href="lib/deck.css?v=76" />
 <!-- a map jump or a step back reloads the page: paint night before the
      stylesheet does, mark a map jump so the chosen scene rises out of the
      water, and hide a mid-scene landing while its beats replay (lib/warp.js) -->
@@ -166,8 +166,8 @@ try { if (JSON.parse(sessionStorage.getItem("nightline-map") || "{}").jump) docu
       <div class="gauge-side">
         <p class="stage-cap mono" data-beat="2">every turn, it re-reads the whole window</p>
         <p class="stage-cap mono" data-beat="3">the unchanged start is cached — ~10× cheaper to re-read</p>
-        <p class="stage-cap mono cap-strong" data-beat="3">cheaper, not lighter — it still reads all of it</p>
-        <p class="stage-cap mono" data-beat="5">past the door with no plan — slower answers, higher rent</p>
+        <p class="stage-cap mono cap-strong" data-beat="3">cheaper — but it still reads all of it</p>
+        <p class="stage-cap mono" data-beat="5">past the door with no plan — slower answers, higher cost</p>
       </div>
     </div>
   </section>
@@ -235,7 +235,7 @@ try { if (JSON.parse(sessionStorage.getItem("nightline-map") || "{}").jump) docu
   </section>
 
   <!-- ========== ACT II · SPAWN MORE AGENTS ========== -->
-  <section class="scene" id="sc-prism" data-nav="write it down" data-nav-group="spawn more agents" data-title="Write It Down" data-beats="10">
+  <section class="scene" id="sc-prism" data-nav="write it down" data-nav-group="spawn more agents" data-title="Write It Down" data-beats="5">
     <h2 class="scene-title" data-beat="0">Write the direction down first</h2>
     <!-- the crossing: the first 20% of a session steers all the rest.
          Two boats, same night, same speed — only one plotted its bearing.
@@ -262,24 +262,12 @@ try { if (JSON.parse(sessionStorage.getItem("nightline-map") || "{}").jump) docu
       </svg>
       <p class="stage-cap mono judge-cap plot-payoff">a small angle at the dock — a wide miss at the spot</p>
     </div>
-    <!-- the fork (b3): one interview, then two roads. Road A (tickets) plays
-         at b4–7 while road B folds away; road B (the long run) plays at b8–10. -->
+    <!-- the interview (b3–5): it always comes first, whichever road follows.
+         The roads themselves are the next scene. -->
     <div class="pipe-rail mono">
-      <span class="pipe-step" id="pipe-1">1 · the interview <em class="pipe-cmd"><!-- volatile -->/requirements</em></span>
-      <svg class="fork-link fl-a" viewBox="0 0 36 22" aria-hidden="true"><circle class="fork-node" cx="3" cy="11" r="2.4"/><path pathLength="100" d="M 3 11 L 36 11"/></svg>
-      <span class="pipe-row pr-a">
-        <span class="pipe-step" id="pipe-2">2 · break it down <em class="pipe-cmd"><!-- volatile -->/discovery</em></span>
-        <span class="pipe-arrow">→</span>
-        <span class="pipe-step" id="pipe-3">3 · one ticket, one fresh window</span>
-      </span>
-      <svg class="fork-link fl-b" viewBox="0 0 36 22" aria-hidden="true"><path pathLength="100" d="M 3 -20 C 3 -2, 12 11, 36 11"/></svg>
-      <span class="pipe-row pr-b">
-        <span class="pipe-step" id="pipe-b2">2 · use <em class="pipe-cmd pipe-cmd-inline"><!-- volatile -->/goal</em> for a long-running task</span>
-        <span class="pipe-arrow">→</span>
-        <span class="pipe-step" id="pipe-b3">3 · runs with subagents</span>
-      </span>
+      <span class="pipe-step" id="pipe-1">the interview <em class="pipe-cmd"><!-- volatile -->/requirements</em></span>
     </div>
-    <div class="prism-stage" data-beat="4">
+    <div class="prism-stage" data-beat="3">
       <div class="prism-top">
         <div class="head-block">
           <svg class="cloud" viewBox="0 0 220 130" aria-hidden="true">
@@ -290,14 +278,14 @@ try { if (JSON.parse(sessionStorage.getItem("nightline-map") || "{}").jump) docu
           <svg class="avatar crisp head-only" viewBox="0 0 80 60"><circle cx="40" cy="26" r="16"/><path d="M 16 60 Q 40 40 64 60"/></svg>
           <p class="stage-cap mono">the epic, in your head</p>
         </div>
-        <div class="qcol" data-beat="5">
+        <div class="qcol" data-beat="4">
           <p class="stage-cap mono">the agent interviews you</p>
           <span class="qbubble mono">should the empty log invite the first cast, or stay blank?</span>
           <span class="qbubble mono">is the log for looking back, or for stats?</span>
           <span class="qbubble mono">does an escaped fish get a page?</span>
         </div>
       </div>
-      <div class="prism-mid" data-beat="6">
+      <div class="prism-mid" data-beat="5">
         <div class="doc">
           <span class="doc-head mono">catch-log epic · requirements</span>
           <span class="doc-line w9"></span><span class="doc-line w7"></span><span class="doc-line w8"></span><span class="doc-line w5"></span>
@@ -305,17 +293,49 @@ try { if (JSON.parse(sessionStorage.getItem("nightline-map") || "{}").jump) docu
         </div>
         <p class="stage-cap mono">the requirements, in a doc — it outlives the session</p>
       </div>
-      <div class="prism-tickets" data-beat="7">
+    </div>
+  </section>
+
+  <!-- three roads from the same doc. b0 the fork · b1 tickets (the middle
+       road) · b2–4 the long run · b5 by hand · b6 all three, weighed.
+       Top to bottom: most of you → least of you. -->
+  <section class="scene" id="sc-roads" data-nav="three roads" data-title="Three Roads" data-beats="6">
+    <h2 class="scene-title" data-beat="0">Three roads — choose how to build</h2>
+    <div class="pipe-rail mono">
+      <span class="pipe-step lit" id="road-1">the interview <em class="pipe-cmd"><!-- volatile -->/requirements</em></span>
+      <svg class="fork-link fl-c" viewBox="0 0 36 22" aria-hidden="true"><path pathLength="100" d="M 3 42 C 3 24, 12 11, 36 11"/></svg>
+      <span class="pipe-row pr-c">
+        <span class="pipe-step" data-road="c">by hand</span>
+      </span>
+      <svg class="fork-link fl-a" viewBox="0 0 36 22" aria-hidden="true"><circle class="fork-node" cx="3" cy="11" r="2.4"/><path pathLength="100" d="M 3 11 L 36 11"/></svg>
+      <span class="pipe-row pr-a">
+        <span class="pipe-step" data-road="a">tickets <em class="pipe-cmd"><!-- volatile -->/discovery</em></span>
+      </span>
+      <svg class="fork-link fl-b" viewBox="0 0 36 22" aria-hidden="true"><path pathLength="100" d="M 3 -20 C 3 -2, 12 11, 36 11"/></svg>
+      <span class="pipe-row pr-b">
+        <span class="pipe-step" data-road="b">the long run <em class="pipe-cmd"><!-- volatile -->/goal</em></span>
+      </span>
+    </div>
+    <!-- the middle road: discovery splits the doc into tickets -->
+    <div class="prism-stage" data-beat="1">
+      <div class="prism-mid">
+        <div class="doc on">
+          <span class="doc-head mono">catch-log epic · requirements</span>
+          <span class="doc-line w9"></span><span class="doc-line w7"></span><span class="doc-line w5"></span>
+          <span class="doc-intent mono">for looking back on catches</span>
+        </div>
+      </div>
+      <div class="prism-tickets">
         <div class="ticket"><span class="badge-clip"></span><span class="mono">record catch events</span></div>
         <div class="ticket"><span class="badge-clip"></span><span class="mono">flip-through log page</span></div>
         <div class="ticket callback"><span class="badge-clip"></span><span class="mono">empty state</span></div>
         <p class="stage-cap mono ticket-cap">discovery splits the epic into tickets — each fits one fresh window</p>
       </div>
     </div>
-    <!-- road B, the long run (b8–10): the same doc goes over WITH its check,
+    <!-- road B, the long run (b2–4): the same doc goes over WITH its check,
          then one long night of agents — one drifts, you steer it back, and the
          check closes it. Folds in as the ticket stage folds out. -->
-    <div class="run-stage fold" data-beat="8">
+    <div class="run-stage fold" data-beat="2">
       <div class="fold-in">
         <div class="run-handoff">
           <div class="doc on run-doc">
@@ -336,8 +356,8 @@ try { if (JSON.parse(sessionStorage.getItem("nightline-map") || "{}").jump) docu
              fresh window and only its result comes back, so the main agent's
              pricey 1M window fills slower — but a long run still fills it
              (700k+ is normal), and a longer one auto-compacts mid-run.
-             b10: it lands near, not on — redirects and rework. -->
-        <div class="run-night fold" data-beat="9"><div class="fold-in">
+             b4: it lands near, not on — redirects and rework. -->
+        <div class="run-night fold" data-beat="3"><div class="fold-in">
           <svg viewBox="0 0 900 190" aria-hidden="true">
             <text class="rn-label" x="0" y="42">main agent</text>
             <text class="rn-label rn-sub-label" x="0" y="60">1M window · pricey</text>
@@ -394,7 +414,7 @@ try { if (JSON.parse(sessionStorage.getItem("nightline-map") || "{}").jump) docu
             <line class="rn-out" pathLength="100" x1="760" y1="43" x2="810" y2="43"/>
             <circle class="rn-land" cx="836" cy="43" r="12"/>
             <text class="rn-label rn-land-label" x="836" y="88" text-anchor="middle">result</text>
-            <!-- b10: it lands near, not on: redirects, rework, more tokens -->
+            <!-- b4: it lands near, not on: redirects, rework, more tokens -->
             <rect class="rn-rework" x="366" y="34" width="36" height="18"/>
             <rect class="rn-rework rn-rework-2" x="402" y="34" width="36" height="18"/>
             <path class="rn-loop" pathLength="100" d="M 854.8 36.2 A 20 20 0 1 1 846 25.7"/>
@@ -402,14 +422,193 @@ try { if (JSON.parse(sessionStorage.getItem("nightline-map") || "{}").jump) docu
             <text class="rn-label rn-rework-label" x="836" y="88" text-anchor="middle">redirect</text>
             <text class="rn-label rn-rework-label" x="836" y="106" text-anchor="middle">+ rework</text>
           </svg>
-          <p class="stage-cap mono">subagents slow the fill — a long run still uses 700k+, and can auto-compact</p>
+          <p class="stage-cap mono">subagents slow the fill — a long run still uses 700k+</p>
         </div></div>
-        <div class="run-trade mono" data-beat="10">
-          <span><b>tickets</b> you stay close · fewer tokens · it builds what you meant</span>
-          <span><b>the long run</b> you plan up front · more tokens · it may build what you didn’t want</span>
-        </div>
       </div>
     </div>
+    <!-- by hand (b5): the same instrument as the long run, read differently —
+         one window, short turns, you at every turn. A wrong step costs one
+         turn (the red tip, caught by the next pin), and what you know goes
+         into the project as you go. -->
+    <div class="hand-stage fold" data-beat="5"><div class="fold-in">
+      <svg viewBox="0 0 900 190" aria-hidden="true">
+        <text class="rn-label" x="0" y="46">you</text>
+        <text class="rn-label rn-sub-label" x="0" y="64">at every turn</text>
+        <text class="rn-label" x="0" y="92">agent</text>
+        <text class="rn-label rn-sub-label" x="0" y="110">one window · short turns</text>
+        <text class="rn-label" x="0" y="158">the project</text>
+        <text class="rn-label rn-sub-label" x="0" y="176">gets what you know</text>
+        <rect class="rn-frame" x="200" y="78" width="560" height="18" rx="4"/>
+        <rect class="rn-chunk rn-goal" x="204" y="78" width="40" height="18"/>
+        <rect class="hn-proj" x="244" y="132" width="200" height="54" rx="5"/>
+        <g class="hn-turn" style="--t: 0.9s"><rect class="rn-chunk" x="244" y="78" width="30" height="18"/><g class="hn-pin"><line x1="274" y1="54" x2="274" y2="76"/><circle cx="274" cy="50" r="4"/></g><circle class="hn-dot" cx="274" cy="100" r="3.5"/><rect class="hn-line" x="254" y="140" width="150" height="4" rx="2"/></g>
+        <g class="hn-turn" style="--t: 1.7s"><rect class="rn-chunk" x="274" y="78" width="30" height="18"/><g class="hn-pin"><line x1="304" y1="54" x2="304" y2="76"/><circle cx="304" cy="50" r="4"/></g><circle class="hn-dot" cx="304" cy="100" r="3.5"/><rect class="hn-line" x="254" y="147" width="120" height="4" rx="2"/><text class="rn-label hn-say" x="314" y="16">reuse the save format — don’t invent one</text><path class="hn-lead" d="M 304 44 L 304 22 L 310 22"/></g>
+        <g class="hn-turn" style="--t: 2.5s"><rect class="rn-chunk" x="304" y="78" width="30" height="18"/><g class="hn-pin"><line x1="334" y1="54" x2="334" y2="76"/><circle cx="334" cy="50" r="4"/></g><circle class="hn-dot" cx="334" cy="100" r="3.5"/><rect class="hn-line" x="254" y="154" width="165" height="4" rx="2"/></g>
+        <g class="hn-turn" style="--t: 3.3s"><rect class="rn-chunk" x="334" y="78" width="30" height="18"/><rect class="hn-wrong" x="352" y="78" width="12" height="18"/><g class="hn-pin"><line x1="364" y1="54" x2="364" y2="76"/><circle cx="364" cy="50" r="4"/></g><circle class="hn-dot" cx="364" cy="100" r="3.5"/><rect class="hn-line" x="254" y="161" width="135" height="4" rx="2"/><text class="rn-label hn-say hn-stop" x="382" y="38">stop — that deletes old saves</text><path class="hn-lead" d="M 368 47 L 378 40"/></g>
+        <g class="hn-turn" style="--t: 4.1s"><rect class="rn-chunk" x="364" y="78" width="30" height="18"/><g class="hn-pin"><line x1="394" y1="54" x2="394" y2="76"/><circle cx="394" cy="50" r="4"/></g><circle class="hn-dot" cx="394" cy="100" r="3.5"/><rect class="hn-line" x="254" y="168" width="155" height="4" rx="2"/></g>
+        <g class="hn-turn" style="--t: 4.9s"><rect class="rn-chunk" x="394" y="78" width="30" height="18"/><g class="hn-pin"><line x1="424" y1="54" x2="424" y2="76"/><circle cx="424" cy="50" r="4"/></g><circle class="hn-dot" cx="424" cy="100" r="3.5"/><rect class="hn-line" x="254" y="175" width="110" height="4" rx="2"/></g>
+        <text class="rn-label rn-compact hn-room" x="752" y="92" text-anchor="end">fills slowly</text>
+        <line class="rn-out" pathLength="100" x1="760" y1="87" x2="810" y2="87"/>
+        <circle class="rn-land hn-land" cx="836" cy="87" r="12"/>
+        <text class="rn-label hn-land-label" x="836" y="120" text-anchor="middle">result</text>
+      </svg>
+      <p class="stage-cap mono">a wrong step costs one turn</p>
+    </div></div>
+    <!-- all three, weighed (b6): rail order, three bar lengths, words on the bars -->
+    <div class="weigh fold" data-beat="6"><div class="fold-in">
+      <div class="weigh-grid mono">
+        <span></span><span class="wh">your effort</span><span class="wh">tokens</span><span class="wh">pick it when</span>
+        <b>by hand</b><span class="wbar you" style="--n: 3"><i></i>high</span><span class="wbar tok" style="--n: 1"><i></i>low</span><span class="wwhen">unknown ground · landmines · foundations</span>
+        <b>tickets</b><span class="wbar you" style="--n: 2"><i></i>moderate</span><span class="wbar tok" style="--n: 2"><i></i>moderate</span><span class="wwhen">most planned work</span>
+        <b>the long run</b><span class="wbar you" style="--n: 1"><i></i>low</span><span class="wbar tok" style="--n: 3"><i></i>high</span><span class="wwhen">work the agent can check itself</span>
+      </div>
+      <p class="stage-cap mono judge-cap">the more you’re in it, the more of what’s in your head reaches the project</p>
+    </div></div>
+  </section>
+
+  <!-- where to be involved: a tree. The trunk is what everything rests on —
+       you build it by hand and you can explain it; limbs and leaves grow,
+       fall and get trimmed on top. b1 growth · b2 a bad leaf · b3 a bad trunk
+       · b4 what you keep in your head · b5 the three roads, placed. -->
+  <section class="scene" id="sc-trunk" data-nav="where to be involved" data-title="The Trunk" data-beats="5">
+    <h2 class="scene-title" data-beat="0">Be most involved where everything else depends on it</h2>
+    <div class="tree-stage" data-beat="0">
+      <svg id="tree-svg" viewBox="60 0 1000 384" aria-hidden="true">
+        <defs>
+          <linearGradient id="tr-ground-fade" gradientUnits="userSpaceOnUse" x1="70" y1="0" x2="560" y2="0">
+            <stop offset="0" stop-color="#7d7a6f" stop-opacity="0"/><stop offset="0.25" stop-color="#7d7a6f"/><stop offset="0.75" stop-color="#7d7a6f"/><stop offset="1" stop-color="#7d7a6f" stop-opacity="0"/>
+          </linearGradient>
+        </defs>
+        <rect class="tr-ground" x="70" y="351" width="490" height="1.5" fill="url(#tr-ground-fade)"/>
+        <path class="tr-root" d="M 272 353 Q 252 367 222 371 M 306 353 L 306 376 M 340 353 Q 360 367 392 371"/>
+        <!-- limbs, branches, leaves: generated by lib/gentree.py, one silhouette with the trunk -->
+        <g class="tr-canopy">
+          <g class="tr-wood-up">
+          <path class="tr-limb" d="M 302.7 217.5 L 296.7 212.2 L 290.5 206.9 L 284 201.6 L 277.3 196.4 L 270.3 191.3 L 263 186.3 L 255.4 181.3 L 247.5 176.4 L 239.3 171.5 L 230.9 166.7 L 222.1 162 L 213.1 157.4 L 203.7 152.8 L 194.1 148.3 L 184.1 143.8 L 173.9 139.4 L 163.3 135.1 L 152.5 130.8 L 151.5 133.2 L 162.1 137.9 L 172.4 142.6 L 182.4 147.4 L 192.1 152.3 L 201.5 157.2 L 210.5 162.2 L 219.2 167.2 L 227.6 172.3 L 235.7 177.5 L 243.4 182.7 L 250.8 188 L 257.9 193.3 L 264.7 198.7 L 271.1 204.1 L 277.2 209.6 L 282.9 215.2 L 288.3 220.8 L 293.3 226.5 Z"/>
+          <path class="tr-limb" d="M 312.5 221.4 L 311.2 212.6 L 310.2 203.9 L 309.4 195.2 L 308.8 186.4 L 308.3 177.7 L 308.1 169 L 308.1 160.2 L 308.2 151.5 L 308.5 142.8 L 309 134 L 309.7 125.3 L 310.5 116.6 L 311.5 107.9 L 312.7 99.2 L 314.1 90.4 L 315.6 81.7 L 317.4 73 L 319.3 64.3 L 316.7 63.7 L 314.4 72.3 L 312.2 81 L 310.1 89.7 L 308.3 98.4 L 306.6 107.1 L 305.1 115.9 L 303.7 124.6 L 302.5 133.4 L 301.5 142.2 L 300.6 151.1 L 300 159.9 L 299.4 168.8 L 299.1 177.7 L 298.9 186.7 L 298.9 195.6 L 299 204.6 L 299.2 213.6 L 299.5 222.6 Z"/>
+          <path class="tr-limb" d="M 317.7 227.4 L 325.2 221.7 L 332.8 216.1 L 340.6 210.7 L 348.4 205.3 L 356.4 200.1 L 364.5 194.8 L 372.6 189.7 L 380.9 184.6 L 389.2 179.6 L 397.7 174.6 L 406.2 169.7 L 414.8 164.9 L 423.5 160.1 L 432.4 155.4 L 441.3 150.7 L 450.3 146.2 L 459.4 141.6 L 468.5 137.2 L 467.5 134.8 L 458.1 138.9 L 448.7 143 L 439.5 147.1 L 430.4 151.4 L 421.3 155.7 L 412.3 160 L 403.4 164.4 L 394.5 168.9 L 385.8 173.4 L 377.1 178 L 368.5 182.7 L 360 187.4 L 351.6 192.2 L 343.2 197 L 334.9 201.8 L 326.7 206.8 L 318.5 211.7 L 310.3 216.6 Z"/>
+          <path class="tr-limb tr-branch" d="M 251.6 181.3 L 250.1 175.2 L 248.2 168.6 L 245.9 161.4 L 243.3 153.6 L 240.2 145.2 L 236.7 136.2 L 232.7 126.7 L 228.4 116.5 L 223.6 105.7 L 218.4 94.3 L 212.8 82.3 L 206.7 69.7 L 205.3 70.3 L 211.1 83 L 216.5 95.1 L 221.4 106.6 L 225.9 117.5 L 230 127.8 L 233.6 137.4 L 236.8 146.4 L 239.6 154.9 L 241.9 162.6 L 243.8 169.8 L 245.2 176.3 L 246.2 182.2 Z"/>
+          <path class="tr-limb tr-branch" d="M 209.4 155.9 L 204.2 156.4 L 198.3 156.8 L 191.7 157.1 L 184.5 157.3 L 176.7 157.4 L 168.2 157.3 L 159.1 157.2 L 149.4 157 L 139 156.7 L 128 156.3 L 116.3 155.8 L 104 155.2 L 104 156.8 L 116.2 157.7 L 127.9 158.4 L 138.9 159.1 L 149.3 159.7 L 159 160.2 L 168.2 160.6 L 176.7 160.9 L 184.5 161.2 L 191.8 161.3 L 198.4 161.4 L 204.4 161.4 L 209.8 161.4 Z"/>
+          <path class="tr-limb tr-branch" d="M 181.2 142.9 L 180.1 139 L 178.7 135 L 177.2 130.7 L 175.3 126.3 L 173.2 121.7 L 170.8 116.8 L 168.2 111.8 L 165.2 106.6 L 162 101.1 L 158.5 95.5 L 154.7 89.6 L 150.7 83.6 L 149.3 84.4 L 153.1 90.6 L 156.7 96.6 L 159.9 102.3 L 162.9 107.9 L 165.5 113.2 L 167.9 118.3 L 169.9 123.1 L 171.7 127.7 L 173.2 132.1 L 174.4 136.3 L 175.2 140.2 L 175.8 143.9 Z"/>
+          <path class="tr-limb tr-branch" d="M 305.2 162.2 L 300.2 159.7 L 295.3 156.5 L 290.5 152.9 L 285.7 148.7 L 280.9 144.1 L 276.2 138.9 L 271.5 133.3 L 266.8 127.2 L 262.2 120.5 L 257.7 113.4 L 253.2 105.8 L 248.7 97.6 L 247.3 98.4 L 251.5 106.7 L 255.8 114.5 L 260.2 121.8 L 264.6 128.7 L 269.1 135.1 L 273.7 141 L 278.3 146.5 L 283 151.5 L 287.8 156.1 L 292.6 160.2 L 297.6 163.8 L 302.6 167.1 Z"/>
+          <path class="tr-limb tr-branch" d="M 306.4 141.8 L 311.4 139.1 L 316.6 136.1 L 321.9 133 L 327.2 129.5 L 332.7 125.8 L 338.4 121.8 L 344.1 117.6 L 349.9 113.2 L 355.9 108.4 L 362 103.4 L 368.2 98.1 L 374.5 92.6 L 373.5 91.4 L 367 96.7 L 360.7 101.7 L 354.4 106.5 L 348.3 111 L 342.4 115.2 L 336.5 119.2 L 330.8 122.8 L 325.2 126.2 L 319.7 129.3 L 314.4 132.1 L 309.2 134.7 L 304.1 136.8 Z"/>
+          <path class="tr-limb tr-branch" d="M 374.9 185.8 L 376.1 179.5 L 377.7 172.6 L 379.5 165.2 L 381.6 157.2 L 384 148.6 L 386.7 139.4 L 389.7 129.6 L 393 119.3 L 396.5 108.4 L 400.3 96.9 L 404.4 84.9 L 408.8 72.3 L 407.2 71.7 L 402.6 84.3 L 398.3 96.2 L 394.2 107.6 L 390.4 118.5 L 386.9 128.7 L 383.6 138.4 L 380.6 147.5 L 377.9 156.1 L 375.4 164.1 L 373.2 171.5 L 371.3 178.3 L 369.6 184.6 Z"/>
+          <path class="tr-limb tr-branch" d="M 412.7 165.7 L 418.9 164.8 L 425.6 163.2 L 432.8 161.1 L 440.7 158.3 L 449.1 154.8 L 458.1 150.7 L 467.6 146 L 477.8 140.6 L 488.6 134.6 L 499.9 127.9 L 511.9 120.6 L 524.4 112.7 L 523.6 111.3 L 510.9 119 L 498.8 126.1 L 487.4 132.5 L 476.5 138.3 L 466.3 143.3 L 456.7 147.8 L 447.7 151.5 L 439.3 154.6 L 431.6 157 L 424.5 158.8 L 418.1 159.9 L 412.3 160.3 Z"/>
+          <path class="tr-limb tr-branch" d="M 444.1 149.1 L 445 145 L 446.3 140.6 L 447.8 135.9 L 449.8 130.9 L 452 125.6 L 454.6 120 L 457.5 114.2 L 460.7 108 L 464.2 101.5 L 468 94.8 L 472.2 87.8 L 476.7 80.4 L 475.3 79.6 L 470.6 86.8 L 466.2 93.7 L 462.1 100.3 L 458.3 106.7 L 454.8 112.8 L 451.7 118.6 L 448.8 124.1 L 446.2 129.4 L 443.9 134.4 L 442 139.1 L 440.3 143.5 L 438.8 147.7 Z"/>
+          <path class="tr-limb tr-branch" d="M 311.2 99.1 L 308.1 97.6 L 305.1 95.6 L 302.1 93.2 L 299.3 90.4 L 296.5 87.1 L 293.9 83.3 L 291.4 79.1 L 289 74.5 L 286.7 69.5 L 284.6 64 L 282.6 58.1 L 280.8 51.8 L 279.2 52.2 L 280.8 58.6 L 282.6 64.7 L 284.5 70.4 L 286.6 75.6 L 288.8 80.5 L 291.1 85 L 293.6 89.1 L 296.3 92.9 L 299.2 96.2 L 302.2 99.2 L 305.4 101.8 L 308.8 104 Z"/>
+          <path class="tr-limb tr-branch" d="M 312.1 97.9 L 315.8 96 L 319.5 93.8 L 323.2 91.2 L 326.7 88.2 L 330.2 84.8 L 333.5 81.1 L 336.9 76.9 L 340.2 72.4 L 343.4 67.5 L 346.5 62.2 L 349.6 56.5 L 352.7 50.4 L 351.3 49.6 L 348 55.6 L 344.7 61.1 L 341.4 66.2 L 338 70.8 L 334.6 75.1 L 331.1 78.9 L 327.7 82.3 L 324.2 85.2 L 320.7 87.7 L 317.2 89.8 L 313.7 91.5 L 310.2 92.7 Z"/>
+          </g>
+          <g class="tr-leaves">
+          <g transform="translate(238.1 173.5)"><path class="tr-leaf tr-l2" style="--a:-96.8deg;--d:0.90s" d="M 0 0 C 5.9 -7.6, 16.4 -8.2, 23.5 0 C 16.4 8.2, 5.9 7.6, 0 0 Z"/></g>
+          <g transform="translate(222.5 167)"><path class="tr-leaf" style="--a:-202.5deg;--d:0.91s" d="M 0 0 C 5.8 -7.5, 16.1 -8.1, 23.1 0 C 16.1 8.1, 5.8 7.5, 0 0 Z"/></g>
+          <g transform="translate(209.7 157.3)"><path class="tr-leaf" style="--a:-108.7deg;--d:0.92s" d="M 0 0 C 5.8 -7.5, 16.2 -8.1, 23.1 0 C 16.2 8.1, 5.8 7.5, 0 0 Z"/></g>
+          <g transform="translate(193.7 151.9)"><path class="tr-leaf tr-l2" style="--a:-215.8deg;--d:0.94s" d="M 0 0 C 4.9 -6.4, 13.8 -6.9, 19.8 0 C 13.8 6.9, 4.9 6.4, 0 0 Z"/></g>
+          <g transform="translate(180.5 143)"><path class="tr-leaf" style="--a:-114.7deg;--d:0.95s" d="M 0 0 C 6.4 -8.3, 17.8 -8.9, 25.5 0 C 17.8 8.9, 6.4 8.3, 0 0 Z"/></g>
+          <g transform="translate(162.9 137.8)"><path class="tr-leaf" style="--a:-196.1deg;--d:0.96s" d="M 0 0 C 6.7 -8.7, 18.8 -9.4, 26.9 0 C 18.8 9.4, 6.7 8.7, 0 0 Z"/></g>
+          <g transform="translate(152 132)"><path class="tr-leaf tr-l2" style="--a:-154.1deg;--d:0.97s" d="M 0 0 C 6.5 -8.5, 18.2 -9.1, 26 0 C 18.2 9.1, 6.5 8.5, 0 0 Z"/></g>
+          <g transform="translate(306.2 142.6)"><path class="tr-leaf" style="--a:-29.2deg;--d:0.98s" d="M 0 0 C 5.1 -6.6, 14.2 -7.1, 20.3 0 C 14.2 7.1, 5.1 6.6, 0 0 Z"/></g>
+          <g transform="translate(304.8 130.9)"><path class="tr-leaf" style="--a:-138deg;--d:1.00s" d="M 0 0 C 4.9 -6.3, 13.6 -6.8, 19.5 0 C 13.6 6.8, 4.9 6.3, 0 0 Z"/></g>
+          <g transform="translate(308.6 119)"><path class="tr-leaf tr-l2" style="--a:-37.4deg;--d:1.01s" d="M 0 0 C 4.8 -6.3, 13.5 -6.7, 19.2 0 C 13.5 6.7, 4.8 6.3, 0 0 Z"/></g>
+          <g transform="translate(308.2 105.5)"><path class="tr-leaf" style="--a:-132.1deg;--d:1.02s" d="M 0 0 C 6.4 -8.4, 18 -9, 25.7 0 C 18 9, 6.4 8.4, 0 0 Z"/></g>
+          <g transform="translate(312.9 92.5)"><path class="tr-leaf" style="--a:-22deg;--d:1.03s" d="M 0 0 C 5.7 -7.5, 16.1 -8, 23 0 C 16.1 8, 5.7 7.5, 0 0 Z"/></g>
+          <g transform="translate(313.4 78)"><path class="tr-leaf tr-l2" style="--a:-129.1deg;--d:1.04s" d="M 0 0 C 5.3 -6.9, 14.9 -7.4, 21.2 0 C 14.9 7.4, 5.3 6.9, 0 0 Z"/></g>
+          <g transform="translate(318 64)"><path class="tr-leaf" style="--a:-63.7deg;--d:1.06s" d="M 0 0 C 6.5 -8.5, 18.2 -9.1, 26 0 C 18.2 9.1, 6.5 8.5, 0 0 Z"/></g>
+          <g transform="translate(388.1 177.5)"><path class="tr-leaf" style="--a:34deg;--d:1.07s" d="M 0 0 C 6.2 -8, 17.3 -8.6, 24.7 0 C 17.3 8.6, 6.2 8, 0 0 Z"/></g>
+          <g transform="translate(399.4 168.6)"><path class="tr-leaf tr-l2" style="--a:-73.3deg;--d:1.08s" d="M 0 0 C 5.3 -6.9, 14.9 -7.5, 21.3 0 C 14.9 7.5, 5.3 6.9, 0 0 Z"/></g>
+          <g transform="translate(412.2 164.5)"><path class="tr-leaf" style="--a:33.3deg;--d:1.09s" d="M 0 0 C 5.6 -7.2, 15.5 -7.8, 22.2 0 C 15.5 7.8, 5.6 7.2, 0 0 Z"/></g>
+          <g transform="translate(426 154.7)"><path class="tr-leaf" style="--a:-76.3deg;--d:1.10s" d="M 0 0 C 6.7 -8.7, 18.7 -9.3, 26.7 0 C 18.7 9.3, 6.7 8.7, 0 0 Z"/></g>
+          <g transform="translate(442.3 149.3)"><path class="tr-leaf tr-l2" style="--a:12.2deg;--d:1.12s" d="M 0 0 C 5.2 -6.7, 14.5 -7.2, 20.7 0 C 14.5 7.2, 5.2 6.7, 0 0 Z"/></g>
+          <g transform="translate(457 139.7)"><path class="tr-leaf" style="--a:-77deg;--d:1.13s" d="M 0 0 C 6.7 -8.7, 18.8 -9.4, 26.8 0 C 18.8 9.4, 6.7 8.7, 0 0 Z"/></g>
+          <g transform="translate(468 136)"><path class="tr-leaf" style="--a:-34.6deg;--d:1.14s" d="M 0 0 C 6.5 -8.5, 18.2 -9.1, 26 0 C 18.2 9.1, 6.5 8.5, 0 0 Z"/></g>
+          <g transform="translate(245.6 164.4)"><path class="tr-leaf tr-l2" style="--a:-49.5deg;--d:1.15s" d="M 0 0 C 6.3 -8.2, 17.7 -8.8, 25.2 0 C 17.7 8.8, 6.3 8.2, 0 0 Z"/></g>
+          <g transform="translate(240.5 154.2)"><path class="tr-leaf" style="--a:-149.2deg;--d:1.16s" d="M 0 0 C 5.4 -7, 15.2 -7.6, 21.7 0 C 15.2 7.6, 5.4 7, 0 0 Z"/></g>
+          <g transform="translate(236.9 138.9)"><path class="tr-leaf" style="--a:-50deg;--d:1.18s" d="M 0 0 C 5 -6.5, 14 -7, 19.9 0 C 14 7, 5 6.5, 0 0 Z"/></g>
+          <g transform="translate(230 126.2)"><path class="tr-leaf tr-l2" style="--a:-153.1deg;--d:1.19s" d="M 0 0 C 4.9 -6.3, 13.6 -6.8, 19.5 0 C 13.6 6.8, 4.9 6.3, 0 0 Z"/></g>
+          <g transform="translate(224.5 108.4)"><path class="tr-leaf" style="--a:-70.1deg;--d:1.20s" d="M 0 0 C 5.9 -7.6, 16.4 -8.2, 23.5 0 C 16.4 8.2, 5.9 7.6, 0 0 Z"/></g>
+          <g transform="translate(215.3 92.2)"><path class="tr-leaf" style="--a:-158.1deg;--d:1.21s" d="M 0 0 C 6.2 -8.1, 17.4 -8.7, 24.9 0 C 17.4 8.7, 6.2 8.1, 0 0 Z"/></g>
+          <g transform="translate(209.4 75.1)"><path class="tr-leaf tr-l2" style="--a:-57.8deg;--d:1.22s" d="M 0 0 C 5 -6.5, 14 -7, 19.9 0 C 14 7, 5 6.5, 0 0 Z"/></g>
+          <g transform="translate(206 70)"><path class="tr-leaf" style="--a:-122.3deg;--d:1.24s" d="M 0 0 C 6.5 -8.5, 18.2 -9.1, 26 0 C 18.2 9.1, 6.5 8.5, 0 0 Z"/></g>
+          <g transform="translate(194.2 158.3)"><path class="tr-leaf" style="--a:225.3deg;--d:1.25s" d="M 0 0 C 6.7 -8.7, 18.7 -9.4, 26.8 0 C 18.7 9.4, 6.7 8.7, 0 0 Z"/></g>
+          <g transform="translate(182.4 160.1)"><path class="tr-leaf tr-l2" style="--a:-226.7deg;--d:1.26s" d="M 0 0 C 6.5 -8.5, 18.3 -9.1, 26.1 0 C 18.3 9.1, 6.5 8.5, 0 0 Z"/></g>
+          <g transform="translate(171.3 158.1)"><path class="tr-leaf" style="--a:-128.9deg;--d:1.27s" d="M 0 0 C 6.5 -8.4, 18.1 -9, 25.8 0 C 18.1 9, 6.5 8.4, 0 0 Z"/></g>
+          <g transform="translate(157.1 159.5)"><path class="tr-leaf" style="--a:-219deg;--d:1.28s" d="M 0 0 C 6.7 -8.7, 18.8 -9.4, 26.9 0 C 18.8 9.4, 6.7 8.7, 0 0 Z"/></g>
+          <g transform="translate(143.4 157.2)"><path class="tr-leaf tr-l2" style="--a:-131.7deg;--d:1.30s" d="M 0 0 C 6.3 -8.2, 17.6 -8.8, 25.2 0 C 17.6 8.8, 6.3 8.2, 0 0 Z"/></g>
+          <g transform="translate(127.8 158.3)"><path class="tr-leaf" style="--a:-223.9deg;--d:1.31s" d="M 0 0 C 4.9 -6.4, 13.7 -6.9, 19.6 0 C 13.7 6.9, 4.9 6.4, 0 0 Z"/></g>
+          <g transform="translate(112.5 155.6)"><path class="tr-leaf" style="--a:-121.2deg;--d:1.32s" d="M 0 0 C 5.2 -6.8, 14.7 -7.3, 20.9 0 C 14.7 7.3, 5.2 6.8, 0 0 Z"/></g>
+          <g transform="translate(104 156)"><path class="tr-leaf tr-l2" style="--a:-179.6deg;--d:1.33s" d="M 0 0 C 6.5 -8.5, 18.2 -9.1, 26 0 C 18.2 9.1, 6.5 8.5, 0 0 Z"/></g>
+          <g transform="translate(176.6 132.7)"><path class="tr-leaf" style="--a:-56.9deg;--d:1.34s" d="M 0 0 C 6.7 -8.7, 18.7 -9.3, 26.7 0 C 18.7 9.3, 6.7 8.7, 0 0 Z"/></g>
+          <g transform="translate(172.4 126.8)"><path class="tr-leaf" style="--a:-167.3deg;--d:1.36s" d="M 0 0 C 6.5 -8.4, 18.2 -9.1, 25.9 0 C 18.2 9.1, 6.5 8.4, 0 0 Z"/></g>
+          <g transform="translate(171.3 119.7)"><path class="tr-leaf tr-l2" style="--a:-72.1deg;--d:1.37s" d="M 0 0 C 6.6 -8.5, 18.4 -9.2, 26.3 0 C 18.4 9.2, 6.6 8.5, 0 0 Z"/></g>
+          <g transform="translate(165.7 112.2)"><path class="tr-leaf" style="--a:-162.9deg;--d:1.38s" d="M 0 0 C 5.1 -6.7, 14.4 -7.2, 20.5 0 C 14.4 7.2, 5.1 6.7, 0 0 Z"/></g>
+          <g transform="translate(162.6 102.7)"><path class="tr-leaf" style="--a:-53.4deg;--d:1.39s" d="M 0 0 C 5.1 -6.7, 14.4 -7.2, 20.6 0 C 14.4 7.2, 5.1 6.7, 0 0 Z"/></g>
+          <g transform="translate(155.2 93.9)"><path class="tr-leaf tr-l2" style="--a:-186.1deg;--d:1.40s" d="M 0 0 C 6 -7.7, 16.7 -8.3, 23.8 0 C 16.7 8.3, 6 7.7, 0 0 Z"/></g>
+          <g transform="translate(150 84)"><path class="tr-leaf" style="--a:-132.7deg;--d:1.42s" d="M 0 0 C 6.5 -8.5, 18.2 -9.1, 26 0 C 18.2 9.1, 6.5 8.5, 0 0 Z"/></g>
+          <g transform="translate(291.4 155.2)"><path class="tr-leaf" style="--a:-101.8deg;--d:1.43s" d="M 0 0 C 6.7 -8.7, 18.7 -9.3, 26.7 0 C 18.7 9.3, 6.7 8.7, 0 0 Z"/></g>
+          <g transform="translate(283.6 150.7)"><path class="tr-leaf tr-l2" style="--a:-195.2deg;--d:1.44s" d="M 0 0 C 5.3 -6.8, 14.7 -7.4, 21.1 0 C 14.7 7.4, 5.3 6.8, 0 0 Z"/></g>
+          <g transform="translate(277.1 141.2)"><path class="tr-leaf" style="--a:-75deg;--d:1.45s" d="M 0 0 C 5.3 -6.9, 14.9 -7.5, 21.3 0 C 14.9 7.5, 5.3 6.9, 0 0 Z"/></g>
+          <g transform="translate(269.5 134.6)"><path class="tr-leaf" style="--a:-186.9deg;--d:1.46s" d="M 0 0 C 4.9 -6.4, 13.7 -6.8, 19.6 0 C 13.7 6.8, 4.9 6.4, 0 0 Z"/></g>
+          <g transform="translate(264.6 124.8)"><path class="tr-leaf tr-l2" style="--a:-69.2deg;--d:1.48s" d="M 0 0 C 6.5 -8.4, 18.1 -9, 25.8 0 C 18.1 9, 6.5 8.4, 0 0 Z"/></g>
+          <g transform="translate(256.2 114.7)"><path class="tr-leaf" style="--a:-167.1deg;--d:1.49s" d="M 0 0 C 6.6 -8.6, 18.4 -9.2, 26.3 0 C 18.4 9.2, 6.6 8.6, 0 0 Z"/></g>
+          <g transform="translate(251.7 103.2)"><path class="tr-leaf" style="--a:-79.7deg;--d:1.50s" d="M 0 0 C 5.3 -6.9, 14.8 -7.4, 21.2 0 C 14.8 7.4, 5.3 6.9, 0 0 Z"/></g>
+          <g transform="translate(248 98)"><path class="tr-leaf tr-l2" style="--a:-127.6deg;--d:1.51s" d="M 0 0 C 6.5 -8.5, 18.2 -9.1, 26 0 C 18.2 9.1, 6.5 8.5, 0 0 Z"/></g>
+          <g transform="translate(319.3 133)"><path class="tr-leaf" style="--a:13.5deg;--d:1.52s" d="M 0 0 C 5.5 -7.1, 15.4 -7.7, 22 0 C 15.4 7.7, 5.5 7.1, 0 0 Z"/></g>
+          <g transform="translate(326.7 126.5)"><path class="tr-leaf" style="--a:-74deg;--d:1.54s" d="M 0 0 C 5.5 -7.1, 15.3 -7.7, 21.9 0 C 15.3 7.7, 5.5 7.1, 0 0 Z"/></g>
+          <g transform="translate(337.1 121.8)"><path class="tr-leaf tr-l2" style="--a:33.1deg;--d:1.55s" d="M 0 0 C 6.1 -7.9, 17 -8.5, 24.3 0 C 17 8.5, 6.1 7.9, 0 0 Z"/></g>
+          <g transform="translate(345.2 113.8)"><path class="tr-leaf" style="--a:-91.8deg;--d:1.56s" d="M 0 0 C 5 -6.5, 14.1 -7, 20.1 0 C 14.1 7, 5 6.5, 0 0 Z"/></g>
+          <g transform="translate(354.1 109.5)"><path class="tr-leaf" style="--a:0.9deg;--d:1.57s" d="M 0 0 C 6.6 -8.5, 18.4 -9.2, 26.3 0 C 18.4 9.2, 6.6 8.5, 0 0 Z"/></g>
+          <g transform="translate(362.7 100.3)"><path class="tr-leaf tr-l2" style="--a:-106.1deg;--d:1.58s" d="M 0 0 C 4.8 -6.2, 13.4 -6.7, 19.2 0 C 13.4 6.7, 4.8 6.2, 0 0 Z"/></g>
+          <g transform="translate(374 92)"><path class="tr-leaf" style="--a:-41.1deg;--d:1.60s" d="M 0 0 C 6.5 -8.5, 18.2 -9.1, 26 0 C 18.2 9.1, 6.5 8.5, 0 0 Z"/></g>
+          <g transform="translate(377.6 167.6)"><path class="tr-leaf" style="--a:-14.8deg;--d:1.61s" d="M 0 0 C 5.4 -7, 15.1 -7.5, 21.6 0 C 15.1 7.5, 5.4 7, 0 0 Z"/></g>
+          <g transform="translate(379.8 153.3)"><path class="tr-leaf tr-l2" style="--a:-113.7deg;--d:1.62s" d="M 0 0 C 5.8 -7.6, 16.4 -8.2, 23.4 0 C 16.4 8.2, 5.8 7.6, 0 0 Z"/></g>
+          <g transform="translate(386 139.4)"><path class="tr-leaf" style="--a:-7.5deg;--d:1.63s" d="M 0 0 C 6.2 -8.1, 17.4 -8.7, 24.9 0 C 17.4 8.7, 6.2 8.1, 0 0 Z"/></g>
+          <g transform="translate(389.3 123.2)"><path class="tr-leaf" style="--a:-133.5deg;--d:1.64s" d="M 0 0 C 6.6 -8.6, 18.4 -9.2, 26.3 0 C 18.4 9.2, 6.6 8.6, 0 0 Z"/></g>
+          <g transform="translate(396.2 108.4)"><path class="tr-leaf tr-l2" style="--a:-12.6deg;--d:1.66s" d="M 0 0 C 6.6 -8.5, 18.3 -9.2, 26.2 0 C 18.3 9.2, 6.6 8.5, 0 0 Z"/></g>
+          <g transform="translate(401.2 88.4)"><path class="tr-leaf" style="--a:-121.1deg;--d:1.67s" d="M 0 0 C 6.3 -8.2, 17.7 -8.9, 25.3 0 C 17.7 8.9, 6.3 8.2, 0 0 Z"/></g>
+          <g transform="translate(408 72)"><path class="tr-leaf" style="--a:-68.5deg;--d:1.68s" d="M 0 0 C 6.5 -8.5, 18.2 -9.1, 26 0 C 18.2 9.1, 6.5 8.5, 0 0 Z"/></g>
+          <g transform="translate(429.8 160.7)"><path class="tr-leaf tr-l2" style="--a:40.9deg;--d:1.69s" d="M 0 0 C 5.5 -7.2, 15.4 -7.7, 22.1 0 C 15.4 7.7, 5.5 7.2, 0 0 Z"/></g>
+          <g transform="translate(441.1 155.1)"><path class="tr-leaf" style="--a:-76.8deg;--d:1.70s" d="M 0 0 C 4.9 -6.4, 13.7 -6.9, 19.6 0 C 13.7 6.9, 4.9 6.4, 0 0 Z"/></g>
+          <g transform="translate(455.3 151.2)"><path class="tr-leaf" style="--a:43.7deg;--d:1.72s" d="M 0 0 C 6.5 -8.5, 18.2 -9.1, 26 0 C 18.2 9.1, 6.5 8.5, 0 0 Z"/></g>
+          <g transform="translate(470 142.2)"><path class="tr-leaf tr-l2" style="--a:-76.6deg;--d:1.73s" d="M 0 0 C 6.2 -8.1, 17.4 -8.7, 24.9 0 C 17.4 8.7, 6.2 8.1, 0 0 Z"/></g>
+          <g transform="translate(487.1 135.1)"><path class="tr-leaf" style="--a:22.2deg;--d:1.74s" d="M 0 0 C 6.4 -8.4, 18 -9, 25.7 0 C 18 9, 6.4 8.4, 0 0 Z"/></g>
+          <g transform="translate(501.2 124.9)"><path class="tr-leaf" style="--a:-91.1deg;--d:1.75s" d="M 0 0 C 4.8 -6.3, 13.5 -6.7, 19.2 0 C 13.5 6.7, 4.8 6.3, 0 0 Z"/></g>
+          <g transform="translate(524 112)"><g class="tr-fall"><path class="tr-leaf tr-bad" style="--a:-32.8deg;--d:1.8s" d="M 0 0 C 6.5 -8.5, 18.2 -9.1, 26 0 C 18.2 9.1, 6.5 8.5, 0 0 Z"/></g><path class="tr-leaf tr-new" style="--a:-32.8deg" d="M 0 0 C 6.5 -8.5, 18.2 -9.1, 26 0 C 18.2 9.1, 6.5 8.5, 0 0 Z"/></g>
+          <g transform="translate(446 137.2)"><path class="tr-leaf" style="--a:-24.1deg;--d:1.78s" d="M 0 0 C 6.1 -8, 17.2 -8.6, 24.6 0 C 17.2 8.6, 6.1 8, 0 0 Z"/></g>
+          <g transform="translate(447.5 129.1)"><path class="tr-leaf" style="--a:-122.5deg;--d:1.79s" d="M 0 0 C 6.6 -8.6, 18.5 -9.2, 26.4 0 C 18.5 9.2, 6.6 8.6, 0 0 Z"/></g>
+          <g transform="translate(452.6 122.4)"><path class="tr-leaf tr-l2" style="--a:-25.5deg;--d:1.80s" d="M 0 0 C 5.4 -7, 15 -7.5, 21.4 0 C 15 7.5, 5.4 7, 0 0 Z"/></g>
+          <g transform="translate(455.7 112.4)"><path class="tr-leaf" style="--a:-105.9deg;--d:1.81s" d="M 0 0 C 5.1 -6.6, 14.2 -7.1, 20.4 0 C 14.2 7.1, 5.1 6.6, 0 0 Z"/></g>
+          <g transform="translate(463.1 102.7)"><path class="tr-leaf" style="--a:-2.2deg;--d:1.82s" d="M 0 0 C 5.6 -7.3, 15.8 -7.9, 22.5 0 C 15.8 7.9, 5.6 7.3, 0 0 Z"/></g>
+          <g transform="translate(468.3 90.5)"><path class="tr-leaf tr-l2" style="--a:-106.3deg;--d:1.84s" d="M 0 0 C 6.1 -7.9, 17 -8.5, 24.3 0 C 17 8.5, 6.1 7.9, 0 0 Z"/></g>
+          <g transform="translate(476 80)"><path class="tr-leaf" style="--a:-59deg;--d:1.85s" d="M 0 0 C 6.5 -8.5, 18.2 -9.1, 26 0 C 18.2 9.1, 6.5 8.5, 0 0 Z"/></g>
+          <g transform="translate(302.3 95.1)"><path class="tr-leaf" style="--a:-75deg;--d:1.86s" d="M 0 0 C 6.6 -8.6, 18.4 -9.2, 26.3 0 C 18.4 9.2, 6.6 8.6, 0 0 Z"/></g>
+          <g transform="translate(296.2 91.1)"><path class="tr-leaf tr-l2" style="--a:-178.1deg;--d:1.87s" d="M 0 0 C 5.9 -7.7, 16.6 -8.3, 23.7 0 C 16.6 8.3, 5.9 7.7, 0 0 Z"/></g>
+          <g transform="translate(294 84.8)"><path class="tr-leaf" style="--a:-80.2deg;--d:1.88s" d="M 0 0 C 5.7 -7.5, 16.1 -8, 23 0 C 16.1 8, 5.7 7.5, 0 0 Z"/></g>
+          <g transform="translate(288.4 78.5)"><path class="tr-leaf" style="--a:-179.6deg;--d:1.90s" d="M 0 0 C 6.2 -8, 17.3 -8.6, 24.7 0 C 17.3 8.6, 6.2 8, 0 0 Z"/></g>
+          <g transform="translate(286.3 69.2)"><path class="tr-leaf tr-l2" style="--a:-64.7deg;--d:1.91s" d="M 0 0 C 5.1 -6.6, 14.2 -7.1, 20.4 0 C 14.2 7.1, 5.1 6.6, 0 0 Z"/></g>
+          <g transform="translate(281.7 61.3)"><path class="tr-leaf" style="--a:-153.5deg;--d:1.92s" d="M 0 0 C 5.2 -6.7, 14.5 -7.2, 20.7 0 C 14.5 7.2, 5.2 6.7, 0 0 Z"/></g>
+          <g transform="translate(280 52)"><path class="tr-leaf" style="--a:-101.2deg;--d:1.93s" d="M 0 0 C 6.5 -8.5, 18.2 -9.1, 26 0 C 18.2 9.1, 6.5 8.5, 0 0 Z"/></g>
+          <g transform="translate(321.2 91.1)"><path class="tr-leaf tr-l2" style="--a:18.7deg;--d:1.94s" d="M 0 0 C 5.4 -7, 15.1 -7.5, 21.5 0 C 15.1 7.5, 5.4 7, 0 0 Z"/></g>
+          <g transform="translate(325.9 85.1)"><path class="tr-leaf" style="--a:-109deg;--d:1.96s" d="M 0 0 C 5.7 -7.4, 15.8 -7.9, 22.6 0 C 15.8 7.9, 5.7 7.4, 0 0 Z"/></g>
+          <g transform="translate(331.6 82.1)"><path class="tr-leaf" style="--a:-7.6deg;--d:1.97s" d="M 0 0 C 6.5 -8.4, 18.2 -9.1, 26 0 C 18.2 9.1, 6.5 8.4, 0 0 Z"/></g>
+          <g transform="translate(334.7 75.9)"><path class="tr-leaf tr-l2" style="--a:-110.1deg;--d:1.98s" d="M 0 0 C 5.9 -7.7, 16.5 -8.2, 23.6 0 C 16.5 8.2, 5.9 7.7, 0 0 Z"/></g>
+          <g transform="translate(340.8 70.7)"><path class="tr-leaf" style="--a:6.8deg;--d:1.99s" d="M 0 0 C 4.8 -6.2, 13.4 -6.7, 19.2 0 C 13.4 6.7, 4.8 6.2, 0 0 Z"/></g>
+          <g transform="translate(343.7 63)"><path class="tr-leaf" style="--a:-109.9deg;--d:2.00s" d="M 0 0 C 4.8 -6.2, 13.4 -6.7, 19.2 0 C 13.4 6.7, 4.8 6.2, 0 0 Z"/></g>
+          <g transform="translate(350.6 54.7)"><path class="tr-leaf tr-l2" style="--a:-16.7deg;--d:2.02s" d="M 0 0 C 5 -6.5, 14.1 -7, 20.1 0 C 14.1 7, 5 6.5, 0 0 Z"/></g>
+          <g transform="translate(352 50)"><path class="tr-leaf" style="--a:-60deg;--d:2.03s" d="M 0 0 C 6.5 -8.5, 18.2 -9.1, 26 0 C 18.2 9.1, 6.5 8.5, 0 0 Z"/></g>
+          </g>
+        </g>
+        <path class="tr-outline" d="M 86 120 C 82 52, 200 22, 318 24 C 436 22, 554 52, 550 120 C 546 182, 430 204, 318 200 C 206 204, 90 182, 86 120 Z"/>
+        <!-- the trunk: one solid shape, the brightest thing on the slide -->
+        <path class="tr-trunk" d="M 258 352 C 280 344, 286 308, 289 262 L 290 214 Q 306 204 322 214 L 323 262 C 326 308, 332 344, 354 352 Z"/>
+        <path class="tr-grain" d="M 297 346 C 299 304, 301 262, 302 222 M 318 346 C 315 304, 312 262, 311 222"/>
+        <path class="tr-crack" pathLength="100" d="M 304 352 l 8 -17 l -9 -14 l 10 -16 l -7 -15 l 8 -16 l -6 -14 l 5 -15 l -4 -15 l 3 -14"/>
+        <!-- one reading column: part · examples, and at b5 the road in the examples' slot -->
+        <g class="tr-col tr-col-leaf"><circle class="tr-dot" cx="556" cy="104" r="3"/><path class="tr-leader" d="M 556 104 L 590 104"/><text class="tr-label" x="604" y="112">leaves</text><text class="tr-eg" x="604" y="138">empty state · sort order · button copy</text><text class="tr-road" x="604" y="138">→ the long run, or tickets</text></g>
+        <g class="tr-col tr-col-limb"><circle class="tr-dot" cx="366" cy="190" r="3"/><path class="tr-leader" d="M 366 190 L 590 190"/><text class="tr-label" x="604" y="198">limbs</text><text class="tr-eg" x="604" y="224">the catch log · the shop</text><text class="tr-road" x="604" y="224">→ tickets, or the long run</text></g>
+        <g class="tr-col tr-col-trunk"><circle class="tr-dot" cx="331" cy="296" r="3"/><path class="tr-leader" d="M 331 296 L 590 296"/><text class="tr-label" x="604" y="304">trunk</text><text class="tr-eg" x="604" y="330">data model · architecture · key product decisions</text><text class="tr-road" x="604" y="330">→ by hand, or tickets</text></g>
+      </svg>
+      <p class="stage-cap mono tree-cap" id="tree-cap"></p>
+    </div>
+    <p class="thesis" data-beat="5">A healthy trunk leads to <em>healthy branches.</em></p>
   </section>
 
   <section class="scene" id="sc-arrows" data-nav="fresh eyes" data-title="Fresh Eyes" data-beats="7">
@@ -430,7 +629,7 @@ try { if (JSON.parse(sessionStorage.getItem("nightline-map") || "{}").jump) docu
               <div class="term-line user">read the requirements. one job: break it.</div>
               <div class="term-line tool">hunting…</div>
             </div>
-            <p class="stage-cap mono">no shared assumptions — that’s the point</p>
+            <p class="stage-cap mono">it shares none of your assumptions</p>
           </div>
           <div class="finding-rail">
           <div class="fcard mono" id="fcard-1">
@@ -518,7 +717,7 @@ try { if (JSON.parse(sessionStorage.getItem("nightline-map") || "{}").jump) docu
     <div class="buoys-stage">
       <svg id="buoys-svg" viewBox="0 0 920 380" aria-hidden="true"></svg>
     </div>
-    <p class="lesson-line serif buoys-limit" data-beat="3">every session loads them — but it only re-inks the ones it catches fighting reality</p>
+    <p class="lesson-line serif buoys-limit" data-beat="3">every session loads them — but it only fixes the ones it catches being wrong</p>
     <p class="thesis serif buoys-verdict" data-beat="5">A stale note steers you quietly — and you <em>won’t know why.</em> Sift them, <em>now and then.</em></p>
   </section>
 
@@ -679,6 +878,6 @@ try { if (JSON.parse(sessionStorage.getItem("nightline-map") || "{}").jump) docu
 <script src="lib/terminal.js?v=10"></script>
 <script src="lib/filmstrip.js?v=11"></script>
 <script src="lib/map.js?v=9"></script>
-<script src="lib/deck.js?v=54"></script>
+<script src="lib/deck.js?v=58"></script>
 </body>
 </html>
