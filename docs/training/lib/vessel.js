@@ -127,6 +127,7 @@ function makeVessel(container, opts = {}) {
     return new Promise((resolve) => {
       const hatches = [];
       let cacheTopY = null; // top edge of the cached (unchanged) span
+      let hand = null, handAt = null; // the stopwatch hand and its pivot
       if (cached) {
         const prefix = layers.length > 1 ? layers.slice(0, -1) : layers;
         cacheTopY = Math.min(...prefix.map((l) => parseFloat(l.rect.getAttribute("y"))));
@@ -144,11 +145,34 @@ function makeVessel(container, opts = {}) {
             hatches.push({ el: hl, y: hy, done: false });
           }
         }
-        const tag = document.createElementNS(ns, "text");
+        // the tag, plus a stopwatch that laps once during the sweep: the
+        // cache is kept for an hour, and the lap says "on a clock" without a
+        // caption. The hand ends back at twelve.
+        const tx = VESSEL.TX + VESSEL.TW + 12;
+        const ty = (cacheTopY + bottomY()) / 2 - 4;
+        const tag = document.createElementNS(ns, "g");
         tag.setAttribute("class", "cache-tag");
-        tag.setAttribute("x", VESSEL.TX + VESSEL.TW + 12);
-        tag.setAttribute("y", (cacheTopY + bottomY()) / 2 + 4);
-        tag.textContent = "cached";
+        const word = document.createElementNS(ns, "text");
+        word.setAttribute("x", tx);
+        word.setAttribute("y", ty);
+        word.textContent = "cached";
+        const face = document.createElementNS(ns, "circle");
+        face.setAttribute("class", "ttl-face");
+        face.setAttribute("cx", tx + 6);
+        face.setAttribute("cy", ty + 15);
+        face.setAttribute("r", 6);
+        hand = document.createElementNS(ns, "line");
+        hand.setAttribute("class", "ttl-hand");
+        hand.setAttribute("x1", tx + 6);
+        hand.setAttribute("y1", ty + 15);
+        hand.setAttribute("x2", tx + 6);
+        hand.setAttribute("y2", ty + 11);
+        handAt = [tx + 6, ty + 15];
+        const ttl = document.createElementNS(ns, "text");
+        ttl.setAttribute("x", tx + 17);
+        ttl.setAttribute("y", ty + 19);
+        ttl.textContent = "1 hr";
+        tag.append(word, face, hand, ttl);
         overlay.appendChild(tag);
         requestAnimationFrame(() => requestAnimationFrame(() => tag.classList.add("on")));
       }
@@ -175,6 +199,7 @@ function makeVessel(container, opts = {}) {
               hp.done = true;
             }
           if (cacheTopY != null && y < cacheTopY) line.classList.remove("cached"); // the new layer re-reads at full price
+          hand.setAttribute("transform", `rotate(${t * 360} ${handAt[0]} ${handAt[1]})`);
         }
         if (onCoin) {
           const pctPassed = Math.min(t * 100, filled);

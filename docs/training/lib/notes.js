@@ -47,7 +47,7 @@ const NOTES = {
       "“Same bar, stood upright — the context window. Let's pour in six hours.”",
       "(layers pour, labeled) “The fat grey slabs — files it read, test output — that's what eats the window. Not your typing.”",
       "(SWEEP — SILENT ~4s) then: “every turn, it re-reads the whole thing. Junk in here isn't history — it's rent.”",
-      "(a sliver pours; the second sweep runs blue, hatching stamps in behind it) “Half of you are thinking: prompt caching. You're right — the unchanged start comes back about ten times cheaper, and faster. But watch the line — it still walks the whole tank. Caching shrinks the bill, not the reading.” Then let “cheaper — but it still reads all of it” land.",
+      "(a sliver pours; the second sweep runs blue, hatching stamps in behind it) “Half of you are thinking: prompt caching. You're right — the unchanged start comes back about ten times cheaper, and faster. But watch the line — it still walks the whole tank. Caching shrinks the bill, not the reading. And see the stopwatch — it keeps for an hour. Walk away longer, and the next turn pays full price again.” Then let “cheaper — but it still reads all of it” land.",
       "(zones + door) “My numbers, a year of daily use — under 30 goldilocks, at 50 a door I plan my exit through. Yours may differ; having numbers is the point.”",
       "(past the door, red) “No plan past the door — that's the cold open's right pane. Slower answers, higher cost.”",
     ],
