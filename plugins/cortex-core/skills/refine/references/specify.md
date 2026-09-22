@@ -1,43 +1,43 @@
 # Specify Phase
 
-Structured interview surfacing hidden requirements, edge cases, and priorities before planning; depth adapts to what research already settles.
+An interview that finds hidden requirements, edge cases, and priorities before planning. Go only as deep as research left open.
 
 ### 1. Load context
 
-Read `cortex/lifecycle/{feature}/research.md` and `cortex/lifecycle.config.md` if present. Requirements were loaded in Clarify — don't re-load; use them to avoid re-asking settled questions, and note any concept missing from the glossary for the next requirements interview.
+Read `cortex/lifecycle/{feature}/research.md` and `cortex/lifecycle.config.md` if present. Requirements were loaded in Clarify — don't re-load. Use them to avoid asking settled questions, and note any concept missing from the glossary for the next requirements interview.
 
 ### 2. Interview
 
-Per area, judge first: **clear** → state it and move on; **partial** → ask only the gaps; **unclear** → full interview. Areas: problem statement (what, who benefits, cost of not building) · requirements (acceptance criteria each; must-have vs nice-to-have) · ADR posture (draft any hard-to-reverse, surprising, real-trade-off decision into `## Proposed ADR` in the same turn) · non-requirements (push back on vague boundaries) · edge cases (challenge optimistic assumptions) · technical constraints (from research).
+For each area, judge first: **clear** → state it and move on; **partial** → ask only the gaps; **unclear** → full interview. Areas: problem statement (what, who benefits, cost of not building) · requirements (acceptance criteria each; must-have vs nice-to-have) · ADR posture (draft any decision that is hard to reverse, surprising, or a real trade-off into `## Proposed ADR` in the same turn) · non-requirements (push back on vague boundaries) · edge cases (challenge optimistic assumptions) · technical constraints (from research).
 
 <!-- pause: spec-interview-gapfill question -->
-Probe until ambiguities resolve; batch only independent questions.
+Keep asking until nothing is ambiguous. Batch only questions that don't depend on each other.
 
-Interactive in-session verification is a legitimate criterion form. Name the grounding file for a code-derived criterion so a wrong location surfaces early; omit rather than fabricate for intent-only criteria. Where criteria look thin, invent and surface one concrete stress scenario before locking.
+A criterion may be checked interactively in the session. For a criterion taken from code, name the file it rests on so a wrong location shows up early; for intent-only criteria, leave it out rather than make one up. Where criteria look thin, show one concrete stress scenario before locking.
 
 ### 2a. Research confidence check
 
-**No research.md** → announce Research must run first, log a `confidence_check` event with `"signals": ["research.md missing"]` and `"action": "loop_back"`, go to Research bypassing its sufficiency check.
+**No research.md** → announce Research must run first, log a `confidence_check` event with `"signals": ["research.md missing"]` and `"action": "loop_back"`, go to Research and skip its sufficiency check.
 
-Otherwise three signals: **C1** an answer made the researched approach unusable (abandon, not adjust) · **C2** unknowns needing codebase files absent from research.md · **C3** constraints relying on codebase patterns absent from research.md. All pass → §3, no event. (Don't re-run clarify.md §6 — that ran at Research entry.) `current_cycle` = `confidence_check` events + 1.
+Otherwise three signals: **C1** an answer made the researched approach unusable (drop it, not adjust it) · **C2** unknowns that need codebase files research.md lacks · **C3** constraints that rely on codebase patterns research.md lacks. All pass → §3, no event. (Don't re-run clarify.md §6 — that ran at Research entry.) `current_cycle` = `confidence_check` events + 1.
 
-**Flagged, cycle 1** → terse bullets, state Research must re-run, go there bypassing the sufficiency check (research.md is invalidated; without the bypass Research declares it sufficient and bounces back).
+**Flagged, cycle 1** → short bullets, say Research must re-run, go there and skip the sufficiency check (research.md is no longer valid; without the skip Research calls it sufficient and sends you back).
 
 <!-- pause: spec-confidence-loopback question -->
 **Flagged, cycle ≥2** → present the same way, then ask: loop back or proceed.
 
 ### 2b. Pre-write checks
 
-Silent on pass; on failure one terse bullet per failing item.
+Say nothing on pass; on failure, one short bullet per failing item.
 
-**Research cross-check** — re-read research.md in full; every behavioral requirement, constraint, guard, and edge case must land in Requirements, Edge Cases, or Technical Constraints. An absent item is a silent omission, not a scope decision — if intentional, record it under Non-Requirements or Open Decisions.
+**Research cross-check** — re-read research.md in full; every behavioral requirement, constraint, guard, and edge case must land in Requirements, Edge Cases, or Technical Constraints. A missing item is an omission, not a scope decision — if you mean to drop it, record it under Non-Requirements or Open Decisions.
 
 <!-- pause: spec-open-decision-ask question -->
-**Open Decisions** — before adding one, in order: resolve from research.md and fold in; ask the user now (the implementer can't resolve it mid-implementation); defer only when the decision needs implementation-level context unobtainable without writing code, with a one-sentence reason.
+**Open Decisions** — before adding one, in order: resolve from research.md and fold in; ask the user now (the implementer can't resolve it mid-implementation); defer only when the decision needs context you can't get without writing code, with a one-sentence reason.
 
 ### 3. Write `spec.md`
 
-`cortex/lifecycle/{feature}/spec.md` — WHAT, not HOW; no implementation code. If §2a ended with the user declining to loop back, prepend an advisory blockquote before `## Problem Statement` (one bullet per flagged signal: research gaps unresolved, requirements may be incomplete, downstream proceeds normally).
+`cortex/lifecycle/{feature}/spec.md` — WHAT, not HOW; no implementation code. If §2a ended with the user declining to loop back, put a warning blockquote before `## Problem Statement` (one bullet per flagged signal: research gaps unresolved, requirements may be incomplete, downstream proceeds normally).
 
 ```markdown
 # Specification: {feature}
@@ -75,14 +75,14 @@ Run the orchestrator-review protocol (propagated **orchestrator-review** path) f
 
 ### 3b. Critical review
 
-Use the tier and criticality `reconcile-clarify` just ratcheted (`cortex-lifecycle-state --feature {feature}` if not in context; that read wins over Clarify's original value). `"corrupted": true` → run the gate rather than skip.
+Use the tier and criticality `reconcile-clarify` just set (`cortex-lifecycle-state --feature {feature}` if not in context; that read wins over Clarify's original value). `"corrupted": true` → run the review rather than skip.
 
-**Run** `/cortex-core:critical-review` on the spec, presenting the synthesis before approval, when `tier = complex` AND `criticality ∈ {medium, high, critical}` — or when the backend ≠ `cortex-backlog` AND the condition failed only because `tier = simple` AND research.md exists (a seed-tier fail-safe: on a non-local backend Clarify may have been bypassed, leaving the `simple/medium` seed; the local path re-sources tier from frontmatter). Otherwise skip to approval. The gate runs at spec only; end-of-implementation review is the backstop.
+**Run** `/cortex-core:critical-review` on the spec, showing its summary before approval, when `tier = complex` AND `criticality ∈ {medium, high, critical}` — or when the backend ≠ `cortex-backlog` AND the condition failed only because `tier = simple` AND research.md exists (a safety net: on a non-local backend Clarify may have been skipped, leaving the default `simple/medium`; the local path reads tier from frontmatter). Otherwise skip to approval. This review runs at spec only; end-of-implementation review catches the rest.
 
 ### 4. Approval
 
 <!-- pause: spec-complexity-value-gate question -->
-**Complexity/value gate**, regardless of critical-review: fires on 3+ new state surfaces, a new persistent data format or config section, or a subsystem needing per-feature upkeep. Default full scope; otherwise recommend the smallest downsize preserving the primary outcome, rationale-first, citing the driving surface. Ask only when the recommendation isn't full scope or confidence is low; else fold into the approval surface. The lead option ends ` (Recommended)` and opens with the rationale; offer applicable downsizes ("drop entirely", "bugs-only", "minimum viable"). This surface wins over the Open-Decisions gate when both fire.
+**Complexity/value gate**, whether or not critical-review ran. It fires on 3+ new places that hold state, a new persistent data format or config section, or a subsystem needing per-feature upkeep. Default to full scope; otherwise recommend the smallest cut that keeps the main outcome, reason first, naming what triggered it. Ask only when you don't recommend full scope or confidence is low; else fold it into the approval prompt. The first option ends ` (Recommended)` and opens with the reason; offer the cuts that apply ("drop entirely", "bugs-only", "minimum viable"). This question wins over the Open-Decisions one when both fire.
 
 <!-- pause: spec-approval relayed-consent -->
 Present **Produced** (one line), **Value** (the problem solved and why now — flag weak cases), **Trade-offs** (alternatives and rationale), **Proposed ADRs** (`<NNNN-slug>` list or `None`), then `Approve` | `Request changes` | `Cancel` → `--decision approved` / `revise` / `cancelled`:
@@ -94,9 +94,9 @@ cortex-lifecycle-advance spec-approve --feature <name> --decision <approved|canc
   [--emit-transition|--no-emit-transition] [--areas <a> <b>|--clear-areas]
 ```
 
-The verb owns the consent record, the flag-gated spec-exit transition, and the backend-gated `status:refined` + `spec` + `areas` write-back; route on the returned `state`, never re-derive. `/cortex-core:refine` passes `--no-emit-transition`; this verb is the sole emitter of the `specify→plan` row.
+The verb records consent, writes the spec-exit transition (when the flag says so), and writes `status:refined` + `spec` + `areas` back per backend. Act on the returned `state`; never work it out yourself. `/cortex-core:refine` passes `--no-emit-transition`; only this verb writes the `specify→plan` row.
 
-- `approved` / `approved-direct` → done. `approved-direct` means the verb routed the spec exit down the short road (simple tier, low/medium criticality), which `/cortex-core:build` reads to skip Plan.
+- `approved` / `approved-direct` → done. `approved-direct` means the verb sent the spec exit down the short road (simple tier, low/medium criticality), which `/cortex-core:build` reads to skip Plan.
 - `revise` → nothing recorded; collect changes, revise, re-present. Only the final Approve records consent.
-- `cancelled` → `lifecycle_cancelled` recorded; halt.
-- `error` → surface `message`, halt. Exit 2 → ambiguous backlog slug; apply backlog-writeback.md's rule and re-run. Missing verb → halt and ask the operator to install or upgrade the cortex-command CLI; never record approval, transition, or write-back by hand.
+- `cancelled` → `lifecycle_cancelled` recorded; stop.
+- `error` → show `message`, stop. Exit 2 → ambiguous backlog slug; apply backlog-writeback.md's rule and re-run. Missing verb → stop and ask the operator to install or upgrade the cortex-command CLI; never record approval, transition, or write-back by hand.

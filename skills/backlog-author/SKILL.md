@@ -6,14 +6,14 @@ argument-hint: "compose <context-block>"
 
 # backlog-author
 
-Compose one ticket body per invocation from the provided context block (a caller with N pieces invokes N times). Emit only the markdown body to stdout — frontmatter belongs to `cortex-create-backlog-item --body`.
+Compose one ticket body per invocation from the given context block. A caller with N pieces invokes N times. Write only the markdown body to stdout — frontmatter belongs to `cortex-create-backlog-item --body`.
 
 ### compose
 
-Emit the five-section markdown body to stdout, sections in order — `## Why`, `## Role`, `## Integration`, `## Edges`, `## Touch points` — all required except `## Touch points`.
+Write the five-section markdown body to stdout, in this order: `## Why`, `## Role`, `## Integration`, `## Edges`, `## Touch points`. All are required except `## Touch points`.
 
-- **`## Why`** — the problem in symptom-voice: what is broken, missing, or degraded, in observable terms. Not the solution. Omit this section when it collapses to a restatement of Role's lead.
-- **`## Role`** — the job this piece does once the ticket lands that nothing did before (arc42 Responsibility), not its mechanism.
-- **`## Integration`** — how it connects inbound and outbound, naming Interface surfaces by name (e.g. "the phase-transition contract").
-- **`## Edges`** — structural constraints and boundary conditions: what breaks if an upstream contract changes shape, what this must not do, which non-goals keep scope tight. Each bullet names a contract surface or a non-goal.
-- **`## Touch points`** — implementation locations: file paths with line numbers, section indices, code excerpts. Omit when none are known.
+- **`## Why`** — the problem as a symptom: what is broken, missing, or worse, in terms someone can observe. Not the solution. Omit this section when it would only repeat the lead of Role.
+- **`## Role`** — the job this piece does once the ticket lands that nothing did before (arc42 Responsibility). Not how it does it.
+- **`## Integration`** — what it connects to, inbound and outbound. Name each interface (e.g. "the phase-transition contract").
+- **`## Edges`** — constraints and boundary conditions: what breaks if an upstream contract changes shape, what this must not do, which non-goals keep scope tight. Each bullet names a contract or a non-goal.
+- **`## Touch points`** — where the work lands: file paths with line numbers, section indices, code excerpts. Omit when none are known.

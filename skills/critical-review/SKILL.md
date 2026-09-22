@@ -6,46 +6,62 @@ argument-hint: "[<artifact-path>]"
 
 # Critical Review
 
-One fresh reviewer per angle — no anchoring to the reasoning that produced the artifact — then you consolidate and disposition.
+One new reviewer per angle. A reviewer has not seen the reasoning that produced the artifact. You then combine the findings and decide on each one.
 
 ## 1. Artifact
 
-An active lifecycle → the most relevant of `cortex/lifecycle/{feature}/plan.md` → `spec.md` → `research.md`; otherwise conversation context. Nothing clear enough to challenge → ask "What should I critically review?" Resolve to an absolute path — reviewers read that literal path.
+With an active lifecycle, take the most relevant of `cortex/lifecycle/{feature}/plan.md` → `spec.md` → `research.md`. Otherwise use the conversation. If nothing is clear enough to challenge, ask "What should I critically review?" Resolve it to an absolute path — reviewers read that exact path.
 
 ## 2. Angles
 
-Derive them here, from this artifact. **1 or 2** — a hard ceiling; weight toward 2 at `high`/`critical` criticality. Each angle cites a specific section, claim, assumption, or design choice, and no two rephrase one concern. "Fragile assumptions" is not an angle; "the retry logic in §3 assumes idempotent endpoints, which breaks for the payment webhook in §5" is. Architectural, integration, and scope-creep risk are a diversity nudge, not a checklist — weight toward the artifact's domain. More weaknesses than slots → highest severity wins.
+Derive **1 or 2** angles from this artifact, never more. Lean toward 2 at `high`/`critical` criticality. Each angle cites a specific section, claim, assumption, or design choice, and the two must not restate one concern. "Fragile assumptions" is not an angle; "the retry logic in §3 assumes idempotent endpoints, which breaks for the payment webhook in §5" is. Architectural, integration, and scope-creep risk are hints to vary the angles, not a checklist — favor the artifact's domain. More weaknesses than slots → take the most severe.
 
 ## 3. Project context
 
-A `## Project Context` block for the reviewer prompts: `cortex/requirements/project.md`'s Overview (~250 words), a `**Project type:** {type}` prefix from `cortex/lifecycle.config.md` when it carries a valid `type:`, and `cortex/requirements/glossary.md`'s `## Language` section verbatim (only that section — vocabulary is definitional, broader context would dilute the fresh-eyes stance). None available → omit the block.
+Build a `## Project Context` block for the reviewer prompts:
+
+- the Overview from `cortex/requirements/project.md` (~250 words);
+- a `**Project type:** {type}` prefix when `cortex/lifecycle.config.md` has a valid `type:`;
+- the `## Language` section of `cortex/requirements/glossary.md`, word for word. Only that section: it defines words, and more context would tell the reviewer the earlier reasoning.
+
+None available → omit the block.
 
 ## 4. Reviewers
 
-One general-purpose agent per angle, in parallel, with `${CLAUDE_SKILL_DIR}/references/reviewer-prompt.md` verbatim (`{artifact_path}`, `{angle name}`, `{angle description}`, and the context block substituted).
+Start one general-purpose agent per angle, in parallel. Send `${CLAUDE_SKILL_DIR}/references/reviewer-prompt.md` exactly, with `{artifact_path}`, `{angle name}`, `{angle description}`, and the context block filled in.
 
-Extract each envelope: split on the **last** `<!--findings-json-->` line, `json.loads` the tail, require top-level `angle: str` and `findings: list` with each finding carrying `class ∈ {A,B,C}`, `finding`, `evidence_quote`. Malformed → warn `⚠ Reviewer {angle} emitted malformed JSON envelope ({reason})`, use its prose as `unstructured` findings, leave the angle out of §6.
+Parse each reply: split on the **last** `<!--findings-json-->` line and `json.loads` the rest. Require top-level `angle: str` and `findings: list`, each finding with `class ∈ {A,B,C}`, `finding`, `evidence_quote`. Malformed → warn `⚠ Reviewer {angle} emitted malformed JSON envelope ({reason})`, use its prose as `unstructured` findings, and leave the angle out of §6.
 
-One of two fails → consolidate from the survivor, prefixed "1 of 2 reviewer angles completed." Never wait on a silent agent. All fail → one general-purpose agent derives 1–2 angles itself, same output shape, prefixed `Note: reviewer dispatch failed, falling back to single reviewer`.
+One of two fails → work from the other, prefixed "1 of 2 reviewer angles completed." Never wait on a silent agent. All fail → one general-purpose agent derives 1–2 angles itself, same output shape, prefixed `Note: reviewer dispatch failed, falling back to single reviewer`.
 
 ## 5. Consolidate
 
-Inline — the artifact is in your context; no synthesizer agent. Re-check every `evidence_quote` against the artifact before accepting its class; weigh any `measurement` as evidence. **Downgrade A→B** when the `fix_invalidation_argument` is absent, restates the finding without a causal link, names an adjacent gap, or hedges with no concrete failure path — except a present `straddle_rationale` ratifies A. Surface each re-class as `Re-classified finding N from B→A: <rationale>` (or A→B). Merge concerns that recur across angles **within the same class** into through-lines; note tensions where angles conflict. With two reviewers this is one coherent challenge, not a per-angle dump.
+Do this yourself — the artifact is in your context. Check every `evidence_quote` against the artifact before you accept its class. Count any `measurement` as evidence.
 
-Output sections `## Objections` (A), `## Through-lines`, `## Tensions`, `## Concerns` (B and C) — bullets citing exact artifact text; skip empty sections. Zero surviving A-class → no `## Objections`, and open with: `No fix-invalidating objections after evidence re-examination. The concerns below are adjacent gaps or framing notes — do not read as verdict.`
+**Downgrade A→B** when the `fix_invalidation_argument` is missing, repeats the finding with no causal link, names an adjacent gap, or hedges with no concrete failure path. Exception: a present `straddle_rationale` keeps it A. Report each class change as `Re-classified finding N from B→A: <rationale>` (or A→B).
+
+Merge concerns that repeat across angles **within the same class** into one through-line. Note tensions where angles conflict. With two reviewers, write one coherent challenge, not a list per angle.
+
+Output sections `## Objections` (A), `## Through-lines`, `## Tensions`, `## Concerns` (B and C). Use bullets that cite exact artifact text; skip empty sections. No A-class left → no `## Objections`, and open with: `No fix-invalidating objections after evidence re-examination. The concerns below are adjacent gaps or framing notes — do not read as verdict.`
 
 ## 6. B-class residue
 
-With ≥1 B-class finding, write the sidecar the morning report reads (the verb resolves the feature from the session id):
+With ≥1 B-class finding, write the file the morning report reads. The command finds the feature from the session id:
 
 ```bash
 cortex-critical-review-write-residue --session-id "$LIFECYCLE_SESSION_ID" <<< "$PAYLOAD_JSON"
 ```
 
-Payload: `ts`, `feature`, `artifact`, `synthesis_status: "ok"`, `reviewers: {completed, dispatched}`, `findings` (each `{class: "B", finding, reviewer_angle, evidence_quote}`). Zero B-class → skip. `state: no-context` / `unowned` / `ambiguous` → nothing written; relay the returned `note`.
+Payload: `ts`, `feature`, `artifact`, `synthesis_status: "ok"`, `reviewers: {completed, dispatched}`, `findings` (each `{class: "B", finding, reviewer_angle, evidence_quote}`). No B-class → skip. `state: no-context` / `unowned` / `ambiguous` → nothing was written; show the returned `note`.
 
 ## 7. Present and apply
 
-Output the consolidated challenge as-is. Then disposition each objection without waiting: **Apply** when the fix is unambiguous and confidence high, **Dismiss** when the artifact already addresses it or it misreads a stated constraint, **Ask** when it turns on preference, scope, or real uncertainty (default for ambiguity). Dismissals point at artifact text; resolutions rest on new evidence — for any empirical claim (latency, size, blast radius, baseline behavior) run the measurement; re-reading is not evidence.
+Output the challenge unchanged. Then decide on each objection without waiting:
 
-Re-read the artifact in full, write the updated version with every Apply incorporated and everything else preserved, and summarize: Apply bullets naming the *direction* of change (strengthened / narrowed / clarified / added / removed / inverted), one **Dismiss: N objections** line (omit at zero), and all Asks in a single message.
+- **Apply** — the fix is unambiguous and confidence is high.
+- **Dismiss** — the artifact already addresses it, or it misreads a stated constraint. Point at the artifact text.
+- **Ask** — it turns on preference, scope, or real uncertainty. The default when unsure.
+
+A resolution needs new evidence. For any empirical claim (latency, size, blast radius, baseline behavior) run the measurement; re-reading is not evidence.
+
+Re-read the whole artifact. Write the updated version with every Apply included and everything else kept. Then summarize: Apply bullets that name the *direction* of change (strengthened / narrowed / clarified / added / removed / inverted), one **Dismiss: N objections** line (omit at zero), and all Asks in a single message.

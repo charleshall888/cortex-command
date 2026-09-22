@@ -2,9 +2,9 @@
 
 Inputs: Clarify's §5 outputs (intent, scope, tier, criticality).
 
-**Sufficiency.** If `cortex/lifecycle/{lifecycle-slug}/research.md` exists — only that exact path counts; a backlog `discovery_source`/`research` field is background — apply clarify.md §6. Sufficient → announce the signals checked and skip to Spec. Insufficient → name the signal(s) and re-run. Re-entry from specify.md §2a bypasses this check and re-runs from scratch.
+**Sufficiency.** If `cortex/lifecycle/{lifecycle-slug}/research.md` exists (only that exact path counts; a backlog `discovery_source`/`research` field is background), apply clarify.md §6. Sufficient → announce the signals checked and skip to Spec. Insufficient → name the signal(s) and re-run. When specify.md §2a sends you back here, skip this check and re-run from scratch.
 
-**Alignment considerations.** Clarify-critic findings with `origin: "alignment"` dispositioned Apply (or Ask → Apply) — dismissed ones don't propagate. Only when ≥1 survives: overwrite `cortex/lifecycle/{lifecycle-slug}/research-considerations.md` with one one-sentence bullet each **and** pass `research-considerations-file=` on dispatch. Always paired.
+**Alignment considerations.** These are clarify-critic findings with `origin: "alignment"` that ended as Apply (or Ask → Apply); dismissed ones are dropped. Only when ≥1 remains: overwrite `cortex/lifecycle/{lifecycle-slug}/research-considerations.md` with a one-sentence bullet each **and** pass `research-considerations-file=` on dispatch. Always do both.
 
 **Dispatch:**
 
@@ -12,8 +12,8 @@ Inputs: Clarify's §5 outputs (intent, scope, tier, criticality).
 /cortex-core:research topic="{clarified intent}" lifecycle-slug="{lifecycle-slug}" tier={tier} criticality={criticality}
 ```
 
-The clarified intent, not the ticket body, anchors scope. Complex-tier or high/critical features carrying a suggested implementation must explore ≥1 alternative — validating the suggestion is a fine outcome.
+The clarified intent sets the scope, not the ticket body. When a complex-tier or high/critical feature comes with a suggested implementation, explore ≥1 alternative — confirming the suggestion is a fine result.
 
-Afterwards `research.md` must exist and be non-empty, else surface and halt.
+Afterwards `research.md` must exist and be non-empty; if not, report it and stop.
 
-**Exit gate.** In `## Open Questions`, an item is resolved with an inline answer or deferred with written rationale; a bare bullet is neither — settle each before Spec. An absent section passes.
+**Exit check.** Each `## Open Questions` item needs an inline answer or a written reason to defer. A bare bullet has neither — settle each before Spec. A missing section passes.

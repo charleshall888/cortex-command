@@ -1,30 +1,37 @@
 # Clarify Phase
 
-Ideation gate before research: the topic is well-aimed, novel, and aligned with requirements. Always ad-hoc — discovery produces backlog items, it does not consume them.
+Check the idea before research: the topic is well-aimed, new, and fits the requirements. Discovery never starts from a backlog item — it produces them.
 
 ### 1. Requirements
 
-`cortex-load-requirements` (no `--feature`; falls back to project.md + Global Context). Read every listed non-skipped path, carry the path list into downstream prompts, relay any fallback note. None → note it and continue.
+Run `cortex-load-requirements` (no `--feature`; it falls back to project.md + Global Context). Read every listed path that is not skipped, pass the path list to later prompts, and tell the user about any fallback note. None found → say so and continue.
 
 ### 2. Backlog coverage
 
-`cortex-read-backlog-backend` (argless). Any backend other than `cortex-backlog` → skip the scan with a one-line advisory, defaulting novelty to "no overlap detected". Under `cortex-backlog` → scan `cortex/backlog/[0-9]*-*.md` titles, tags, and descriptions; substantial overlap → surface it and ask whether to proceed or work from the existing ticket.
+Run `cortex-read-backlog-backend` (no arguments). Any backend other than `cortex-backlog` → skip the scan with a one-line note and set novelty to "no overlap detected". Under `cortex-backlog` → scan the titles, tags, and descriptions in `cortex/backlog/[0-9]*-*.md`. Large overlap → show it and ask whether to proceed or work from the existing ticket.
 
 ### 3. Confidence
 
-Four dimensions: **topic aim** (one problem space vs. vague or conflated), **domain** (one area vs. unrelated ones with no unifying question), **novelty** (no substantial backlog overlap), **requirements alignment** (no conflicts). All high → §4. Any low → ask targeted questions covering only what is unclear, and wait.
+Rate four things:
+
+- **Topic aim** — one problem space, not vague or mixed.
+- **Domain** — one area, not unrelated areas with no shared question.
+- **Novelty** — no large backlog overlap.
+- **Requirements alignment** — no conflicts.
+
+All high → §4. Any low → ask only about what is unclear, and wait.
 
 ### 4. Output
 
 1. **Clarified topic statement** — one sentence: what this investigates and why.
 2. **Domain note** — the area(s) touched.
 3. **Requirements alignment** — aligned (file and constraints), partial, none found, or conflict (resolve with the user first).
-4. **Open questions for research** — what investigation should resolve, not what the user should answer. May be empty.
-5. **Research-sizing complexity** — `simple` or `complex`; sizes the fan-out only, not implementation complexity. Skew toward `complex` for any multi-faceted or epic-seeding topic: an under-sized pass propagates a shallow direction across every ticket the epic spawns.
-6. **Research-sizing criticality** — `low|medium|high|critical`, biased upward for the same reason and floored at `medium`. `high`/`critical` when the topic sets direction across multiple tickets.
-7. **Scope envelope** (optional) — in/out bullets when boundaries are tractable now; else "No envelope needed" with a reason.
+4. **Open questions for research** — what the research should answer, not what the user should answer. May be empty.
+5. **Research-sizing complexity** — `simple` or `complex`. It sets how many research agents run, not how hard the build is. Lean toward `complex` for any many-sided topic or one that starts an epic: research that is too small sends every ticket in the epic in a shallow direction.
+6. **Research-sizing criticality** — `low|medium|high|critical`. Lean high for the same reason; never below `medium`. `high`/`critical` when the topic sets direction across several tickets.
+7. **Scope envelope** (optional) — in/out bullets when the boundaries are clear now; else "No envelope needed" with a reason.
 
-State each with brief reasoning.
+Give a short reason for each.
 
 ### 5. Persist the sizing
 

@@ -6,18 +6,18 @@ argument-hint: "[optional topic to interview about]"
 
 # Interview
 
-A thinking-partner conversation that helps the user reason through a topic. Anchor on the topic argument; absent one, on the current conversation; absent both, ask one topic-establishing question first.
+A conversation that helps the user think a topic through. Work from the topic argument. With none, work from the current conversation. With neither, first ask one question to set the topic.
 
 ## The loop
 
-**Ask in prose, and let each answer shape what follows.** Group questions that stand independent of each other; hold back any question whose shape or existence depends on an answer you don't have yet. A list fixed up front commits to later questions before earlier answers arrive.
+**Ask in prose, and let each answer shape the next question.** Group questions that do not depend on each other. Hold any question that depends on an answer you do not have yet. A list fixed at the start commits to later questions before the early answers arrive.
 
-**Recommend before asking.** Lead with your defensible default and reasoning, then ask them to confirm or redirect. Suppress this on taste questions, where recommending contaminates the preference you meant to elicit.
+**Recommend before asking.** Give your default and your reasons first, then ask the user to confirm or redirect. Skip this on questions of taste: a recommendation would bias the preference you want to hear.
 
-**Let the codebase trump the interview.** When code or on-disk context already answers something, confirm what you found rather than asking cold. Reserve live questions for intent, priorities, scope boundaries, and the bars judgment sets.
+**Let the codebase answer first.** When code or files on disk already answer something, confirm what you found instead of asking cold. Keep live questions for intent, priorities, scope boundaries, and judgment calls.
 
-**Funnel broad to narrow.** Map the territory before closing in.
+**Go from broad to narrow.** Map the whole topic before you close in.
 
-**Stop at saturation** — when new answers stop changing the picture, not at template coverage. Honor an early stop immediately; once substantial ground is covered, offer a "keep going or wrap up?" check.
+**Stop when new answers no longer change the picture** — not when a template is covered. If the user wants to stop early, stop at once. Once you have covered a lot of ground, offer a "keep going or wrap up?" check.
 
-Close with a concise brief: the topic, the decisions reached, and their rationale.
+Close with a short brief: the topic, the decisions reached, and the reasons for them.

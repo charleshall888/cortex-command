@@ -8,8 +8,8 @@
 | `status` | enum | yes | `backlog`, `ready`, `refined`, `in_progress`, `implementing`, `review`, `complete`, `abandoned` |
 | `priority` | enum | yes | `critical`, `high`, `medium`, `low` |
 | `type` | enum | yes | `feature`, `bug`, `chore`, `spike`, `idea`, `epic` (epics: non-implementable, from `/cortex-core:discovery`) |
-| `tags` | array | no | `deferred` renders Status as `<status> (deferred)` and excludes the item from `## Refined`/`## Backlog`; it does not affect overnight selection — park via a non-eligible `status` instead |
-| `areas` | list[str] | no | Splits overlapping-area features into different overnight rounds; set by `/cortex-core:refine`, absent/empty = skipped. Canonical: `overnight-runner`, `backlog`, `skills`, `lifecycle`, `hooks`, `report`, `tests`, `docs` |
+| `tags` | array | no | `deferred` shows Status as `<status> (deferred)` and hides the item from `## Refined`/`## Backlog`. Overnight selection ignores it; to park an item, give it a non-eligible `status` |
+| `areas` | list[str] | no | Features that share an area run in different overnight rounds. Set by `/cortex-core:refine`; absent/empty = skipped. Canonical: `overnight-runner`, `backlog`, `skills`, `lifecycle`, `hooks`, `report`, `tests`, `docs` |
 | `created` / `updated` | date | yes | `YYYY-MM-DD` |
 | `lifecycle_slug` | string | no | Associated lifecycle-feature slug, or `null` |
 | `lifecycle_phase` | string | no | `null`, or `research`, `specify`, `plan`, `implement`, `implement-rework`, `review`, `complete`, `escalated` |
@@ -20,6 +20,6 @@
 | `spec` | string | no | `cortex/lifecycle/{slug}/spec.md`, set by `/cortex-core:refine` |
 | `discovery_source` | string | no | Discovery research artifact path, set by `/cortex-core:discovery` on epics and children |
 
-**Array fields must use inline `[a, b]` form**, never multiline `- item` — the shell parser expects a single regex. New items carry every required field; optional arrays default to `[]`, other optional fields to `null`.
+**Write arrays inline as `[a, b]`**, never as multiline `- item`: the shell parser matches one regex. New items carry every required field. Optional arrays default to `[]`, other optional fields to `null`.
 
-**Frame implementation approaches as suggestions, not instructions** ("one approach might be…") — research and plan evaluate them. Prescribe an exact solution only when an external constraint (API shape, platform requirement, sole library) dictates it.
+**Write implementation approaches as suggestions, not instructions** ("one approach might be…"); research and plan judge them. Name an exact solution only when an outside constraint (API shape, platform requirement, sole library) forces it.

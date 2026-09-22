@@ -6,7 +6,7 @@ argument-hint: "<feature> [phase]"
 
 # Build
 
-Plan → implement → review → complete, file-based so it survives context loss. `cortex/lifecycle.config.md`, when present, overrides complexity defaults, test commands, phase skipping, and review criteria.
+Plan → implement → review → complete. State lives in files, so it survives context loss. `cortex/lifecycle.config.md`, when present, overrides complexity defaults, test commands, phase skipping, and review criteria.
 
 ## Step 1: Read the served state
 
@@ -14,31 +14,44 @@ Plan → implement → review → complete, file-based so it survives context lo
 cortex-lifecycle-next "$ARGUMENTS" --expect-file ${CLAUDE_SKILL_DIR}/references/protocol-expectation.txt
 ```
 
-One read-only call serves the state, its advance contract, and its pause spec; `--expect-file` lets it flag wheel/prose skew. Consume the served envelope, not the legacy `next` field. **Halt on skew or unavailability** — `protocol-skew`, wrapper exit 2 (wheel absent), or a missing command each carry their own remediation; relay it and stop.
+One read-only call returns the state, its advance contract, and its pause spec. `--expect-file` lets it detect a version mismatch between the installed CLI and this skill. Use the JSON result's fields, not the legacy `next` field. **Stop on `protocol-skew`, wrapper exit 2 (CLI not installed), or a missing command** — each gives its own fix; show it and stop.
 
 Forms: `/cortex-core:build <feature>`, `<feature> <phase>`, reserved `complete <slug>` / `resume <feature>`.
 
-**Not yet refined** — state `research`, `specify`, or `new`: hand off to `/cortex-core:refine {feature}`. Never plan without both `research.md` and `spec.md` (overnight needs both).
+**Not yet refined** — state `research`, `specify`, or `new`: hand off to `/cortex-core:refine {feature}`. Never plan without both `research.md` and `spec.md`; overnight needs both.
 
-**`resume`** is served phase-keyed: `state` is the current phase, `advance_contract` threads into `cortex-lifecycle-advance` at each boundary, `pause_spec` drives the kept pauses. Artifacts go under `roots.artifacts.path` — never the log path, which is main-root pinned.
+**`resume`** is served by phase: `state` is the current phase, `advance_contract` goes to `cortex-lifecycle-advance` at each boundary, and `pause_spec` drives the kept pauses. Write artifacts under `roots.artifacts.path` — never the log path, which always points at the main checkout.
 
 <!-- pause: empty-lifecycle-offer question -->
 <!-- pause: ambiguous-backlog-pick question -->
-**Passthrough states** carry a `next` directive — act on it: `derive-slug` (derive a 3–6 word kebab slug and re-run, no confirmation); `empty` (offer incomplete `cortex/lifecycle/*` lifecycles, then re-run); `ambiguous-backlog` (present `candidates`, then re-run); `wontfix` (run the named `cortex-lifecycle-wontfix` command and halt); `closed` / `parked` (an outcome is already recorded — relay `next`, do not build); `error` / `needs-feature` / `no-such-lifecycle` (report and stop).
+**Other states** carry a `next` instruction — act on it:
+
+- `derive-slug` → make a 3–6 word kebab slug and re-run without asking.
+- `empty` → offer the incomplete `cortex/lifecycle/*` lifecycles, then re-run.
+- `ambiguous-backlog` → present `candidates`, then re-run.
+- `wontfix` → run the named `cortex-lifecycle-wontfix` command and stop.
+- `closed` / `parked` → already decided; show `next`, do not build.
+- `error` / `needs-feature` / `no-such-lifecycle` → report and stop.
 
 ## Step 2: Enter the resolved state
 
-Run the envelope's `enter_command` **verbatim** — a `cortex-lifecycle-enter` invocation with every discriminant pre-bound:
+Run the result's `enter_command` exactly as given — a `cortex-lifecycle-enter` call with every argument already filled in:
 
 ```bash
 {envelope.enter_command}
 ```
 
-Never rebuild it or substitute the user's typed token for `--feature`; its bound backlog-file is what lets a resume repair an index that never received its backlog tags.
+Never rebuild it or swap the user's typed token in for `--feature`. Its backlog-file argument lets a resume repair an index that never got its backlog tags.
 
-`ready` → proceed. `needs-decision` → the item is `already_complete` and nothing ran; apply the Backlog Status Check in [backlog-writeback.md](${CLAUDE_SKILL_DIR}/references/backlog-writeback.md). `blocked` → a user-correctable gate refused, `.session` unwritten; halt, fix, re-run. `ensure-failed` / `error` → halt. Exit 2 → ambiguous slug; backlog-writeback.md's exit-2 rule. Mention any `ignored_tokens` in one line.
+- `ready` → proceed.
+- `needs-decision` → the item is `already_complete`; nothing ran. Apply the Backlog Status Check in [backlog-writeback.md](${CLAUDE_SKILL_DIR}/references/backlog-writeback.md).
+- `blocked` → a check the user can fix refused; `.session` is unwritten. Stop, fix, re-run.
+- `ensure-failed` / `error` → stop.
+- Exit 2 → ambiguous slug; follow backlog-writeback.md's exit-2 rule.
 
-On resume, report the served `state`/`criticality`/`tier`, offer continue-or-restart, surface `staleness` tersely (default continue). **Carry `criticality` and `tier` forward** — phase references consume them rather than re-reading.
+Mention any `ignored_tokens` in one line.
+
+On resume, report the served `state`/`criticality`/`tier`, offer continue (default) or restart, and mention `staleness` briefly. **Carry `criticality` and `tier` forward** — the phase references use them instead of re-reading.
 
 ## Step 3: Execute the phase
 
@@ -51,25 +64,29 @@ On resume, report the served `state`/`criticality`/`tier`, offer continue-or-res
 
 Read **only** the row for the served `state`.
 
-Sub-agent dispatch is authorised by this invocation — a standing "no agents unless asked" rule does not reach the dispatches a phase reference prescribes. If dispatch is unavailable, name the substitution in the phase summary and label any review a self-review.
+Invoking this skill authorises the sub-agents a phase reference calls for, even under a standing "no agents unless asked" rule. If you cannot start them, say what you did instead in the phase summary and label any review a self-review.
 
-**Path propagation.** `${CLAUDE_SKILL_DIR}` resolves only in this body: wherever a reference names a `${CLAUDE_SKILL_DIR}/…` path, substitute the absolute path resolved here.
+**Path propagation.** `${CLAUDE_SKILL_DIR}` resolves only in this body. Wherever a reference names a `${CLAUDE_SKILL_DIR}/…` path, use the absolute path resolved here.
 
 ## Advance-verb routing
 
-Every phase boundary hands off to `cortex-lifecycle-advance`, which owns that arm's ordered emissions and idempotent replay. Route on the returned `state` and relay its `message` / `reason` / `preferred_remedy`; never re-derive an outcome or record an emission by hand. On `refused`, re-run `cortex-lifecycle-next` and re-invoke threading `advance_contract.expected_from_state` via `--from-state`; if the mismatch survives, escalate with both phases. Verb missing from `PATH` → halt; the operator installs or upgrades the cortex-command CLI.
+Every phase boundary hands off to `cortex-lifecycle-advance`. It writes that boundary's events in order and is safe to run again. Route on the returned `state` and show its `message` / `reason` / `preferred_remedy`. Never work out an outcome or write an event by hand. On `refused`, re-run `cortex-lifecycle-next`, then re-invoke with `--from-state` set to `advance_contract.expected_from_state`; if still refused, escalate, naming both phases. Verb missing from `PATH` → stop; the operator installs or upgrades the cortex-command CLI.
 
 ## Phase transitions
 
-Cross boundaries automatically — announce and continue; add no stop of your own unless a `<!-- pause: -->` marker or the arm's routed outcome says so. Each summary carries **Decisions**, **Scope delta**, **Blockers** ("None" when empty), then **Next**. A boundary fires on its gate condition (e.g. `plan.md` all tasks `[x]`), not user input; Plan additionally gates on user approval.
+Cross boundaries automatically: announce and continue. Add no stop unless a `<!-- pause: -->` marker or the routed outcome says so. Each summary carries **Decisions**, **Scope delta**, **Blockers** ("None" when empty), then **Next**. A boundary fires on its condition (e.g. `plan.md` all tasks `[x]`), not on user input; Plan also needs user approval.
 
 ## Criticality
 
-Override anytime: `cortex-lifecycle-event criticality-override --feature <name> --from <old> --to <new> --reason "{tag}: <one line>"` (tag from `reversibility:` / `exposure:` / `consequence:` / `other:`; carry the reason so the next reader need not re-derive it). `cortex-lifecycle-state --feature {feature}` (or `--field <x>`) reduces the log to current values, omitting absent keys — default `criticality=medium` / `tier=moderate` yourself. **`"corrupted": true`** → tier/criticality unknowable: treat the feature as *requiring* review.
+Override anytime: `cortex-lifecycle-event criticality-override --feature <name> --from <old> --to <new> --reason "{tag}: <one line>"`. Tag: `reversibility:` / `exposure:` / `consequence:` / `other:`. The reason saves the next reader from working it out again.
 
-**Review** is forced at every tier when criticality is `high`/`critical` (Stage 2 complex-only); otherwise tier-based, complex only. **Orchestrator review** runs at every phase boundary except `low`-criticality below complex. **Planning** dispatches competing plans at `critical`, a single plan otherwise.
+`cortex-lifecycle-state --feature {feature}` (or `--field <x>`) returns the log's current values and omits absent keys — default `criticality=medium` / `tier=moderate` yourself. **`"corrupted": true`** → tier and criticality are unknown: treat the feature as *requiring* review.
 
-Model choice is the dispatching agent's call at each site. The implement→{review|complete} routing lives in its verb.
+- **Review** runs at every tier when criticality is `high`/`critical` (Stage 2 complex-only). Otherwise it runs for complex tier only.
+- **Orchestrator review** runs at every phase boundary, except `low` criticality below complex.
+- **Planning** uses competing plans at `critical`, a single plan otherwise.
+
+You choose the model each time you start an agent. The implement→{review|complete} routing lives in its verb.
 
 ## Situational references
 
@@ -77,4 +94,4 @@ Model choice is the dispatching agent's call at each site. The implement→{revi
 - [wontfix.md](${CLAUDE_SKILL_DIR}/references/wontfix.md) — operator-decided termination
 
 <!-- pause: resume-feature-pick question -->
-Sessions bind to one feature via the gitignored, SessionEnd-cleaned `cortex/lifecycle/{feature}/.session` (never commit it). Several incomplete lifecycles and none named → list them and ask; features with `feature_complete` in events.log or an APPROVED verdict in review.md are ignored.
+A session binds to one feature through `cortex/lifecycle/{feature}/.session` — gitignored, cleaned at SessionEnd, never committed. Several incomplete lifecycles and none named → list them and ask. Ignore features with `feature_complete` in events.log or an APPROVED verdict in review.md.

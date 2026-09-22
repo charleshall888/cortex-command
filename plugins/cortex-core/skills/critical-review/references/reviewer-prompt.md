@@ -1,12 +1,12 @@
 # Per-Angle Reviewer Prompt Template
 
-Dispatched verbatim (body after the `---`) with the Step 2–3 substitutions applied.
+Send the body after the `---` exactly, with the Step 2–3 values filled in.
 
 ---
 
-You are conducting an adversarial review of one specific angle.
+You are doing an adversarial review of one specific angle.
 
-Read `{artifact_path}` — literal, do not re-derive.
+Read `{artifact_path}` — use this exact path.
 
 ## Project Context
 {## Project Context block, omit this entire section if none was loaded}
@@ -18,21 +18,21 @@ Read `{artifact_path}` — literal, do not re-derive.
 
 Exactly one class per finding.
 
-- **A — fix-invalidating**: the artifact's proposed change does not work as described, or makes things worse. ("The refactor removes a null check the caller depends on.")
-- **B — adjacent-gap**: the change is internally correct but an adjacent code path, callsite, or contract is left misaligned. ("The fix is correct but the analytics event a layer up still fires on the old path.")
-- **C — framing**: the narrative misrepresents the change, scope, or motivation.
+- **A — fix-invalidating**: the proposed change does not work as described, or makes things worse. ("The refactor removes a null check the caller depends on.")
+- **B — adjacent-gap**: the change itself is correct, but a nearby code path, callsite, or contract is left out of step. ("The fix is correct but the analytics event a layer up still fires on the old path.")
+- **C — framing**: the text misstates the change, its scope, or its motivation.
 
-Every A-class finding needs a `fix_invalidation_argument`: one sentence naming the concrete mechanism by which the change, as written, fails to produce its stated outcome — not merely that an adjacent concern exists.
+Every A-class finding needs a `fix_invalidation_argument`: one sentence that names how the change, as written, fails to produce its stated outcome. That a nearby concern exists is not enough.
 
-If one problem decomposes into both an A and a B concern, **split it into two findings**. If they can't be cleanly split, **bias up to A** and say why in `straddle_rationale`.
+If one problem is both an A and a B concern, **split it into two findings**. If it cannot be split cleanly, **class it A** and say why in `straddle_rationale`.
 
 ## Instructions
 
-Work within a ~40-turn cap; on reaching it, return what you have.
+You have about 40 turns. At the limit, return what you have.
 
-Focus exclusively on your angle — do not cover others, do not be balanced. Cite exact artifact text in quotes; "this might not scale" is not acceptable. Investigate freely: probes, measurements, and live commands run in your own context and beat speculation.
+Cover only your angle. Do not cover others, and do not be balanced. Quote exact artifact text; "this might not scale" is not acceptable. Investigate freely: probes, measurements, and live commands beat speculation.
 
-State your findings in prose, then end with the JSON envelope. The automated path reads only the envelope, so empirical evidence goes in `measurement`; the prose is the fallback if the envelope fails to parse. Put the delimiter on its own line, then the object:
+Write your findings in prose, then end with the JSON object. The automated path reads only the JSON, so put empirical evidence in `measurement`. The prose is the fallback if the JSON does not parse. Put the delimiter on its own line, then the object:
 
 <!--findings-json-->
 {
