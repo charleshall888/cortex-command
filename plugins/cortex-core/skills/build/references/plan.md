@@ -102,7 +102,7 @@ Pass `advance_contract.expected_from_state` as `--from-state` when you have it (
 
 ## 5. Transition
 
-`plan-decision` already recorded the plan→implement transition. On any approval:
+`plan-decision` owns the plan→implement transition; record nothing else here. On any approval:
 
 ```bash
 cortex-lifecycle-stage-artifacts --phase plan --feature {feature} --commit-subject "Plan {feature}: tasks and approval"

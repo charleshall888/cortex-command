@@ -14,7 +14,7 @@ Start N agents on independent angles, then combine their findings. Options: $ARG
 
 ## Dispatch
 
-Choose the agent count and angles from [`fanout.md`](${CLAUDE_SKILL_DIR}/references/fanout.md). Agents are read-only, no worktree isolation. You pick each agent's model; the core angles only read widely and report.
+Choose the agent count and angles from [`fanout.md`](${CLAUDE_SKILL_DIR}/references/fanout.md). Agents are read-only, no worktree isolation. You pick each agent's model; the core wave only reads widely and reports, so a cheaper model usually fits.
 
 Write each prompt yourself: the angle, what it must cover, and its `## <Angle name>` output heading (which becomes a research.md section). The core angles:
 

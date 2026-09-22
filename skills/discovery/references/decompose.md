@@ -14,7 +14,7 @@ Grouping merges pieces into fewer tickets; it never edits `### Pieces`.
 - **Zero** → no tickets. Still write `decomposed.md` with frontmatter `decomposition_verdict: zero-piece` and either `## Fold-into` (an existing ticket number plus the reason) or `## Verdict` (no work to do).
 - **Two or more** → group, then one epic and one child per group.
 
-Group pieces that share a connection point, form one integration cluster, have the same role, or only deliver visible value together. Group only when the Architecture plainly shows over-splitting. No clear tie → one ticket per piece. A subtler tie is a `revise-piece` at §5a. A `blocked-by` *inside* a group becomes an ordering note in `## Grouping Notes`. A dependency from outside the group points at the merged ticket.
+Group pieces that share a connection point, form one integration cluster, have the same role, or only deliver visible value together. Group only when the Architecture plainly shows over-splitting. No clear tie → one ticket per piece. A subtler tie is a `revise-piece` at §5a. A `blocked-by` *inside* a group becomes an ordering note in `## Grouping Notes`. A dependency crossing the group boundary, either way, names the merged ticket.
 
 ### 5. Author tickets
 

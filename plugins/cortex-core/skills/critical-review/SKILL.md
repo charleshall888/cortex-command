@@ -6,7 +6,7 @@ argument-hint: "[<artifact-path>]"
 
 # Critical Review
 
-One new reviewer per angle. A reviewer has not seen the reasoning that produced the artifact. You then combine the findings and decide on each one.
+One new reviewer per angle, so no reviewer is swayed by the reasoning that produced the artifact. You then combine the findings and decide on each one.
 
 ## 1. Artifact
 

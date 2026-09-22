@@ -25,7 +25,7 @@ Follow `${CLAUDE_SKILL_DIR}/references/clarify-critic.md`. The orchestrator writ
 ## 4. Question threshold
 
 <!-- pause: clarify-question-batch question -->
-All three dimensions high after §3 **and** no critic Ask items → skip to §5. Otherwise merge the low-rated gaps and critic Asks into one list of ≤5 choices — critic Asks first, then highest-impact gaps. Ask only about specific gaps, never about what is already clear.
+All three dimensions high after §3 **and** no critic Ask items → skip to §5. Otherwise merge the low-rated gaps and critic Asks into one list of ≤5 choices — critic Asks first, then highest-impact gaps. Ask only about specific gaps, never to be complete or about what is already clear.
 
 ## 5. Handoff package
 

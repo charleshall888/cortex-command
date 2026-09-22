@@ -45,7 +45,7 @@ Never rebuild it or swap the user's typed token in for `--feature`. Its backlog-
 
 - `ready` → proceed.
 - `needs-decision` → the item is `already_complete`; nothing ran. Apply the Backlog Status Check in [backlog-writeback.md](${CLAUDE_SKILL_DIR}/references/backlog-writeback.md).
-- `blocked` → a check the user can fix refused; `.session` is unwritten. Stop, fix, re-run.
+- `blocked` → a check refused, and the user can fix the cause; `.session` is unwritten. Stop, fix, re-run.
 - `ensure-failed` / `error` → stop.
 - Exit 2 → ambiguous slug; follow backlog-writeback.md's exit-2 rule.
 

@@ -24,13 +24,13 @@ Exactly one class per finding.
 
 Every A-class finding needs a `fix_invalidation_argument`: one sentence that names how the change, as written, fails to produce its stated outcome. That a nearby concern exists is not enough.
 
-If one problem is both an A and a B concern, **split it into two findings**. If it cannot be split cleanly, **class it A** and say why in `straddle_rationale`.
+If one problem is both an A and a B concern, **split it into two findings**. If it cannot be split cleanly, **lean toward A** and say why in `straddle_rationale`.
 
 ## Instructions
 
 You have about 40 turns. At the limit, return what you have.
 
-Cover only your angle. Do not cover others, and do not be balanced. Quote exact artifact text; "this might not scale" is not acceptable. Investigate freely: probes, measurements, and live commands beat speculation.
+Cover only your angle. Do not cover others, and do not be balanced. Quote exact artifact text; "this might not scale" is not acceptable. Investigate freely: probes, measurements, and live commands you run yourself beat speculation.
 
 Write your findings in prose, then end with the JSON object. The automated path reads only the JSON, so put empirical evidence in `measurement`. The prose is the fallback if the JSON does not parse. Put the delimiter on its own line, then the object:
 

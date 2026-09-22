@@ -2,11 +2,11 @@
 
 ## 1. Executive summary
 
-Before asking anything, show the verdict, feature counts (completed / failed / deferred), and session duration.
+First show the verdict, feature counts (completed / failed / deferred), and duration.
 
 ## 2. Completed features
 
-Read `cortex/lifecycle/sessions/latest-overnight/overnight-state.json`, if readable, for each feature's `round_assigned`, `started_at`, `completed_at`. Show every feature at once, under `### Round N` headings only when rounds differ:
+Read `cortex/lifecycle/sessions/latest-overnight/overnight-state.json`, if readable, for each feature's `round_assigned`, `started_at`, `completed_at`. Show all features at once, under `### Round N` headings only when rounds differ:
 
 ```
 ### {feature-name}
@@ -150,9 +150,9 @@ cortex-morning-review-close-tickets --item {feature}={identifier} [--item ...]
 
 - `closed` → `closed #{id}` (add `(parent epic also closed)` when `parent_closed`)
 - `no-ticket` → `no ticket found`
-- `ambiguous` → show `message`'s candidates and ask for a clearer name
+- `ambiguous` → show `message`'s candidates, ask for a clearer name, re-run
 - `skipped-disabled` → one-line advisory (`none` backend)
-- `external` → close it as best you can per `backlog.instructions`; tell the user if that fails
+- `external` → close it as best you can per `backlog.instructions`; say so if it fails
 - `error` → `close failed: {message}`, continue
 
 Print a `Ticket closure results:` summary.
@@ -169,3 +169,5 @@ cortex-morning-review-push-closures --path {changed_path} [--path ...] --ticket 
 - `no-op` → say nothing
 - `push-failed` → show `message` and name `unpushed_tickets` as committed locally only. The review did not fully succeed.
 - `error` → `push step failed: {message}`
+
+The review is complete.

@@ -13,7 +13,7 @@ For each area, judge first: **clear** → state it and move on; **partial** → 
 <!-- pause: spec-interview-gapfill question -->
 Keep asking until nothing is ambiguous. Batch only questions that don't depend on each other.
 
-A criterion may be checked interactively in the session. For a criterion taken from code, name the file it rests on so a wrong location shows up early; for intent-only criteria, leave it out rather than make one up. Where criteria look thin, show one concrete stress scenario before locking.
+A criterion may be checked interactively in the session. For a criterion taken from code, name the file it rests on so a wrong location shows up early; for intent-only criteria, leave it out rather than make one up. Where criteria look thin, make up and show one concrete stress scenario before locking.
 
 ### 2a. Research confidence check
 

@@ -2,7 +2,7 @@
 
 ## 1. Load
 
-Use the newest `$CORTEX_COMMAND_ROOT/cortex/lifecycle/sessions/*/overnight-state.json` whose `phase` is not `complete`. Skip files that fail to parse. None → "No active overnight session found. Use `/overnight` to start a new session." All corrupted → say so and suggest manual repair or `/overnight`. Then stop.
+Use the newest `$CORTEX_COMMAND_ROOT/cortex/lifecycle/sessions/*/overnight-state.json` whose `phase` is not `complete`. Skip files that fail to parse. None → "No active overnight session found. Use `/overnight` to start a new session." All corrupted → say so and suggest manual repair or `/overnight`. Stop in both cases.
 
 ## 2. Report
 

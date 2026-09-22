@@ -10,7 +10,7 @@ Run `cortex overnight status`. A session whose phase is not `complete` is active
 cortex overnight prepare --format json
 ```
 
-Safe to re-run. Non-zero exit → show `message` and stop. No eligible items → report "Nothing ready for overnight execution", list the ineligible items in `selection` with reasons, suggest `/cortex-core:refine` on the highest-priority ones, and stop. Otherwise show `selection` (eligible and batch counts, features per batch, ineligible items and reasons) and `plan_markdown`. To re-render, re-run with `--time-limit-hours N` or `--batch-size-cap N`.
+Reads only; safe to re-run. Non-zero exit → show `message` and stop. No eligible items → report "Nothing ready for overnight execution", list the ineligible items in `selection` with reasons, suggest `/cortex-core:refine` on the top ones, and stop. Otherwise show `selection` (counts, features per batch, ineligible items and reasons) and `plan_markdown`. To re-render, re-run with `--time-limit-hours N` or `--batch-size-cap N`.
 
 ## 3. Curate and approve
 
@@ -71,7 +71,7 @@ Remove a feature only for substance (out of scope, not ready); the runner scales
 
 4. **Dashboard.** Not running → mention `cortex dashboard` (or `just dashboard` from a clone) is optional and can start anytime.
 
-5. **Run or schedule.** Ask `[1] Run now` / `[2] Schedule for specific time` (`HH:MM` 24-hour local, or `YYYY-MM-DDTHH:MM`). Both run via Bash with `dangerouslyDisableSandbox: true`, use the captured `state_path`, and return at once. The runner logs `session_start` itself.
+5. **Run or schedule.** Ask `[1] Run now` / `[2] Schedule for specific time` (`HH:MM` 24-hour local, or `YYYY-MM-DDTHH:MM`). Both run via Bash with `dangerouslyDisableSandbox: true`, use the captured `state_path`, and return at once. The runner logs `session_start` itself when it starts.
 
    ```
    cortex overnight start --state {state_path} --time-limit 21600
