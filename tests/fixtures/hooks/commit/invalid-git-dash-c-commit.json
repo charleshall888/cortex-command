@@ -1,0 +1,7 @@
+{
+  "tool_name": "Bash",
+  "tool_input": {
+    "command": "git -C /x commit -am \"fixed it\""
+  },
+  "cwd": "/tmp"
+}

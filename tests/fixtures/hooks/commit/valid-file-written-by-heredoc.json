@@ -1,0 +1,7 @@
+{
+  "tool_name": "Bash",
+  "tool_input": {
+    "command": "cat > msg.txt <<'EOF'\nAdd a proper subject\nEOF\ngit commit -F msg.txt"
+  },
+  "cwd": "/tmp"
+}

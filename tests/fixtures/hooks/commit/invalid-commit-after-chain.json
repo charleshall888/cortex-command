@@ -1,0 +1,7 @@
+{
+  "tool_name": "Bash",
+  "tool_input": {
+    "command": "cd /a && git add . && git commit -m \"Short\" && git push"
+  },
+  "cwd": "/tmp"
+}

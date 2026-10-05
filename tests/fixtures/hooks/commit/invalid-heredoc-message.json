@@ -1,0 +1,7 @@
+{
+  "tool_name": "Bash",
+  "tool_input": {
+    "command": "git commit -m \"$(cat <<'EOF'\nadd the thing\nEOF\n)\""
+  },
+  "cwd": "/tmp"
+}
